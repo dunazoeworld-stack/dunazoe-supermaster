@@ -1,0 +1,662 @@
+{
+  "info": {
+    "name": "DUNAZOE OS — Complete API Collection",
+    "description": "All endpoints for DUNAZOE microservices backend. Import into Postman. Set baseUrl variable to http://localhost:3000",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000", "type": "string" },
+    { "key": "token",   "value": "", "type": "string" },
+    { "key": "userId",  "value": "", "type": "string" },
+    { "key": "vendorId","value": "", "type": "string" },
+    { "key": "productId","value":"", "type": "string" },
+    { "key": "orderId", "value": "", "type": "string" }
+  ],
+  "item": [
+
+    {
+      "name": "🔐 Auth Service",
+      "item": [
+        {
+          "name": "Register User",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "if (pm.response.code === 201) {",
+            "  pm.collectionVariables.set('token', pm.response.json().token);",
+            "  pm.collectionVariables.set('userId', pm.response.json().user_id);",
+            "  pm.test('Registration successful', () => pm.expect(pm.response.code).to.eq(201));",
+            "}"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/register",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Temidayo Folorunso\",\n  \"email\": \"ceo@dunazoe.com\",\n  \"password\": \"SecurePass2026!\",\n  \"phone\": \"08012345678\",\n  \"whatsapp\": \"08012345678\",\n  \"role\": \"customer\",\n  \"state\": \"oyo\",\n  \"city\": \"ibadan\",\n  \"town\": \"bodija\"\n}" }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "if (pm.response.code === 200) {",
+            "  pm.collectionVariables.set('token', pm.response.json().token);",
+            "  pm.collectionVariables.set('userId', pm.response.json().user_id);",
+            "  pm.test('Login OK', () => pm.expect(pm.response.json().token).to.be.a('string'));",
+            "}"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/login",
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"ceo@dunazoe.com\",\n  \"password\": \"SecurePass2026!\"\n}" }
+          }
+        },
+        {
+          "name": "Verify Token",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/verify",
+            "body": { "mode": "raw", "raw": "{ \"token\": \"{{token}}\" }" }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/logout",
+            "body": { "mode": "raw", "raw": "{ \"token\": \"{{token}}\" }" }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "👤 User Service",
+      "item": [
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/users/{{userId}}"
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/users/{{userId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"city\": \"akure\",\n  \"state\": \"ondo\",\n  \"phone\": \"08012345678\"\n}" }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🏪 Vendor Service",
+      "item": [
+        {
+          "name": "Register Vendor (Pickup Station)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "if (pm.response.code === 201) pm.collectionVariables.set('vendorId', pm.response.json().vendor_id);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/vendors",
+            "body": { "mode": "raw", "raw": "{\n  \"business_name\": \"Adebayo Fashions Akure\",\n  \"description\": \"Premium SW Nigeria fashion store\",\n  \"type\": \"direct\",\n  \"category\": \"fashion\",\n  \"state\": \"ondo\",\n  \"city\": \"akure\",\n  \"town\": \"ilesha way\",\n  \"lat\": 7.2526,\n  \"lng\": 5.1986,\n  \"pickup_address\": \"12 Ilesha Way, Akure\",\n  \"payout_method\": \"bank\",\n  \"bank_name\": \"OPay\",\n  \"account_no\": \"8012345678\",\n  \"account_name\": \"Adebayo Fashion Store\"\n}" }
+          }
+        },
+        {
+          "name": "Approve Vendor (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/vendors/{{vendorId}}/verify"
+          }
+        },
+        {
+          "name": "Get Vendor",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/vendors/{{vendorId}}"
+          }
+        },
+        {
+          "name": "List Vendors by State",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/vendors?state=ondo&status=active",
+              "query": [
+                { "key": "state", "value": "ondo" },
+                { "key": "status", "value": "active" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Register Copy Trader",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/vendors/copy-trader/register",
+            "body": { "mode": "raw", "raw": "{\n  \"source_vendor_id\": \"{{vendorId}}\"\n}" }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "📦 Product Service",
+      "item": [
+        {
+          "name": "AI Listing Assistant",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/products/ai/assist",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Premium Ankara Dress\",\n  \"cost\": 12000,\n  \"category\": \"fashion\",\n  \"ajo_weeks\": 3,\n  \"description\": \"Authentic Ankara, all sizes available\"\n}" }
+          }
+        },
+        {
+          "name": "Add Product (with Ajo surcharge)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "if (pm.response.code === 201) pm.collectionVariables.set('productId', pm.response.json().product_id);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/products",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Premium Ankara Dress\",\n  \"description\": \"Authentic Ankara dress, available in all sizes. Made in Nigeria.\",\n  \"type\": \"physical\",\n  \"category\": \"fashion\",\n  \"price\": 18000,\n  \"cost\": 12000,\n  \"ajo_enabled\": true,\n  \"ajo_weeks\": 3,\n  \"images\": \"https://dunazoe.com/img/ankara1.jpg\"\n}" }
+          }
+        },
+        {
+          "name": "Browse Products",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/products?category=fashion&state=ondo&page=1",
+              "query": [
+                { "key": "category", "value": "fashion" },
+                { "key": "state", "value": "ondo" },
+                { "key": "page", "value": "1" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Copy Product (6% markup)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/products/copy",
+            "body": { "mode": "raw", "raw": "{ \"product_id\": \"{{productId}}\" }" }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "📊 Inventory Service",
+      "item": [
+        {
+          "name": "Add Stock",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/inventory",
+            "body": { "mode": "raw", "raw": "{\n  \"product_id\": \"{{productId}}\",\n  \"vendor_id\": \"{{vendorId}}\",\n  \"quantity\": 50,\n  \"reorder_level\": 5\n}" }
+          }
+        },
+        {
+          "name": "Reserve Stock",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/inventory/reserve",
+            "body": { "mode": "raw", "raw": "{\n  \"product_id\": \"{{productId}}\",\n  \"quantity\": 2,\n  \"order_ref\": \"ORDER_TEST_001\"\n}" }
+          }
+        },
+        {
+          "name": "Low Stock Alerts",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/inventory/alerts/low-stock"
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🛍️ Order Service",
+      "item": [
+        {
+          "name": "Place Order (inter-city)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "if (pm.response.code === 201) pm.collectionVariables.set('orderId', pm.response.json().order_id);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/orders",
+            "body": { "mode": "raw", "raw": "{\n  \"product_id\": \"{{productId}}\",\n  \"quantity\": 1,\n  \"payment_type\": \"full\",\n  \"delivery_address\": \"12 Bodija Estate, Ibadan, Oyo State\",\n  \"dest_city\": \"ibadan\",\n  \"ai_assisted\": true\n}" }
+          }
+        },
+        {
+          "name": "❌ Try Cash Payment (should fail)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/orders",
+            "body": { "mode": "raw", "raw": "{\n  \"product_id\": \"{{productId}}\",\n  \"quantity\": 1,\n  \"payment_type\": \"cash\",\n  \"delivery_address\": \"12 Bodija Estate, Ibadan\",\n  \"dest_city\": \"ibadan\"\n}" }
+          }
+        },
+        {
+          "name": "Get My Orders",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/orders/my/list"
+          }
+        },
+        {
+          "name": "Update Order Status (delivered)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/orders/{{orderId}}/status",
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"delivered\",\n  \"tracking_status\": \"delivered\",\n  \"delivery_photo\": \"https://dunazoe.com/photos/proof-001.jpg\"\n}" }
+          }
+        },
+        {
+          "name": "Cancel Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/orders/{{orderId}}/cancel",
+            "body": { "mode": "raw", "raw": "{ \"reason\": \"Changed my mind\" }" }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🔐 Escrow Service",
+      "item": [
+        {
+          "name": "Get Escrow by Order",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/escrow/order/{{orderId}}"
+          }
+        },
+        {
+          "name": "Lock Escrow (dispute)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/escrow/1/lock"
+          }
+        },
+        {
+          "name": "Release Escrow (delivery confirmed)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/escrow/1/release"
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🚨 Fraud Service",
+      "item": [
+        {
+          "name": "Fraud Check — Safe Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/fraud/check",
+            "body": { "mode": "raw", "raw": "{\n  \"user_id\": \"{{userId}}\",\n  \"amount\": 18000,\n  \"quantity\": 1,\n  \"ip_address\": \"192.168.1.1\"\n}" }
+          }
+        },
+        {
+          "name": "Fraud Check — HIGH RISK (>₦500k)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/fraud/check",
+            "body": { "mode": "raw", "raw": "{\n  \"user_id\": \"{{userId}}\",\n  \"amount\": 750000,\n  \"quantity\": 1,\n  \"ip_address\": \"192.168.1.1\"\n}" }
+          }
+        },
+        {
+          "name": "Fraud Check — Suspicious Quantity (>50)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/fraud/check",
+            "body": { "mode": "raw", "raw": "{\n  \"user_id\": \"{{userId}}\",\n  \"amount\": 18000,\n  \"quantity\": 80,\n  \"ip_address\": \"10.0.0.1\"\n}" }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "💳 Wallet Service",
+      "item": [
+        {
+          "name": "Get Wallet Balance",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/wallets/{{userId}}"
+          }
+        },
+        {
+          "name": "Deposit NGN (via Paystack)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/wallets/deposit",
+            "body": { "mode": "raw", "raw": "{\n  \"user_id\": \"{{userId}}\",\n  \"amount\": 50000,\n  \"currency\": \"NGN\",\n  \"reference\": \"PS_TEST_REF_001\"\n}" }
+          }
+        },
+        {
+          "name": "Deposit USD (via Stripe)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/wallets/deposit",
+            "body": { "mode": "raw", "raw": "{\n  \"user_id\": \"{{userId}}\",\n  \"amount\": 100,\n  \"currency\": \"USD\",\n  \"reference\": \"STRIPE_TEST_REF_001\"\n}" }
+          }
+        },
+        {
+          "name": "Withdraw",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/wallets/withdraw",
+            "body": { "mode": "raw", "raw": "{\n  \"amount\": 10000,\n  \"currency\": \"NGN\",\n  \"purpose\": \"Personal withdrawal\"\n}" }
+          }
+        },
+        {
+          "name": "Transaction History",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/wallets/{{userId}}/transactions"
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "⬡ Thrift (Ajo) Service",
+      "item": [
+        {
+          "name": "Open Thrift Account",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/thrift/accounts",
+            "body": { "mode": "raw", "raw": "{\n  \"purpose\": \"personal\",\n  \"plan_type\": \"monthly\",\n  \"target_amount\": 100000,\n  \"target_date\": \"2026-12-31\"\n}" }
+          }
+        },
+        {
+          "name": "Contribute to Ajo",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/thrift/contribute",
+            "body": { "mode": "raw", "raw": "{\n  \"amount\": 15000,\n  \"reference\": \"AJO_REF_001\",\n  \"note\": \"Monthly Ajo contribution\"\n}" }
+          }
+        },
+        {
+          "name": "Get Thrift Account",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/thrift/accounts/{{userId}}"
+          }
+        },
+        {
+          "name": "Create Ajo Group",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/thrift/groups",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Bodija Market Ajo Group\",\n  \"contribution_amount\": 10000,\n  \"cycle_days\": 30\n}" }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "⭐ Trust & Loan",
+      "item": [
+        {
+          "name": "Compute Trust Score",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/trust/compute/{{userId}}"
+          }
+        },
+        {
+          "name": "Get Trust Score (cached)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/trust/{{userId}}"
+          }
+        },
+        {
+          "name": "Apply for Loan",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/loans/apply",
+            "body": { "mode": "raw", "raw": "{\n  \"amount\": 25000,\n  \"repayment_days\": 30\n}" }
+          }
+        },
+        {
+          "name": "My Loans",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/loans/my"
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "💰 Commission & Payouts",
+      "item": [
+        {
+          "name": "My Earnings",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/commissions/my/earnings"
+          }
+        },
+        {
+          "name": "Pending Payouts (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/commissions/pending"
+          }
+        },
+        {
+          "name": "Run Biweekly Payout (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/commissions/payout/run"
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🤖 AI Service",
+      "item": [
+        {
+          "name": "AI Dispatcher — Recommend",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/ai/run",
+            "body": { "mode": "raw", "raw": "{\n  \"type\": \"recommend\",\n  \"data\": { \"user_id\": \"{{userId}}\", \"category\": \"fashion\", \"city\": \"akure\" }\n}" }
+          }
+        },
+        {
+          "name": "AI Optimise Price",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/ai/optimize-price",
+            "body": { "mode": "raw", "raw": "{\n  \"product_name\": \"Premium Ankara Dress\",\n  \"cost\": 12000,\n  \"category\": \"fashion\",\n  \"city\": \"akure\",\n  \"ajo_weeks\": 3\n}" }
+          }
+        },
+        {
+          "name": "AI Marketing Copy — Ajo Segment",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/ai/marketing-copy",
+            "body": { "mode": "raw", "raw": "{\n  \"segment\": \"thrift_seeker\",\n  \"product_name\": \"Premium Ankara Dress\",\n  \"price\": 18000,\n  \"vendor_city\": \"Akure\"\n}" }
+          }
+        },
+        {
+          "name": "Vendor Insights",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/ai/vendor-insights",
+            "body": { "mode": "raw", "raw": "{ \"vendor_id\": \"{{vendorId}}\" }" }
+          }
+        },
+        {
+          "name": "Segment User",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/ai/segment",
+            "body": { "mode": "raw", "raw": "{ \"user_id\": \"{{userId}}\" }" }
+          }
+        },
+        {
+          "name": "Demand Forecast",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/ai/run",
+            "body": { "mode": "raw", "raw": "{\n  \"type\": \"demand_forecast\",\n  \"data\": { \"category\": \"fashion\", \"city\": \"akure\" }\n}" }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🌐 Gateway Health",
+      "item": [
+        {
+          "name": "Gateway Health",
+          "request": { "method": "GET", "url": "{{baseUrl}}/health" }
+        }
+      ]
+    }
+
+  ]
+}

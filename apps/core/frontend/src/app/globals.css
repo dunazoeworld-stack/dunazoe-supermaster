@@ -1,0 +1,21 @@
+:root {
+  --dz-blue-light:#00A3FF; --dz-blue-dark:#0066FF;
+  --dz-navy:#0A0E1A; --dz-navy-mid:#0D1525;
+  --dz-orange:#FF6B00; --dz-white:#FFFFFF;
+  --dz-gray-mid:#8A9AB5; --dz-success:#00C896;
+  --dz-error:#FF3B5C;
+  --dz-gradient-blue:linear-gradient(135deg,#00A3FF 0%,#0066FF 100%);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body.dunazoe-body{font-family:Inter,-apple-system,sans-serif;background:#0A0E1A;color:#fff;min-height:100vh;}
+.text-gradient{background:var(--dz-gradient-blue);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.dz-logo{display:flex;align-items:center;gap:12px;text-decoration:none;}
+.dz-logo-img{width:40px;height:40px;border-radius:8px;box-shadow:0 0 12px rgba(0,163,255,.4);}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:12px;font-weight:600;cursor:pointer;border:none;text-decoration:none;}
+.btn-primary{background:var(--dz-gradient-blue);color:#fff;box-shadow:0 0 20px rgba(0,163,255,.25);}
+.container{max-width:1280px;margin:0 auto;padding:0 24px;}
+.flex-between{display:flex;align-items:center;justify-content:space-between;}
+.glow-divider{width:100%;height:1px;background:linear-gradient(90deg,transparent,#0066FF,transparent);margin:32px 0;}
+.dz-spinner{width:32px;height:32px;border:3px solid rgba(0,163,255,.2);border-top-color:#00A3FF;border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:768px){.container{padding:0 16px;}}

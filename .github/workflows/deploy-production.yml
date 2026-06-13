@@ -1,0 +1,98 @@
+name: Deploy — Production
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  # ──────────────────────────────────────────────────────────────
+  # GATE 1 — Deployment AI Master Audit (Update #95 / #96 §2)
+  # Production deploy must NEVER happen directly.
+  # Minimum release score: 90/100.
+  # ──────────────────────────────────────────────────────────────
+  deployment-audit:
+    runs-on: ubuntu-latest
+    environment: production
+    outputs:
+      approved: ${{ steps.audit.outputs.approved }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Deployment AI master audit
+        id: audit
+        run: |
+          # Calls the Deployment AI service (Update #95) on staging,
+          # which must already be running and healthy.
+          RESPONSE=$(curl -sf -X POST \
+            -H "Authorization: Bearer ${{ secrets.DEPLOYMENT_AI_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"version":"${{ github.sha }}","environment":"production","hosting_provider":"auto-detect"}' \
+            "${{ vars.STAGING_URL || 'https://staging.dunazoe.com' }}/deployment/audit" \
+            || echo '{"approved":false,"ceo_summary":{"headline":"AUDIT_UNREACHABLE"}}')
+
+          echo "$RESPONSE" | python3 -m json.tool
+
+          APPROVED=$(echo "$RESPONSE" | python3 -c "import sys,json; print(str(json.load(sys.stdin).get('approved', False)).lower())")
+          echo "approved=$APPROVED" >> "$GITHUB_OUTPUT"
+
+          if [ "$APPROVED" != "true" ]; then
+            echo "::error::🔴 DEPLOYMENT BLOCKED — Deployment AI audit did not pass (score < 90)."
+            echo "Review the audit response above for blocked_reasons."
+            exit 1
+          fi
+          echo "✅ Deployment AI audit PASSED — cleared for production."
+
+  # ──────────────────────────────────────────────────────────────
+  # GATE 2 — Production Deploy (only runs if audit passed)
+  # ──────────────────────────────────────────────────────────────
+  deploy-production:
+    runs-on: ubuntu-latest
+    needs: deployment-audit
+    if: needs.deployment-audit.outputs.approved == 'true'
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create pre-deploy backup
+        run: |
+          echo "📦 Triggering pre-deployment backup (Update #93.3 / #96 §10)"
+          # Adapt to your backup mechanism, e.g.:
+          # curl -X POST -H "Authorization: Bearer ${{ secrets.RELIABILITY_TOKEN }}" \
+          #   "${{ vars.PRODUCTION_URL }}/reliability/backup/trigger"
+
+      # ── ADAPT THIS STEP TO YOUR HOSTING PROVIDER ──────────────
+      - name: Placeholder — configure deployment target
+        run: |
+          echo "⚠️  No production deployment target configured yet."
+          echo "Edit .github/workflows/deploy-production.yml and add the"
+          echo "appropriate deploy step (SSH/Render/Replit/AWS/etc.)."
+
+      - name: Smoke test production
+        run: |
+          sleep 15
+          curl -sf "${{ vars.PRODUCTION_URL || 'https://dunazoe.com' }}/health" \
+            && echo "✅ Production healthy" \
+            || echo "⚠️ Production health check failed — consider rollback"
+
+      - name: Post-deployment monitoring window
+        run: |
+          echo "👀 Deployment AI will monitor for 72 hours (Update #95 Part D)."
+          echo "Check: ${{ vars.PRODUCTION_URL || 'https://dunazoe.com' }}/deployment/monitor"
+
+  # ──────────────────────────────────────────────────────────────
+  # ROLLBACK — manual trigger only
+  # ──────────────────────────────────────────────────────────────
+  rollback:
+    runs-on: ubuntu-latest
+    if: failure()
+    needs: [deployment-audit, deploy-production]
+    environment: production
+
+    steps:
+      - name: Alert team of rollback need
+        run: |
+          echo "::error::🔄 Deployment failed. Manual rollback required."
+          echo "Run: POST /deployment/rollback {run_id, reason}"
+          echo "Or use Deployment AI's rollback endpoint per docs/git/GIT_SETUP.md"

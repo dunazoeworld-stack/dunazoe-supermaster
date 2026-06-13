@@ -1,0 +1,372 @@
+
+  # ── KYC SERVICE ──────────────────────────────────────────────
+  kyc:
+    build:
+      context:    ./services/kyc-service
+      dockerfile: Dockerfile
+    container_name: dunazoe-kyc
+    restart: unless-stopped
+    env_file: .env.docker
+    environment:
+      PORT: 4023
+      SERVICE_NAME: kyc-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ── RECONCILIATION SERVICE ────────────────────────────────────
+  reconciliation:
+    build:
+      context:    ./services/reconciliation-service
+      dockerfile: Dockerfile
+    container_name: dunazoe-reconciliation
+    restart: unless-stopped
+    env_file: .env.docker
+    environment:
+      PORT: 4024
+      SERVICE_NAME: reconciliation-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ── RELIABILITY SERVICE (Update #93) ─────────────────────────
+  reliability:
+    build:
+      context:    ./services/reliability-service
+      dockerfile: Dockerfile
+    container_name: dunazoe-reliability
+    restart: unless-stopped
+    env_file: .env.docker
+    environment:
+      PORT: 4025
+      SERVICE_NAME: reliability-service
+      CHAOS_ENABLED: "false"
+    ports:
+      - "4025:4025"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ── PGBOUNCER (Connection Pooler) ─────────────────────────────
+  pgbouncer:
+    image: edoburu/pgbouncer:1.21.0
+    container_name: dunazoe-pgbouncer
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://dunazoe_user:dunazoe_pass_dev@postgres:5432/dunazoe_db
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 2000
+      DEFAULT_POOL_SIZE: 50
+    ports:
+      - "5433:5432"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ── PROMETHEUS ────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: dunazoe-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+
+  # ── GRAFANA ───────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: dunazoe-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: dunazoe_grafana_2026
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/dunazoe-dashboard.json
+    volumes:
+      - ./monitoring/grafana/dunazoe-dashboard.json:/var/lib/grafana/dashboards/dunazoe-dashboard.json
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3010:3000"
+    depends_on:
+      - prometheus
+
+  # ── RABBITMQ ─────────────────────────────────────────────────
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: dunazoe-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout:  10s
+      retries:  5
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+  # ── NGINX (CDN + Reverse Proxy) ───────────────────────────────
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: dunazoe-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./monitoring/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - nginx_ssl:/etc/letsencrypt
+    depends_on:
+      - gateway
+      - realtime
+
+  prometheus_data:
+  grafana_data:
+  rabbitmq_data:
+  nginx_ssl:
+
+  # ── KYC SERVICE ───────────────────────────────────────────────
+  kyc:
+    build:
+      context:    ./services/kyc-service
+      dockerfile: Dockerfile
+    container_name: dunazoe-kyc
+    restart: unless-stopped
+    env_file: .env.docker
+    environment:
+      PORT: 4023
+      SERVICE_NAME: kyc-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ── RECONCILIATION SERVICE ────────────────────────────────────
+  reconciliation:
+    build:
+      context:    ./services/reconciliation-service
+      dockerfile: Dockerfile
+    container_name: dunazoe-reconciliation
+    restart: unless-stopped
+    env_file: .env.docker
+    environment:
+      PORT: 4024
+      SERVICE_NAME: reconciliation-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ── RELIABILITY SERVICE (Update #93) ──────────────────────────
+  reliability:
+    build:
+      context:    ./services/reliability-service
+      dockerfile: Dockerfile
+    container_name: dunazoe-reliability
+    restart: unless-stopped
+    env_file: .env.docker
+    environment:
+      PORT: 4025
+      SERVICE_NAME: reliability-service
+      CHAOS_ENABLED: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ── PGBOUNCER (connection pooler, 93.1) ───────────────────────
+  pgbouncer:
+    image: bitnami/pgbouncer:1.22.1
+    container_name: dunazoe-pgbouncer
+    restart: unless-stopped
+    environment:
+      POSTGRESQL_HOST:     postgres
+      POSTGRESQL_PORT:     5432
+      POSTGRESQL_DATABASE: dunazoe_db
+      POSTGRESQL_USERNAME: dunazoe_user
+      POSTGRESQL_PASSWORD: dunazoe_pass_dev
+      PGBOUNCER_POOL_MODE: transaction
+      PGBOUNCER_MAX_CLIENT_CONN: 2000
+      PGBOUNCER_DEFAULT_POOL_SIZE: 50
+    ports:
+      - "5433:5432"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ── NGINX (CDN + TLS + Security headers, 93.1/93.13) ─────────
+  nginx:
+    image: nginx:1.26-alpine
+    container_name: dunazoe-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./monitoring/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./frontend/public:/var/www/dunazoe/public:ro
+      - certbot_www:/var/www/certbot:ro
+      - certbot_conf:/etc/letsencrypt:ro
+    depends_on:
+      - gateway
+      - reliability
+
+  # ── CERTBOT (auto SSL renewal, 93.13) ─────────────────────────
+  certbot:
+    image: certbot/certbot:latest
+    container_name: dunazoe-certbot
+    volumes:
+      - certbot_www:/var/www/certbot
+      - certbot_conf:/etc/letsencrypt
+    entrypoint: /bin/sh -c "trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;"
+
+  # ── RABBITMQ (event bus) ──────────────────────────────────────
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: dunazoe-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD","rabbitmq-diagnostics","ping"]
+      interval: 15s
+      timeout:  5s
+      retries:  5
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+  # ── PROMETHEUS (93.2) ─────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    container_name: dunazoe-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=30d"
+      - "--web.enable-lifecycle"
+      - "--web.enable-admin-api"
+
+  # ── GRAFANA (93.2) ────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:11.0.0
+    container_name: dunazoe-grafana
+    restart: unless-stopped
+    ports:
+      - "3100:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: dunazoe_grafana_change_in_prod
+      GF_USERS_ALLOW_SIGN_UP:     "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dunazoe-dashboard.json:/etc/grafana/provisioning/dashboards/dunazoe.json:ro
+    depends_on:
+      - prometheus
+  rabbitmq_data:
+  prometheus_data:
+  grafana_data:
+  certbot_www:
+  certbot_conf:
+
+  # ── UPDATE #93 — RELIABILITY SERVICE ─────────────────────────
+  reliability:
+    build: { context: ./services/reliability-service, dockerfile: Dockerfile }
+    container_name: dunazoe-reliability
+    restart: unless-stopped
+    env_file: .env.docker
+    environment: { PORT: 4025, SERVICE_NAME: reliability-service }
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_healthy }
+
+  # ── UPDATE #94 — AI SECURITY ENGINE ──────────────────────────
+  security-ai:
+    build: { context: ./services/security-ai-service, dockerfile: Dockerfile }
+    container_name: dunazoe-security-ai
+    restart: unless-stopped
+    env_file: .env.docker
+    environment: { PORT: 4026, SERVICE_NAME: security-ai-service }
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  # ── UPDATE #95 — DEPLOYMENT AI ───────────────────────────────
+  deployment-ai:
+    build: { context: ./services/deployment-ai-service, dockerfile: Dockerfile }
+    container_name: dunazoe-deployment-ai
+    restart: unless-stopped
+    env_file: .env.docker
+    environment: { PORT: 4027, SERVICE_NAME: deployment-ai-service }
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  # ── UPDATE #94 — SELF DELIVERY ────────────────────────────────
+  self-delivery:
+    build: { context: ./services/self-delivery-service, dockerfile: Dockerfile }
+    container_name: dunazoe-self-delivery
+    restart: unless-stopped
+    env_file: .env.docker
+    environment: { PORT: 4028, SERVICE_NAME: self-delivery-service }
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  # ── UPDATE #94 — ADMIN OVERRIDE ──────────────────────────────
+  admin-override:
+    build: { context: ./services/admin-override-service, dockerfile: Dockerfile }
+    container_name: dunazoe-admin-override
+    restart: unless-stopped
+    env_file: .env.docker
+    environment: { PORT: 4029, SERVICE_NAME: admin-override-service }
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  # ── UPDATE #93 — SOCIAL MEDIA AI ─────────────────────────────
+  social-media:
+    build: { context: ./services/social-media-service, dockerfile: Dockerfile }
+    container_name: dunazoe-social-media
+    restart: unless-stopped
+    env_file: .env.docker
+    environment: { PORT: 4030, SERVICE_NAME: social-media-service }
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  # ── KYC SERVICE ───────────────────────────────────────────────
+  kyc:
+    build: { context: ./services/kyc-service, dockerfile: Dockerfile }
+    container_name: dunazoe-kyc
+    restart: unless-stopped
+    env_file: .env.docker
+    environment: { PORT: 4023, SERVICE_NAME: kyc-service }
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  # ── RECONCILIATION SERVICE ────────────────────────────────────
+  reconciliation:
+    build: { context: ./services/reconciliation-service, dockerfile: Dockerfile }
+    container_name: dunazoe-reconciliation
+    restart: unless-stopped
+    env_file: .env.docker
+    environment: { PORT: 4024, SERVICE_NAME: reconciliation-service }
+    depends_on:
+      postgres: { condition: service_healthy }

@@ -1,0 +1,8 @@
+// DUNAZOE OS — STRUCTURED LOGGER (Winston)
+const{createLogger,format,transports}=require("winston");const crypto=require("crypto");
+const SERVICE_NAME=process.env.SERVICE_NAME||"dunazoe-service";const NODE_ENV=process.env.NODE_ENV||"development";const LOG_LEVEL=process.env.LOG_LEVEL||(NODE_ENV==="production"?"info":"debug");
+const logger=createLogger({level:LOG_LEVEL,defaultMeta:{service:SERVICE_NAME},format:format.combine(format.errors({stack:true}),format.timestamp(),format.json()),transports:[new transports.Console({format:NODE_ENV==="production"?format.combine(format.timestamp(),format.json()):format.combine(format.colorize(),format.printf(({level,message,timestamp,service,...m})=>`${timestamp} [${service}] ${level}: ${message}${Object.keys(m).length?" "+JSON.stringify(m):""}`))})]});
+function generateTraceId(){return crypto.randomBytes(8).toString("hex");}
+function requestLogger(req,res,next){const trace_id=req.headers["x-trace-id"]||generateTraceId();const start=Date.now();req.headers["x-trace-id"]=trace_id;res.setHeader("X-Trace-ID",trace_id);req.log=logger.child({trace_id,method:req.method,path:req.path,user_id:req.headers["x-user-id"]||null});req.log.info("→ Request");res.on("finish",()=>{const lvl=res.statusCode>=500?"error":res.statusCode>=400?"warn":"info";req.log[lvl]("← Response",{status:res.statusCode,duration_ms:Date.now()-start});});next();}
+function errorLogger(err,req,res,next){(req.log||logger).error("Unhandled error",{error:err.message,stack:err.stack,status:err.status||500});next(err);}
+module.exports={logger,requestLogger,errorLogger,generateTraceId};

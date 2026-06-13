@@ -1,0 +1,53 @@
+name: Deploy — Staging
+
+on:
+  push:
+    branches: [develop]
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Notify deployment start
+        run: echo "🚀 Deploying develop → staging.dunazoe.com"
+
+      # ── ADAPT THIS STEP TO YOUR HOSTING PROVIDER ──────────────
+      # Examples (uncomment and configure the one that applies):
+      #
+      # Render:
+      #   - name: Trigger Render deploy hook
+      #     run: curl -X POST "${{ secrets.RENDER_STAGING_DEPLOY_HOOK }}"
+      #
+      # SSH to VPS:
+      #   - name: Deploy via SSH
+      #     uses: appleboy/ssh-action@v1
+      #     with:
+      #       host: ${{ secrets.STAGING_HOST }}
+      #       username: ${{ secrets.STAGING_USER }}
+      #       key: ${{ secrets.STAGING_SSH_KEY }}
+      #       script: |
+      #         cd /opt/dunazoe-supermaster/apps/core
+      #         git pull origin develop
+      #         docker-compose up --build -d
+      #         ./scripts/start-all.sh
+      #
+      # Replit:
+      #   - name: Trigger Replit deployment
+      #     run: curl -X POST "${{ secrets.REPLIT_DEPLOY_HOOK }}"
+
+      - name: Placeholder — configure deployment target
+        run: |
+          echo "⚠️  No deployment target configured yet."
+          echo "Edit .github/workflows/deploy-staging.yml and uncomment the"
+          echo "appropriate deployment step for your hosting provider."
+
+      - name: Smoke test staging health endpoint
+        run: |
+          sleep 15
+          curl -sf "${{ vars.STAGING_URL || 'https://staging.dunazoe.com' }}/health" \
+            && echo "✅ Staging healthy" \
+            || echo "⚠️ Staging health check failed (expected until target configured)"

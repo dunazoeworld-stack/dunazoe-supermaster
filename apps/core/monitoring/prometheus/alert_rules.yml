@@ -1,0 +1,76 @@
+groups:
+  - name: payment_alerts
+    rules:
+      - alert: PaymentFailureSpike
+        expr: rate(http_requests_total{service="dunazoe-payment",status=~"5.."}[5m]) / rate(http_requests_total{service="dunazoe-payment"}[5m]) > 0.05
+        for: 2m
+        labels: { severity: critical, team: finance }
+        annotations: { summary: "Payment failure rate above 5%", runbook: "https://docs.dunazoe.com/runbooks/payment-failures" }
+
+      - alert: EscrowImbalance
+        expr: dunazoe_reconciliation_mismatches{entity_type="escrow"} > 0
+        for: 1m
+        labels: { severity: critical, team: finance }
+        annotations: { summary: "🚨 ESCROW IMBALANCE DETECTED" }
+
+  - name: fraud_alerts
+    rules:
+      - alert: FraudSpikeHigh
+        expr: rate(dunazoe_fraud_checks_total{risk_level="high_risk"}[5m]) > 0.5
+        for: 3m
+        labels: { severity: critical, team: security }
+        annotations: { summary: "🚨 High fraud spike" }
+
+      - alert: BruteForceDetected
+        expr: rate(dunazoe_auth_failures_total[5m]) > 10
+        for: 1m
+        labels: { severity: high, team: security }
+        annotations: { summary: "Brute force attack detected" }
+
+      - alert: SocialMediaUnauthorized
+        expr: increase(dunazoe_social_media_threats_total[5m]) > 0
+        for: 0m
+        labels: { severity: critical, team: security }
+        annotations: { summary: "🚨 Unauthorized social media access" }
+
+  - name: service_health
+    rules:
+      - alert: ServiceDown
+        expr: up{job="dunazoe-services"} == 0
+        for: 1m
+        labels: { severity: critical, team: engineering }
+        annotations: { summary: "🚨 DUNAZOE service DOWN: {{ $labels.service }}" }
+
+      - alert: HighResponseLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="dunazoe-services"}[5m])) > 2
+        for: 5m
+        labels: { severity: warning, team: engineering }
+        annotations: { summary: "High P95 latency on {{ $labels.service }}" }
+
+  - name: database_alerts
+    rules:
+      - alert: PostgreSQLDown
+        expr: pg_up == 0
+        for: 30s
+        labels: { severity: critical, team: engineering }
+        annotations: { summary: "🚨 PostgreSQL is DOWN" }
+
+      - alert: LedgerImbalance
+        expr: dunazoe_ledger_imbalance_ngn > 0.01
+        for: 1m
+        labels: { severity: critical, team: finance }
+        annotations: { summary: "🚨 DOUBLE-ENTRY LEDGER IMBALANCE" }
+
+  - name: security_alerts
+    rules:
+      - alert: AdminImpersonationAbuse
+        expr: increase(dunazoe_admin_impersonations_total{outcome="suspicious"}[10m]) > 0
+        for: 0m
+        labels: { severity: critical, team: security }
+        annotations: { summary: "🚨 Suspicious admin impersonation detected" }
+
+      - alert: DeploymentBlocked
+        expr: dunazoe_deployment_score{type="security"} < 90
+        for: 0m
+        labels: { severity: high, team: engineering }
+        annotations: { summary: "Deployment AI blocked deployment — security score below threshold" }

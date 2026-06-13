@@ -1,0 +1,72 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels: { monitor: dunazoe-monitor, environment: production }
+
+alerting:
+  alertmanagers:
+    - static_configs: [{ targets: [alertmanager:9093] }]
+
+rule_files: [alert_rules.yml]
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs: [{ targets: [localhost:9090] }]
+
+  - job_name: dunazoe-gateway
+    static_configs: [{ targets: [gateway:3000] }]
+    metrics_path: /metrics
+    scrape_interval: 10s
+
+  - job_name: dunazoe-services
+    static_configs:
+      - targets:
+          - auth:4001
+          - user:4002
+          - vendor:4003
+          - product:4004
+          - inventory:4005
+          - order:4006
+          - escrow:4007
+          - fraud:4008
+          - wallet:4009
+          - thrift:4010
+          - trust:4011
+          - loan:4012
+          - commission:4013
+          - ai:4014
+          - payment:4015
+          - dispute:4016
+          - notification:4017
+          - logistics:4018
+          - feature-flag:4019
+          - upload:4020
+          - realtime:4021
+          - search:4022
+          - kyc:4023
+          - reconciliation:4024
+          - reliability:4025
+          - security-ai:4026
+          - deployment-ai:4027
+          - self-delivery:4028
+          - admin-override:4029
+          - social-media:4030
+          - payments-ai:4031
+    metrics_path: /metrics
+    scrape_interval: 15s
+
+  - job_name: postgresql
+    static_configs: [{ targets: [postgres-exporter:9187] }]
+    scrape_interval: 30s
+
+  - job_name: redis
+    static_configs: [{ targets: [redis-exporter:9121] }]
+    scrape_interval: 15s
+
+  - job_name: rabbitmq
+    static_configs: [{ targets: [rabbitmq:15692] }]
+    scrape_interval: 30s
+
+  - job_name: node
+    static_configs: [{ targets: [node-exporter:9100] }]
+    scrape_interval: 15s
