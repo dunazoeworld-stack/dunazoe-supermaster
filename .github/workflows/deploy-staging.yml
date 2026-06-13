@@ -4,6 +4,9 @@ on:
   push:
     branches: [develop]
 
+env:
+  DEPLOYMENT_AI_URL: ${{ vars.DEPLOYMENT_AI_URL || 'https://9e5b4e75-943a-4219-8c78-a1cf48cb7753-00-1sfx72v0oq3y9.kirk.replit.dev' }}
+
 jobs:
   deploy-staging:
     runs-on: ubuntu-latest
@@ -12,42 +15,54 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Notify deployment start
-        run: echo "🚀 Deploying develop → staging.dunazoe.com"
+      - name: Notify Deployment AI — staging deploy started
+        run: |
+          curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -d '{
+              "event":       "staging_deploy_started",
+              "repo":        "${{ github.repository }}",
+              "branch":      "${{ github.ref_name }}",
+              "commit":      "${{ github.sha }}",
+              "actor":       "${{ github.actor }}"
+            }' \
+            "${{ env.DEPLOYMENT_AI_URL }}/api/pipeline/notify" || true
+          echo "🚀 Deploying develop → staging"
 
       # ── ADAPT THIS STEP TO YOUR HOSTING PROVIDER ──────────────
-      # Examples (uncomment and configure the one that applies):
-      #
-      # Render:
-      #   - name: Trigger Render deploy hook
-      #     run: curl -X POST "${{ secrets.RENDER_STAGING_DEPLOY_HOOK }}"
+      # Replit:
+      #   - name: Trigger Replit deploy
+      #     run: curl -X POST "${{ secrets.REPLIT_STAGING_DEPLOY_HOOK }}"
       #
       # SSH to VPS:
-      #   - name: Deploy via SSH
-      #     uses: appleboy/ssh-action@v1
+      #   - uses: appleboy/ssh-action@v1
       #     with:
       #       host: ${{ secrets.STAGING_HOST }}
       #       username: ${{ secrets.STAGING_USER }}
       #       key: ${{ secrets.STAGING_SSH_KEY }}
       #       script: |
-      #         cd /opt/dunazoe-supermaster/apps/core
+      #         cd /opt/dunazoe-staging/apps/core
       #         git pull origin develop
       #         docker-compose up --build -d
-      #         ./scripts/start-all.sh
-      #
-      # Replit:
-      #   - name: Trigger Replit deployment
-      #     run: curl -X POST "${{ secrets.REPLIT_DEPLOY_HOOK }}"
-
-      - name: Placeholder — configure deployment target
+      - name: Placeholder — configure staging target
         run: |
-          echo "⚠️  No deployment target configured yet."
-          echo "Edit .github/workflows/deploy-staging.yml and uncomment the"
-          echo "appropriate deployment step for your hosting provider."
+          echo "⚠️  No staging deployment target configured yet."
+          echo "See: docs/audit/DEPLOYMENT_AI_INTEGRATION.md for setup guide"
 
-      - name: Smoke test staging health endpoint
+      - name: Smoke test staging
         run: |
-          sleep 15
+          sleep 10
           curl -sf "${{ vars.STAGING_URL || 'https://staging.dunazoe.com' }}/health" \
             && echo "✅ Staging healthy" \
-            || echo "⚠️ Staging health check failed (expected until target configured)"
+            || echo "⚠️  Staging health check failed (expected until target configured)"
+
+      - name: Notify Deployment AI — staging complete
+        run: |
+          curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -d '{
+              "event":   "staging_deploy_complete",
+              "commit":  "${{ github.sha }}",
+              "status":  "success"
+            }' \
+            "${{ env.DEPLOYMENT_AI_URL }}/api/pipeline/notify" || true
