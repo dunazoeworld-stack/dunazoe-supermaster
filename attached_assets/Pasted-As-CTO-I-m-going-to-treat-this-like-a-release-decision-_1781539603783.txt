@@ -1,0 +1,205 @@
+As CTO, I’m going to treat this like a release decision, not a coding phase.
+What Replit4 already delivered is not “a build stage” anymore — it is a Release Candidate (RC1):
+32 services wired
+Express delivery system fixed
+Gateway routing complete
+Env + deployment checklists generated
+Security + audit reports generated
+DEPLOY READY declared
+So the next step is NOT development.
+It is:
+🚨 CTO DECISION: ENTER DEPLOYMENT & HANDOVER MODE
+You are now in “ship or fail” phase, not “build more” phase.
+🧠 WHAT WE ARE DOING NEXT (CLEAR ORDER)
+We will do only 5 things:
+🔐 Freeze code (GitHub handover branch)
+📦 Push everything to GitHub (backup source of truth)
+⚙️ Apply environment variables (NO blanks)
+🚀 Deploy on Contabo (production server)
+🌐 Connect domain (dunazoe.com live)
+NOTHING ELSE.
+🟢 STEP 1 — CREATE RELEASE HANDOVER BRANCH (REPLIT)
+What you click:
+Open Replit
+Left panel → “Version Control”
+Then:
+Click Branch
+Type:
+Plain text
+release/v1-go-live
+Click Create
+Meaning:
+You are freezing the system so nothing breaks accidentally.
+🟡 STEP 2 — PUSH TO GITHUB (FULL BACKUP)
+What you click:
+In Replit → Version Control panel
+Then:
+Click Commit
+Message:
+Plain text
+DUNAZOE RC1 FINAL HANDOVER
+Click Commit
+Then click Push
+Verify on phone GitHub app:
+Open: github.com⁠�
+Check:
+repository exists
+branch exists:
+Plain text
+release/v1-go-live
+If YES → SAFE
+🟠 STEP 3 — ENVIRONMENT LOCK (MOST IMPORTANT STEP)
+This is where most startups fail.
+You must now ensure NO missing secrets.
+Go to Replit → Secrets (🔐)
+Add EXACTLY these:
+Plain text
+DATABASE_URL
+JWT_SECRET
+SUPABASE_URL
+SUPABASE_KEY
+PAYSTACK_SECRET
+STRIPE_SECRET
+CLOUDINARY_NAME
+CLOUDINARY_KEY
+CLOUDINARY_SECRET
+Meaning:
+This is your system’s “power supply”.
+If one is missing → production will crash.
+🔵 STEP 4 — RUN FINAL BUILD CHECK
+Click in Replit:
+Press Run
+Watch output:
+You must confirm:
+Plain text
+No red errors
+Server starts successfully
+If error: Fix BEFORE deploying.
+🔴 STEP 5 — DEPLOY TO CONTABO (PRODUCTION)
+Now we move from Replit → real server.
+Step 5A: Login to server
+Use Termius app:
+termius.com⁠�
+Connect:
+Plain text
+IP
+username: root
+password
+Step 5B: Install runtime
+Run:
+Bash
+apt update -y
+apt install nodejs npm git -y
+Step 5C: Install PM2 (keeps app alive)
+Bash
+npm install -g pm2
+Meaning: Your server will not stop running.
+Step 5D: Clone GitHub repo
+Bash
+git clone https://github.com/YOUR_REPO/dunazoe
+cd dunazoe
+npm install
+Step 5E: Start backend
+Bash
+pm2 start index.js --name dunazoe
+pm2 save
+Now backend is LIVE:
+Plain text
+http://YOUR_CONTABO_IP:3000
+🌐 STEP 6 — CONNECT DOMAIN (Namecheap)
+Open Namecheap:
+ap.www.namecheap.com⁠�
+Go:
+Domain List
+Manage
+Advanced DNS
+Add A Record:
+Plain text
+Host: @
+Value: CONTABO_IP
+Add CNAME:
+Plain text
+Host: www
+Value: dunazoe.com
+Meaning:
+Now:
+Plain text
+dunazoe.com → your live server
+🟣 STEP 7 — VERIFY PRODUCTION (NO DEVELOPMENT NOW)
+Open:
+Plain text
+dunazoe.com
+Test ONLY:
+register user
+login
+add product
+place order
+If ALL WORK:
+👉 YOU ARE LIVE
+🟢 STEP 8 — USE REMAINING REPLIT CREDITS (IMPORTANT)
+Now you go back to Replit AI and paste this:
+Plain text
+You are now a Production QA + DevOps Auditor.
+
+DO NOT BUILD FEATURES.
+
+ONLY DO:
+
+- detect bugs
+- detect broken routes
+- detect missing env variables
+- detect deployment issues
+- detect security issues
+- detect payment webhook issues
+- detect database schema issues
+- detect performance bottlenecks
+- detect memory leaks
+- detect PWA issues
+- detect mobile issues
+
+OUTPUT:
+
+FINAL_AUDIT.md
+FINAL_SECURITY_REPORT.md
+FINAL_DEPLOYMENT_CHECKLIST.md
+FINAL_RISK_MATRIX.md
+FINAL_HANDOVER.md
+
+If fixes are possible → auto-fix
+Then commit + push to GitHub
+Tag release:
+
+v1.0.0-rc1
+🧠 CTO FINAL DECISION LOGIC
+You are now here:
+Stage
+Status
+Build
+❌ STOPPED
+Deploy
+🔄 IN PROGRESS
+Test
+🔄 NEXT
+Scale
+⏳ LATER
+AI expansion
+⏳ LATER
+🚨 FINAL CTO WARNING
+If you do ANY of these now:
+add new modules
+redesign architecture
+rebuild AI systems
+👉 You will break deployment stability.
+🟢 FINAL OUTCOME YOU ARE AIMING FOR
+After this process you should have:
+Plain text
+dunazoe.com LIVE
+backend running on Contabo
+database connected (Supabase)
+GitHub backup secured
+RC1 tagged
+10 vendors onboarding ready
+If you want next step after this, I can guide you on:
+👉 “How to onboard your first 10 vendors and make first sales within 7 days” 👉 or
+👉 “How to convert this RC1 into scalable production v1.1 safely”
+Just tell me.

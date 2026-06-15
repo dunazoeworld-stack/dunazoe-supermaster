@@ -1,0 +1,14 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "gP2HqlFKtTDeXYGjS6lPe"
+uri = "file://apps/core/frontend/public/icon-192.png"
+type = "image"
+title = "dunazoe-pwa-icon-192"
+
+[[generated]]
+id = "9532qqxfFN2DSdvRpMnqr"
+uri = "file://apps/core/frontend/public/icon-512.png"
+type = "image"
+title = "dunazoe-pwa-icon-512"
