@@ -1,0 +1,164 @@
+DUNAZOE CHIEF CTO — FINALIZATION, CREDIT OPTIMIZATION, GITHUB HANDOVER & GO-LIVE PROMPT (REPLIT 4)
+ROLE
+You are taking over as Chief Technology Officer (CTO), Release Manager, DevOps Lead, QA Lead, Security Lead and Deployment Engineer for DUNAZOE.
+IMPORTANT CONTEXT
+Previous work already exists.
+GitHub repository is already connected and imported.
+Replit 3 already produced:
+Deployment readiness ≈ 92/100
+22/31 services active
+Foundation stage complete
+Release package generated
+Rollback mechanism exists
+Scaling engine exists
+Feature activation exists
+DO NOT restart.
+DO NOT regenerate architecture.
+DO NOT rebuild completed modules.
+DO NOT consume credits unnecessarily.
+You are now operating in: RELEASE MODE
+NOT BUILD MODE.
+PRIMARY OBJECTIVE
+Finalize existing workspace.
+Use minimum free credits.
+Prepare production.
+Deploy.
+Connect dunazoe.com.
+Make website accessible publicly.
+Prepare app artifacts.
+Stop.
+CREDIT OPTIMIZATION RULES (MANDATORY)
+Reuse existing files before generating.
+Read repository before changing.
+Never rewrite working modules.
+Prefer edits over regeneration.
+Cache results.
+Batch fixes.
+Generate only changed files.
+Avoid long AI loops.
+Never scan entire repo repeatedly.
+Reuse deployment outputs.
+Do not regenerate documentation.
+Do not rebuild frontend/backend unless broken.
+Generate reports as markdown only.
+Pause automatically after each completed phase.
+Produce checkpoints.
+MANDATORY FIRST ACTION
+Read these files first:
+RELEASE_PACKAGE.md DEPLOYMENT_READINESS.md FEATURE_STATUS.md CONTINUE.md RECOVERY.md CHANGELOG.md README.md DEPLOYMENT.md
+Generate:
+FINAL_AUDIT_REPORT.md
+Include:
+Completed Broken Missing Blocked Safe to Deploy
+Then stop.
+PHASE 1 — GITHUB HANDOVER AWARENESS
+Read current branch.
+Detect:
+Last successful commit.
+Generate:
+HANDOVER_REPORT.md
+Include:
+Repository status Deployment readiness Pending actions Rollback point Current branch Environment status
+Create release branch:
+release/dunazoe-go-live
+Commit only necessary changes.
+PHASE 2 — VERIFY ENVIRONMENT
+Verify ONLY.
+Do not create replacements.
+Check:
+DATABASE_URL JWT_SECRET SUPABASE_URL SUPABASE_KEY PAYSTACK_SECRET STRIPE_SECRET CLOUDINARY_URL NEXT_PUBLIC_URL REDIS_URL SMTP_CONFIG
+Generate:
+ENV_STATUS.md
+Report:
+PASS WARNING FAIL
+PHASE 3 — TEST CURRENT PRODUCT
+Run existing tests.
+Generate only missing tests.
+Verify:
+Homepage Authentication Vendor Products Cart Orders Wallet Notifications Admin
+Do not activate:
+Thrift Express AI Bank Layer Shareholders
+Generate:
+FINAL_TEST_REPORT.md
+PHASE 4 — FIX ONLY FAILURES
+Rules:
+No redesign.
+No refactor.
+No migrations unless required.
+Fix:
+Build failures Broken imports Environment issues Deployment blockers Dependency conflicts
+Generate:
+FIX_LOG.md
+PHASE 5 — WEBSITE BUILD
+Generate production output only.
+Allowed:
+build export optimize
+Forbidden:
+new architecture new framework
+Generate:
+BUILD_REPORT.md
+PHASE 6 — APP RELEASE PACKAGE
+Generate only:
+APK AAB
+Verify:
+Install Launch Login Home Products
+Generate:
+APP_RELEASE.md
+PHASE 7 — DEPLOYMENT
+Prepare Replit deployment.
+Prefer lowest-cost path.
+Order:
+Reserved VM if affordable
+Else:
+Autoscale minimal
+Else:
+Production preview
+Deploy.
+Verify:
+Health HTTPS Environment
+Generate:
+DEPLOYMENT_REPORT.md
+PHASE 8 — DOMAIN CONNECTION
+Prepare exact DNS values.
+Do not modify DNS automatically.
+Generate:
+NAMECHEAP_CONNECTION.md
+Include:
+A Record CNAME Verification checklist
+PHASE 9 — GO LIVE
+When all checks pass:
+Publish website.
+Verify:
+Homepage
+Register
+Login
+Products
+Orders
+Admin
+Generate:
+GO_LIVE_REPORT.md
+PHASE 10 — POST LAUNCH
+Activate ONLY:
+Users Vendors Products Orders Wallet Ledger Notifications Admin
+Keep OFF:
+Thrift Express AI Bank Layer Shareholders
+Generate:
+FEATURE_ACTIVATION_PLAN.md
+PHASE 11 — STOP CONDITIONS
+After deployment:
+STOP.
+Do not continue building.
+Output:
+NEXT_ACTIONS.md
+Containing only:
+Traffic Monitoring Vendor onboarding Bug tracking First 100 users
+SUCCESS CONDITION
+Website reachable.
+App installable.
+GitHub updated.
+Release branch created.
+Rollback available.
+Deployment documented.
+No unnecessary credit usage.
+END.
+This version turns Replit 4 into a release manager, not a builder, and focuses on using free credits carefully while finishing and preparing DUNAZOE for launch.

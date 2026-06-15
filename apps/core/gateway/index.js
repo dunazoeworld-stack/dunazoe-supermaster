@@ -9,7 +9,8 @@ const jwt       = require("jsonwebtoken");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || "dunazoe_secret_change_in_prod";
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) throw new Error("[Gateway] JWT_SECRET env var is required — set it in Replit Secrets");
 
 app.use(helmet());
 app.use(cors({
