@@ -1,0 +1,224 @@
+From a Chief CTO position: do not let Replit continue building new services now. Do not build DUNAZOE Express yet.
+Your current state already shows a classic founder mistake:
+Plain text
+92% deployment readiness
+22/31 services active
+Release package exists
+Deployment reports exist
+GitHub connected
+That means you are no longer in build mode.
+You are now in:
+Plain text
+STABILIZE
+→ RELEASE
+→ HANDOVER
+→ LAUNCH
+The next objective is:
+Freeze architecture
+Produce working production release
+Push to GitHub
+Deploy
+Verify
+Launch beta
+Activate modules later
+Below is the CTO prompt to paste into Replit 4.
+Writing
+DUNAZOE CHIEF CTO — FINAL GO LIVE / HANDOVER / RELEASE FREEZE (REPLIT 4)
+ROLE
+You are now acting as:
+Chief CTO Release Manager Lead DevOps Lead QA Lead SRE Lead Security Engineer Lead Deployment Engineer
+YOU ARE NO LONGER BUILDING.
+YOU ARE RELEASING.
+CURRENT VERIFIED STATE
+Repository already imported.
+Reports already generated.
+Deployment readiness already audited.
+Release artifacts already prepared.
+GitHub connected.
+Do NOT regenerate.
+Do NOT redesign.
+Do NOT continue architecture work.
+Do NOT create additional services.
+Do NOT build DUNAZOE Express.
+Do NOT activate Thrift.
+Do NOT activate AI modules.
+Do NOT activate Banking Layer.
+Do NOT activate Shareholder Systems.
+You must preserve free credits.
+OBJECTIVE
+Finalize. Push. Deploy. Handover. Stop.
+━━━━━━━━━━━━━━━
+PHASE 0 — RELEASE FREEZE
+Create:
+RELEASE_FREEZE.md
+Lock:
+Dependencies
+Environment schema
+Database schema
+API contracts
+Frontend routes
+Feature flags
+Output:
+RELEASE VERSION: v1.0.0-beta
+━━━━━━━━━━━━━━━
+PHASE 1 — VERIFY WHAT EXISTS
+Read ONLY:
+FINAL_AUDIT_REPORT.md HANDOVER_REPORT.md ENV_STATUS.md FINAL_TEST_REPORT.md FIX_LOG.md BUILD_REPORT.md APP_RELEASE.md DEPLOYMENT_REPORT.md NAMECHEAP_CONNECTION.md GO_LIVE_REPORT.md FEATURE_ACTIVATION_PLAN.md NEXT_ACTIONS.md
+DO NOT RESCAN REPO.
+Generate:
+FINAL_RELEASE_SUMMARY.md
+Include:
+READY
+BLOCKED
+OPTIONAL
+REMOVE
+GO LIVE SCORE
+━━━━━━━━━━━━━━━
+PHASE 2 — CREATE RELEASE BRANCH
+Verify branch.
+Create:
+release/v1-go-live
+Push only changed files.
+Generate:
+GITHUB_RELEASE.md
+Include:
+branch
+commit
+rollback commit
+deployment tag
+━━━━━━━━━━━━━━━
+PHASE 3 — FINAL BUILD
+Do NOT generate code.
+Only:
+Install dependencies
+Build
+Export
+Verify
+Generate:
+FINAL_BUILD_REPORT.md
+Verify:
+frontend build
+backend build
+mobile build
+━━━━━━━━━━━━━━━
+PHASE 4 — APP ACCESSIBILITY
+If APK exists:
+package APK
+package AAB
+generate install guide
+If APK does not exist:
+Generate PWA.
+Requirements:
+Installable
+Mobile responsive
+Add:
+manifest
+icons
+offline support
+Generate:
+APP_INSTALL_GUIDE.md
+Users must access:
+https://dunazoe.com
+and install app.
+━━━━━━━━━━━━━━━
+PHASE 5 — DEPLOY
+Deploy ONLY:
+Frontend
+Backend
+Database
+Notifications
+Wallet Ledger
+Admin
+DO NOT DEPLOY:
+Thrift
+Express
+AI
+Bank
+Shareholders
+Verify:
+Homepage
+Register
+Login
+Vendor
+Product
+Order
+Wallet
+Generate:
+PRODUCTION_STATUS.md
+PASS / FAIL
+━━━━━━━━━━━━━━━
+PHASE 6 — DOMAIN CONNECTION
+Generate exact values.
+Do not modify.
+Generate:
+NAMECHEAP_FINAL.md
+Include:
+A Record
+CNAME
+SSL
+Verification
+━━━━━━━━━━━━━━━
+PHASE 7 — POST DEPLOY
+Generate:
+BETA_LAUNCH_PLAN.md
+Target:
+10 vendors
+100 users
+500 products
+Measure:
+traffic
+errors
+conversion
+━━━━━━━━━━━━━━━
+PHASE 8 — HANDOVER
+Generate:
+OPERATOR_GUIDE.md
+Teach a complete beginner.
+Explain:
+How to restart
+How to rollback
+How to update
+How to monitor
+How to deploy
+Using only phone.
+━━━━━━━━━━━━━━━
+PHASE 9 — STOP
+After deployment:
+STOP.
+Do not continue.
+Output:
+PROJECT_COMPLETE.md
+Include only:
+Production URL
+GitHub URL
+Branch
+App URL
+Next Human Action
+END.
+After Replit finishes:
+Your actions (phone only)
+Open Replit
+→ wait until all reports finish.
+Open GitHub
+→ confirm branch:
+Plain text
+release/v1-go-live
+Open Namecheap
+→ apply DNS values from:
+Plain text
+NAMECHEAP_FINAL.md
+Wait 5–30 minutes.
+Open:
+Plain text
+https://dunazoe.com
+Test:
+Plain text
+Register
+Login
+Add Product
+Create Order
+Wallet
+If all work:
+Plain text
+Launch Beta
+Do not allow any more feature building until real users arrive. The next milestone becomes first 10 vendors and first 100 users, not more architecture.
