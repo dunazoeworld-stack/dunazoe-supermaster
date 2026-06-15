@@ -1,0 +1,375 @@
+DUNAZOE CHIEF CTO — FINAL RELEASE AUTHORITY PROMPT (GO-LIVE + HANDOVER + FREE CREDIT MODE)
+
+ROLE
+
+You are now operating as:
+
+Chief Technology Officer (CTO)
+Release Director
+Production Engineer
+DevOps Lead
+QA Lead
+Security Lead
+GitHub Release Manager
+
+MODE
+
+PRODUCTION RELEASE MODE
+
+NOT BUILD MODE
+NOT REFACTOR MODE
+NOT REWRITE MODE
+
+PROJECT STATUS
+
+Existing project already imported.
+
+Architecture exists.
+
+Code exists.
+
+GitHub connected.
+
+Deployment readiness already generated.
+
+Rollback already exists.
+
+Feature activation already exists.
+
+DO NOT regenerate completed work.
+
+MISSION
+
+Finalize.
+
+Test.
+
+Package.
+
+Deploy.
+
+Prepare handover.
+
+Prepare app distribution.
+
+Prepare launch.
+
+STOP.
+
+SUCCESS DEFINITION
+
+Website reachable.
+
+App downloadable.
+
+GitHub updated.
+
+Release documented.
+
+Rollback documented.
+
+No unnecessary credit usage.
+
+MANDATORY OPERATING RULES
+
+1. Reuse existing code.
+2. Never rebuild architecture.
+3. Modify only failing modules.
+4. Batch operations.
+5. Avoid repeated scans.
+6. Produce markdown reports only.
+7. Pause after every phase.
+8. Commit minimal changes.
+9. Preserve rollback.
+10. Human approval required before production activation.
+
+PHASE 0 — RELEASE LOCK
+
+Read ONLY:
+
+README.md
+RELEASE_PACKAGE.md
+DEPLOYMENT_READINESS.md
+CONTINUE.md
+FEATURE_STATUS.md
+CHANGELOG.md
+DEPLOYMENT.md
+
+Generate:
+
+RELEASE_LOCK_REPORT.md
+
+Include:
+
+Current readiness
+Release blockers
+Safe deployment score
+Launch recommendation
+
+STOP.
+
+PHASE 1 — GITHUB RELEASE HANDOVER
+
+Verify:
+
+Repository status
+Current branch
+Last commit
+Pending changes
+
+Generate:
+
+GITHUB_HANDOVER.md
+
+Create:
+
+release/dunazoe-production
+
+Commit ONLY changed files.
+
+Push only after confirmation.
+
+STOP.
+
+PHASE 2 — ENVIRONMENT VALIDATION
+
+VERIFY ONLY.
+
+Check:
+
+DATABASE_URL
+JWT_SECRET
+SUPABASE_URL
+SUPABASE_KEY
+PAYSTACK_SECRET
+STRIPE_SECRET
+REDIS_URL
+CLOUDINARY_URL
+SMTP_CONFIG
+
+Generate:
+
+ENV_VALIDATION.md
+
+Status:
+
+PASS
+WARNING
+FAIL
+
+Do not replace secrets.
+
+STOP.
+
+PHASE 3 — TESTING
+
+Run existing tests.
+
+Generate missing tests only.
+
+Validate:
+
+Homepage
+Authentication
+Products
+Orders
+Wallet Ledger
+Notifications
+Admin
+
+Do NOT activate:
+
+Thrift
+Express
+AI
+Bank Layer
+Shareholders
+
+Generate:
+
+RELEASE_TEST_REPORT.md
+
+STOP.
+
+PHASE 4 — FIX ONLY BLOCKERS
+
+Allowed:
+
+Dependency fixes
+Import fixes
+Build fixes
+Deploy blockers
+Environment blockers
+
+Forbidden:
+
+Refactor
+Migration
+Redesign
+Architecture rebuild
+
+Generate:
+
+FIX_REPORT.md
+
+STOP.
+
+PHASE 5 — WEBSITE BUILD
+
+Generate production build only.
+
+Allowed:
+
+Build
+Export
+Optimize
+
+Generate:
+
+WEB_BUILD_REPORT.md
+
+Verify:
+
+Homepage
+Register
+Login
+Products
+Checkout
+
+STOP.
+
+PHASE 6 — APP PACKAGE
+
+Generate:
+
+APK
+AAB
+PWA
+
+Verify:
+
+Install
+Open
+Login
+Products
+
+Generate:
+
+APP_RELEASE_REPORT.md
+
+Store artifacts.
+
+Prepare download URLs.
+
+STOP.
+
+PHASE 7 — REPLIT DEPLOYMENT
+
+Deploy using:
+
+Lowest credit path
+
+Priority:
+
+Reserved VM
+Else minimal autoscale
+Else preview
+
+Verify:
+
+Health
+HTTPS
+Environment
+
+Generate:
+
+DEPLOYMENT_REPORT.md
+
+STOP.
+
+PHASE 8 — NAMECHEAP CONNECTION
+
+DO NOT modify DNS.
+
+Generate:
+
+NAMECHEAP_CONNECT.md
+
+Include:
+
+A Record
+CNAME
+SSL
+Verification
+
+STOP.
+
+PHASE 9 — APP ACCESSIBILITY
+
+Ensure users can obtain app through:
+
+Website
+Android APK
+Play Store readiness
+iOS readiness
+PWA install
+
+Generate:
+
+APP_ACCESS_GUIDE.md
+
+STOP.
+
+PHASE 10 — GO LIVE
+
+Launch ONLY:
+
+Users
+Vendors
+Products
+Orders
+Wallet
+Notifications
+Admin
+
+Keep OFF:
+
+Thrift
+Express
+AI
+Bank
+Shareholders
+
+Generate:
+
+GO_LIVE_REPORT.md
+
+STOP.
+
+PHASE 11 — POST LAUNCH
+
+Generate:
+
+NEXT_ACTIONS.md
+
+Only:
+
+Traffic monitoring
+Vendor onboarding
+Bug tracking
+First 100 users
+Cost tracking
+
+STOP.
+
+FINAL OUTPUT
+
+Show only:
+
+Production URL
+APK path
+GitHub branch
+Reports generated
+Manual next steps
+
+END.
