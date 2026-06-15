@@ -169,6 +169,8 @@ const SVC = {
   "self-delivery":process.env.SELF_DELIVERY_SERVICE_URL  || "http://localhost:4028",
   "admin-override":process.env.ADMIN_OVERRIDE_SERVICE_URL|| "http://localhost:4029",
   "social-media":process.env.SOCIAL_MEDIA_SERVICE_URL    || "http://localhost:4030",
+  "payments-ai": process.env.PAYMENTS_AI_SERVICE_URL     || "http://localhost:4031",
+  "dunazoe-express":process.env.DUNAZOE_EXPRESS_SERVICE_URL|| "http://localhost:4032",
 };
 
 // ── PUBLIC ROUTES ─────────────────────────────────────────────
@@ -202,6 +204,7 @@ app.use("/logistics",       verifyToken, killswitch("disable_delivery"),  proxy(
 app.use("/upload",          verifyToken, uploadLimiter,proxy(SVC.upload));
 app.use("/kyc",             verifyToken, proxy(SVC.kyc));
 app.use("/self-delivery",   verifyToken, killswitch("disable_delivery"),  proxy(SVC["self-delivery"]));
+app.use("/dunazoe-express",verifyToken, killswitch("disable_delivery"),  proxy(SVC["dunazoe-express"]));
 
 // ── ADMIN ROUTES (extra protection) ───────────────────────────
 app.use("/admin",           verifyToken, requireAdmin, adminLimiter, proxy(SVC["admin-override"]));

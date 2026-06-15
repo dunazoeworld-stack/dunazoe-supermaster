@@ -1,7 +1,7 @@
 // ================================================================
 // DUNAZOE DRFCOS — DUNAZOE EXPRESS LOGISTICS ORCHESTRATOR
 // services/dunazoe-express/index.js
-// Port: 4027
+// Port: 4032
 //
 // CEO VISION: DUNAZOE Express is not just shipping.
 //   It is a hybrid delivery network + courier aggregation platform
@@ -37,7 +37,7 @@ const { logger, requestLogger }      = require("../../shared/logger");
 const { generate }                   = require("../../shared/identity/idGenerator");
 
 const app  = express();
-const PORT = process.env.PORT || 4027;
+const PORT = process.env.PORT || 4032;
 app.use(cors()); app.use(express.json()); app.use(requestLogger);
 
 const pool = new Pool({

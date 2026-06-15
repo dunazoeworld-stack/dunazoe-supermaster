@@ -1,7 +1,7 @@
 {
   "name": "dunazoe-express",
   "version": "1.0.0",
-  "description": "DUNAZOE Express delivery module",
+  "description": "DUNAZOE Express — hybrid delivery network + courier aggregation",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
@@ -11,7 +11,8 @@
     "express": "^4.19.2",
     "dotenv": "^16.4.5",
     "cors": "^2.8.5",
-    "pg": "^8.12.0"
+    "pg": "^8.12.0",
+    "axios": "^1.7.2"
   },
   "devDependencies": {
     "nodemon": "^3.1.0"

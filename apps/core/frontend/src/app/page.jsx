@@ -4,6 +4,12 @@ import Link from "next/link";
 import Image from "next/image";
 import Navbar from "../components/Navbar";
 
+if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}
+
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
 export default function HomePage() {
