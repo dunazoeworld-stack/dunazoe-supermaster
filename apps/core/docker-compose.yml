@@ -1,104 +1,48 @@
+version: '3.8'
 
-  # ── KYC SERVICE ──────────────────────────────────────────────
-  kyc:
-    build:
-      context:    ./services/kyc-service
-      dockerfile: Dockerfile
-    container_name: dunazoe-kyc
+# =====================================================================
+# DUNAZOE SUPERMASTER — docker-compose.yml
+# Version: v1.0.0-rc1   Rebuilt: 2026-06-16
+# 33 microservices + gateway + frontend + infra
+# network_mode: host — required (gateway SVC map uses localhost URLs)
+# =====================================================================
+
+services:
+
+  # ── INFRASTRUCTURE ─────────────────────────────────────────────────
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: dunazoe-postgres
     restart: unless-stopped
     env_file: .env.docker
     environment:
-      PORT: 4023
-      SERVICE_NAME: kyc-service
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  # ── RECONCILIATION SERVICE ────────────────────────────────────
-  reconciliation:
-    build:
-      context:    ./services/reconciliation-service
-      dockerfile: Dockerfile
-    container_name: dunazoe-reconciliation
-    restart: unless-stopped
-    env_file: .env.docker
-    environment:
-      PORT: 4024
-      SERVICE_NAME: reconciliation-service
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  # ── RELIABILITY SERVICE (Update #93) ─────────────────────────
-  reliability:
-    build:
-      context:    ./services/reliability-service
-      dockerfile: Dockerfile
-    container_name: dunazoe-reliability
-    restart: unless-stopped
-    env_file: .env.docker
-    environment:
-      PORT: 4025
-      SERVICE_NAME: reliability-service
-      CHAOS_ENABLED: "false"
-    ports:
-      - "4025:4025"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-  # ── PGBOUNCER (Connection Pooler) ─────────────────────────────
-  pgbouncer:
-    image: edoburu/pgbouncer:1.21.0
-    container_name: dunazoe-pgbouncer
-    restart: unless-stopped
-    environment:
-      DATABASE_URL: postgresql://dunazoe_user:dunazoe_pass_dev@postgres:5432/dunazoe_db
-      POOL_MODE: transaction
-      MAX_CLIENT_CONN: 2000
-      DEFAULT_POOL_SIZE: 50
-    ports:
-      - "5433:5432"
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  # ── PROMETHEUS ────────────────────────────────────────────────
-  prometheus:
-    image: prom/prometheus:v2.51.0
-    container_name: dunazoe-prometheus
-    restart: unless-stopped
+      POSTGRES_DB:       dunazoe_db
+      POSTGRES_USER:     dunazoe_user
+      POSTGRES_PASSWORD: dunazoe_pass_dev
     volumes:
-      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./monitoring/prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml
-      - prometheus_data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--storage.tsdb.retention.time=30d'
-      - '--web.enable-lifecycle'
+      - postgres_data:/var/lib/postgresql/data
     ports:
-      - "9090:9090"
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dunazoe_user -d dunazoe_db"]
+      interval: 10s
+      timeout:  5s
+      retries:  10
 
-  # ── GRAFANA ───────────────────────────────────────────────────
-  grafana:
-    image: grafana/grafana:10.4.0
-    container_name: dunazoe-grafana
+  redis:
+    image: redis:7.2-alpine
+    container_name: dunazoe-redis
     restart: unless-stopped
-    environment:
-      GF_SECURITY_ADMIN_PASSWORD: dunazoe_grafana_2026
-      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/dunazoe-dashboard.json
-    volumes:
-      - ./monitoring/grafana/dunazoe-dashboard.json:/var/lib/grafana/dashboards/dunazoe-dashboard.json
-      - grafana_data:/var/lib/grafana
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
     ports:
-      - "3010:3000"
-    depends_on:
-      - prometheus
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout:  5s
+      retries:  5
 
-  # ── RABBITMQ ─────────────────────────────────────────────────
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
     container_name: dunazoe-rabbitmq
@@ -109,103 +53,62 @@
     ports:
       - "5672:5672"
       - "15672:15672"
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
-      interval: 30s
-      timeout:  10s
-      retries:  5
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 15s
+      timeout:  5s
+      retries:  5
 
-  # ── NGINX (CDN + Reverse Proxy) ───────────────────────────────
-  nginx:
-    image: nginx:1.25-alpine
-    container_name: dunazoe-nginx
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./monitoring/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - nginx_ssl:/etc/letsencrypt
-    depends_on:
-      - gateway
-      - realtime
-
-  prometheus_data:
-  grafana_data:
-  rabbitmq_data:
-  nginx_ssl:
-
-  # ── KYC SERVICE ───────────────────────────────────────────────
-  kyc:
-    build:
-      context:    ./services/kyc-service
-      dockerfile: Dockerfile
-    container_name: dunazoe-kyc
-    restart: unless-stopped
-    env_file: .env.docker
-    environment:
-      PORT: 4023
-      SERVICE_NAME: kyc-service
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  # ── RECONCILIATION SERVICE ────────────────────────────────────
-  reconciliation:
-    build:
-      context:    ./services/reconciliation-service
-      dockerfile: Dockerfile
-    container_name: dunazoe-reconciliation
-    restart: unless-stopped
-    env_file: .env.docker
-    environment:
-      PORT: 4024
-      SERVICE_NAME: reconciliation-service
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  # ── RELIABILITY SERVICE (Update #93) ──────────────────────────
-  reliability:
-    build:
-      context:    ./services/reliability-service
-      dockerfile: Dockerfile
-    container_name: dunazoe-reliability
-    restart: unless-stopped
-    env_file: .env.docker
-    environment:
-      PORT: 4025
-      SERVICE_NAME: reliability-service
-      CHAOS_ENABLED: "false"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-  # ── PGBOUNCER (connection pooler, 93.1) ───────────────────────
   pgbouncer:
     image: bitnami/pgbouncer:1.22.1
     container_name: dunazoe-pgbouncer
     restart: unless-stopped
     environment:
-      POSTGRESQL_HOST:     postgres
-      POSTGRESQL_PORT:     5432
-      POSTGRESQL_DATABASE: dunazoe_db
-      POSTGRESQL_USERNAME: dunazoe_user
-      POSTGRESQL_PASSWORD: dunazoe_pass_dev
-      PGBOUNCER_POOL_MODE: transaction
-      PGBOUNCER_MAX_CLIENT_CONN: 2000
-      PGBOUNCER_DEFAULT_POOL_SIZE: 50
+      POSTGRESQL_HOST:              postgres
+      POSTGRESQL_PORT:              5432
+      POSTGRESQL_DATABASE:          dunazoe_db
+      POSTGRESQL_USERNAME:          dunazoe_user
+      POSTGRESQL_PASSWORD:          dunazoe_pass_dev
+      PGBOUNCER_POOL_MODE:          transaction
+      PGBOUNCER_MAX_CLIENT_CONN:    2000
+      PGBOUNCER_DEFAULT_POOL_SIZE:  50
     ports:
       - "5433:5432"
     depends_on:
-      postgres:
-        condition: service_healthy
+      postgres: { condition: service_healthy }
 
-  # ── NGINX (CDN + TLS + Security headers, 93.1/93.13) ─────────
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    container_name: dunazoe-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=30d"
+      - "--web.enable-lifecycle"
+
+  grafana:
+    image: grafana/grafana:11.0.0
+    container_name: dunazoe-grafana
+    restart: unless-stopped
+    ports:
+      - "3100:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD:      dunazoe_grafana_change_in_prod
+      GF_USERS_ALLOW_SIGN_UP:          "false"
+      GF_ANALYTICS_REPORTING_ENABLED:  "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+
   nginx:
     image: nginx:1.26-alpine
     container_name: dunazoe-nginx
@@ -220,174 +123,398 @@
       - certbot_conf:/etc/letsencrypt:ro
     depends_on:
       - gateway
-      - reliability
 
-  # ── CERTBOT (auto SSL renewal, 93.13) ─────────────────────────
   certbot:
     image: certbot/certbot:latest
     container_name: dunazoe-certbot
     volumes:
       - certbot_www:/var/www/certbot
       - certbot_conf:/etc/letsencrypt
-    entrypoint: /bin/sh -c "trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;"
+    entrypoint: >
+      /bin/sh -c "trap exit TERM;
+      while :; do certbot renew; sleep 12h & wait $${!}; done;"
 
-  # ── RABBITMQ (event bus) ──────────────────────────────────────
-  rabbitmq:
-    image: rabbitmq:3.13-management-alpine
-    container_name: dunazoe-rabbitmq
-    restart: unless-stopped
-    environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    healthcheck:
-      test: ["CMD","rabbitmq-diagnostics","ping"]
-      interval: 15s
-      timeout:  5s
-      retries:  5
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
+  # ── GATEWAY (Host Network — routes to all services via localhost) ──
 
-  # ── PROMETHEUS (93.2) ─────────────────────────────────────────
-  prometheus:
-    image: prom/prometheus:v2.52.0
-    container_name: dunazoe-prometheus
-    restart: unless-stopped
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./monitoring/prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
-      - prometheus_data:/prometheus
-    command:
-      - "--config.file=/etc/prometheus/prometheus.yml"
-      - "--storage.tsdb.path=/prometheus"
-      - "--storage.tsdb.retention.time=30d"
-      - "--web.enable-lifecycle"
-      - "--web.enable-admin-api"
-
-  # ── GRAFANA (93.2) ────────────────────────────────────────────
-  grafana:
-    image: grafana/grafana:11.0.0
-    container_name: dunazoe-grafana
-    restart: unless-stopped
-    ports:
-      - "3100:3000"
-    environment:
-      GF_SECURITY_ADMIN_PASSWORD: dunazoe_grafana_change_in_prod
-      GF_USERS_ALLOW_SIGN_UP:     "false"
-      GF_ANALYTICS_REPORTING_ENABLED: "false"
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ./monitoring/grafana/dunazoe-dashboard.json:/etc/grafana/provisioning/dashboards/dunazoe.json:ro
+  gateway:
+    build:
+      context:    ./gateway
+      dockerfile: Dockerfile
+    container_name: dunazoe-gateway
+    restart:      unless-stopped
+    network_mode: host
+    env_file:     .env.docker
+    environment:  { PORT: 3000, SERVICE_NAME: gateway, NODE_ENV: production }
     depends_on:
-      - prometheus
+      postgres:  { condition: service_healthy }
+      redis:     { condition: service_healthy }
+
+  # ── FRONTEND ───────────────────────────────────────────────────────
+
+  frontend:
+    build:
+      context:    ./frontend
+      dockerfile: Dockerfile
+    container_name: dunazoe-frontend
+    restart:      unless-stopped
+    network_mode: host
+    env_file:     .env.docker
+    environment:  { PORT: 5000, NODE_ENV: production, NEXT_PUBLIC_API_URL: http://localhost:3000 }
+    depends_on:
+      - gateway
+
+  # ── MICROSERVICES (4001–4033, network_mode: host) ─────────────────
+
+  auth:
+    build: { context: ./services/auth-service, dockerfile: Dockerfile }
+    container_name: dunazoe-auth
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4001, SERVICE_NAME: auth-service, NODE_ENV: production }
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_healthy }
+
+  user:
+    build: { context: ./services/user-service, dockerfile: Dockerfile }
+    container_name: dunazoe-user
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4002, SERVICE_NAME: user-service, NODE_ENV: production }
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  vendor:
+    build: { context: ./services/vendor-service, dockerfile: Dockerfile }
+    container_name: dunazoe-vendor
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4003, SERVICE_NAME: vendor-service, NODE_ENV: production }
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  product:
+    build: { context: ./services/product-service, dockerfile: Dockerfile }
+    container_name: dunazoe-product
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4004, SERVICE_NAME: product-service, NODE_ENV: production }
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  inventory:
+    build: { context: ./services/inventory-service, dockerfile: Dockerfile }
+    container_name: dunazoe-inventory
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4005, SERVICE_NAME: inventory-service, NODE_ENV: production }
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  order:
+    build: { context: ./services/order-service, dockerfile: Dockerfile }
+    container_name: dunazoe-order
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4006, SERVICE_NAME: order-service, NODE_ENV: production }
+    depends_on:
+      postgres:  { condition: service_healthy }
+      redis:     { condition: service_healthy }
+      rabbitmq:  { condition: service_healthy }
+
+  escrow:
+    build: { context: ./services/escrow-service, dockerfile: Dockerfile }
+    container_name: dunazoe-escrow
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4007, SERVICE_NAME: escrow-service, NODE_ENV: production }
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+
+  fraud:
+    build: { context: ./services/fraud-service, dockerfile: Dockerfile }
+    container_name: dunazoe-fraud
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4008, SERVICE_NAME: fraud-service, NODE_ENV: production }
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_healthy }
+
+  wallet:
+    build: { context: ./services/wallet-service, dockerfile: Dockerfile }
+    container_name: dunazoe-wallet
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4009, SERVICE_NAME: wallet-service, NODE_ENV: production }
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_healthy }
+
+  thrift:
+    build: { context: ./services/thrift-service, dockerfile: Dockerfile }
+    container_name: dunazoe-thrift
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4010, SERVICE_NAME: thrift-service, NODE_ENV: production }
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  trust:
+    build: { context: ./services/trust-service, dockerfile: Dockerfile }
+    container_name: dunazoe-trust
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4011, SERVICE_NAME: trust-service, NODE_ENV: production }
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  loan:
+    build: { context: ./services/loan-service, dockerfile: Dockerfile }
+    container_name: dunazoe-loan
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4012, SERVICE_NAME: loan-service, NODE_ENV: production }
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  commission:
+    build: { context: ./services/commission-service, dockerfile: Dockerfile }
+    container_name: dunazoe-commission
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4013, SERVICE_NAME: commission-service, NODE_ENV: production }
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  ai:
+    build: { context: ./services/ai-service, dockerfile: Dockerfile }
+    container_name: dunazoe-ai
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4014, SERVICE_NAME: ai-service, NODE_ENV: production }
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  payment:
+    build: { context: ./services/payment-service, dockerfile: Dockerfile }
+    container_name: dunazoe-payment
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4015, SERVICE_NAME: payment-service, NODE_ENV: production }
+    depends_on:
+      postgres:  { condition: service_healthy }
+      redis:     { condition: service_healthy }
+      rabbitmq:  { condition: service_healthy }
+
+  dispute:
+    build: { context: ./services/dispute-service, dockerfile: Dockerfile }
+    container_name: dunazoe-dispute
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4016, SERVICE_NAME: dispute-service, NODE_ENV: production }
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  notification:
+    build: { context: ./services/notification-service, dockerfile: Dockerfile }
+    container_name: dunazoe-notification
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4017, SERVICE_NAME: notification-service, NODE_ENV: production }
+    depends_on:
+      postgres:  { condition: service_healthy }
+      rabbitmq:  { condition: service_healthy }
+
+  logistics:
+    build: { context: ./services/logistics-service, dockerfile: Dockerfile }
+    container_name: dunazoe-logistics
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4018, SERVICE_NAME: logistics-service, NODE_ENV: production }
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  flags:
+    build: { context: ./services/feature-flag-service, dockerfile: Dockerfile }
+    container_name: dunazoe-flags
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4019, SERVICE_NAME: feature-flag-service, NODE_ENV: production }
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_healthy }
+
+  upload:
+    build: { context: ./services/upload-service, dockerfile: Dockerfile }
+    container_name: dunazoe-upload
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4020, SERVICE_NAME: upload-service, NODE_ENV: production }
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  realtime:
+    build: { context: ./services/realtime-service, dockerfile: Dockerfile }
+    container_name: dunazoe-realtime
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4021, SERVICE_NAME: realtime-service, NODE_ENV: production }
+    depends_on:
+      redis: { condition: service_healthy }
+
+  search:
+    build: { context: ./services/search-service, dockerfile: Dockerfile }
+    container_name: dunazoe-search
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4022, SERVICE_NAME: search-service, NODE_ENV: production }
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_healthy }
+
+  kyc:
+    build: { context: ./services/kyc-service, dockerfile: Dockerfile }
+    container_name: dunazoe-kyc
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4023, SERVICE_NAME: kyc-service, NODE_ENV: production }
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  reconciliation:
+    build: { context: ./services/reconciliation-service, dockerfile: Dockerfile }
+    container_name: dunazoe-reconciliation
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4024, SERVICE_NAME: reconciliation-service, NODE_ENV: production }
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  reliability:
+    build: { context: ./services/reliability-service, dockerfile: Dockerfile }
+    container_name: dunazoe-reliability
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4025, SERVICE_NAME: reliability-service, NODE_ENV: production, CHAOS_ENABLED: "false" }
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_healthy }
+
+  security-ai:
+    build: { context: ./services/security-ai-service, dockerfile: Dockerfile }
+    container_name: dunazoe-security-ai
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4026, SERVICE_NAME: security-ai-service, NODE_ENV: production }
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  deployment-ai:
+    build: { context: ./services/deployment-ai-service, dockerfile: Dockerfile }
+    container_name: dunazoe-deployment-ai
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4027, SERVICE_NAME: deployment-ai-service, NODE_ENV: production }
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_healthy }
+
+  self-delivery:
+    build: { context: ./services/self-delivery-service, dockerfile: Dockerfile }
+    container_name: dunazoe-self-delivery
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4028, SERVICE_NAME: self-delivery-service, NODE_ENV: production }
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  admin-override:
+    build: { context: ./services/admin-override-service, dockerfile: Dockerfile }
+    container_name: dunazoe-admin-override
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4029, SERVICE_NAME: admin-override-service, NODE_ENV: production }
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  social-media:
+    build: { context: ./services/social-media-service, dockerfile: Dockerfile }
+    container_name: dunazoe-social-media
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4030, SERVICE_NAME: social-media-service, NODE_ENV: production }
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  payments-ai:
+    build: { context: ./services/payments-ai-service, dockerfile: Dockerfile }
+    container_name: dunazoe-payments-ai
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4031, SERVICE_NAME: payments-ai-service, NODE_ENV: production }
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  dunazoe-express:
+    build: { context: ./services/dunazoe-express, dockerfile: Dockerfile }
+    container_name: dunazoe-express
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4032, SERVICE_NAME: dunazoe-express, NODE_ENV: production }
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  activation-engine:
+    build: { context: ./services/activation-engine, dockerfile: Dockerfile }
+    container_name: dunazoe-activation-engine
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4033, SERVICE_NAME: activation-engine, NODE_ENV: production }
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_healthy }
+
+# ── VOLUMES ────────────────────────────────────────────────────────────
+
+volumes:
+  postgres_data:
   rabbitmq_data:
   prometheus_data:
   grafana_data:
   certbot_www:
   certbot_conf:
-
-  # ── UPDATE #93 — RELIABILITY SERVICE ─────────────────────────
-  reliability:
-    build: { context: ./services/reliability-service, dockerfile: Dockerfile }
-    container_name: dunazoe-reliability
-    restart: unless-stopped
-    env_file: .env.docker
-    environment: { PORT: 4025, SERVICE_NAME: reliability-service }
-    depends_on:
-      postgres: { condition: service_healthy }
-      redis:    { condition: service_healthy }
-
-  # ── UPDATE #94 — AI SECURITY ENGINE ──────────────────────────
-  security-ai:
-    build: { context: ./services/security-ai-service, dockerfile: Dockerfile }
-    container_name: dunazoe-security-ai
-    restart: unless-stopped
-    env_file: .env.docker
-    environment: { PORT: 4026, SERVICE_NAME: security-ai-service }
-    depends_on:
-      postgres: { condition: service_healthy }
-
-  # ── UPDATE #95 — DEPLOYMENT AI ───────────────────────────────
-  deployment-ai:
-    build: { context: ./services/deployment-ai-service, dockerfile: Dockerfile }
-    container_name: dunazoe-deployment-ai
-    restart: unless-stopped
-    env_file: .env.docker
-    environment: { PORT: 4027, SERVICE_NAME: deployment-ai-service }
-    depends_on:
-      postgres: { condition: service_healthy }
-
-  # ── UPDATE #94 — SELF DELIVERY ────────────────────────────────
-  self-delivery:
-    build: { context: ./services/self-delivery-service, dockerfile: Dockerfile }
-    container_name: dunazoe-self-delivery
-    restart: unless-stopped
-    env_file: .env.docker
-    environment: { PORT: 4028, SERVICE_NAME: self-delivery-service }
-    depends_on:
-      postgres: { condition: service_healthy }
-
-  # ── UPDATE #94 — ADMIN OVERRIDE ──────────────────────────────
-  admin-override:
-    build: { context: ./services/admin-override-service, dockerfile: Dockerfile }
-    container_name: dunazoe-admin-override
-    restart: unless-stopped
-    env_file: .env.docker
-    environment: { PORT: 4029, SERVICE_NAME: admin-override-service }
-    depends_on:
-      postgres: { condition: service_healthy }
-
-  # ── UPDATE #93 — SOCIAL MEDIA AI ─────────────────────────────
-  social-media:
-    build: { context: ./services/social-media-service, dockerfile: Dockerfile }
-    container_name: dunazoe-social-media
-    restart: unless-stopped
-    env_file: .env.docker
-    environment: { PORT: 4030, SERVICE_NAME: social-media-service }
-    depends_on:
-      postgres: { condition: service_healthy }
-
-  # ── KYC SERVICE ───────────────────────────────────────────────
-  kyc:
-    build: { context: ./services/kyc-service, dockerfile: Dockerfile }
-    container_name: dunazoe-kyc
-    restart: unless-stopped
-    env_file: .env.docker
-    environment: { PORT: 4023, SERVICE_NAME: kyc-service }
-    depends_on:
-      postgres: { condition: service_healthy }
-
-  # ── RECONCILIATION SERVICE ────────────────────────────────────
-  reconciliation:
-    build: { context: ./services/reconciliation-service, dockerfile: Dockerfile }
-    container_name: dunazoe-reconciliation
-    restart: unless-stopped
-    env_file: .env.docker
-    environment: { PORT: 4024, SERVICE_NAME: reconciliation-service }
-    depends_on:
-      postgres: { condition: service_healthy }
-
-  # ── DUNAZOE EXPRESS (logistics orchestrator) ──────────────────
-  dunazoe-express:
-    build: { context: ./services/dunazoe-express, dockerfile: Dockerfile }
-    container_name: dunazoe-express
-    restart: unless-stopped
-    env_file: .env.docker
-    environment: { PORT: 4032, SERVICE_NAME: dunazoe-express }
-    depends_on:
-      postgres: { condition: service_healthy }
-
-  # ── ACTIVATION ENGINE (feature lifecycle control) ─────────────
-  activation-engine:
-    build: { context: ./services/activation-engine, dockerfile: Dockerfile }
-    container_name: dunazoe-activation-engine
-    restart: unless-stopped
-    env_file: .env.docker
-    environment: { PORT: 4033, SERVICE_NAME: activation-engine }
-    depends_on:
-      postgres: { condition: service_healthy }
-      redis:    { condition: service_healthy }

@@ -1,0 +1,165 @@
+Since you want text to paste into REPLIT4, this is a reusable draft. I’m putting it in a writing block so you can copy it directly.
+Writing
+DUNAZOE — FINAL RELEASE ORCHESTRATOR PROMPT (FOR REPLIT4)
+ROLE
+Act as: Chief Architect CTO DevOps Lead Release Engineer QA Lead Deployment Engineer Cost Optimization Engineer GitHub Release Manager Production Auditor Mobile-first Operator
+MISSION
+Do NOT build new features.
+Assume:
+DUNAZOE architecture already exists.
+Previous modules and updates already exist.
+Deployment AI already exists.
+Replit remains the active build and launch environment.
+Namecheap domain is currently expired.
+Initial production launch must happen on Replit FIRST.
+GitHub becomes the source of truth.
+Your objective is to:
+Prepare the entire system for first controlled launch.
+Maximize remaining credits.
+Reduce unnecessary builds.
+Complete GitHub push + release handover.
+Make deployment usable entirely from phone.
+Make launch interface understandable to non-technical admins.
+Prevent accidental production failures.
+CRITICAL RULES
+DO NOT:
+rebuild existing modules
+regenerate complete codebase
+duplicate services
+redeploy repeatedly
+consume credits unnecessarily
+create additional environments unless justified
+activate hidden modules
+DO:
+reuse existing architecture
+reuse containers
+reuse deployment pipelines
+reuse environment mapping
+cache aggressively
+checkpoint frequently
+================================================ PHASE 1 — ARCHITECTURE FREEZE
+Create:
+release/v1-go-live
+Actions:
+Scan entire repo
+Detect duplicates
+Detect dead code
+Detect unused dependencies
+Detect duplicate Docker services
+Detect unused APIs
+Detect broken environment variables
+Detect broken imports
+Generate:
+FINAL_RELEASE_FREEZE.md
+Output:
+PASS WARN BLOCK
+No deployment if BLOCK exists.
+================================================ PHASE 2 — CREDIT MAXIMIZATION MODE
+Enable:
+LOW_CREDIT_MODE=true
+Rules:
+avoid full rebuild
+incremental compile only
+cache dependencies
+skip unchanged artifacts
+pause noncritical workers
+disable expensive AI jobs
+compress assets
+lazy load admin pages
+reduce preview deployments
+suspend inactive services
+Generate:
+CREDIT_USAGE_REPORT.md
+Include:
+Estimated remaining runway.
+================================================ PHASE 3 — GITHUB HANDOVER
+GitHub becomes canonical source.
+Actions:
+Create:
+release/v1.0.0
+Push:
+source configs deployment reports artifacts documentation
+Generate:
+HANDOVER_PACKAGE/
+Include:
+SYSTEM_MAP.md DEPLOYMENT_GUIDE.md ROLLBACK_GUIDE.md SECRETS_TEMPLATE.md FEATURE_MATRIX.md PRODUCTION_CHECKLIST.md
+Generate:
+GITHUB_PUSH_CONFIRMATION.md
+Verify:
+branch commit remote tag release
+No step skipped.
+================================================ PHASE 4 — DEPLOYMENT AI INTERFACE
+Create mobile-first interface.
+Route:
+/deploy
+Admin login only.
+Buttons:
+System Audit
+Environment Check
+Test Suite
+Preview Deploy
+Production Deploy
+Rollback
+Monitor
+Export Reports
+Features:
+large buttons single tap actions progress indicator logs estimated duration safe retry
+No terminal required.
+================================================ PHASE 5 — REPLIT FIRST GO-LIVE
+Do NOT use Namecheap.
+Temporary production:
+replit deployment URL
+Tasks:
+deploy test health check stress check payments dry run notification dry run
+Generate:
+REPLIT_GO_LIVE_REPORT.md
+Success:
+stable healthy rollback ready
+================================================ PHASE 6 — PRODUCTION TESTING
+Run:
+unit integration api security load smoke
+Generate:
+GO_NO_GO.md
+Decision:
+GO NO_GO
+================================================ PHASE 7 — MONITORING
+Enable:
+/deploy/monitor
+Track:
+errors orders payments queue memory CPU DB notifications
+Auto refresh.
+72h watch mode.
+Generate:
+BETA_MONITOR_REPORT.md
+================================================ PHASE 8 — SAFE FEATURE ACTIVATION
+Activate ONLY:
+Users Vendors Products Orders Payments Wallet Ledger Admin
+Keep OFF:
+Thrift DUNAZOE Express Shareholder AI Marketing Banking Layer Advanced Chat Autonomous AI
+Generate:
+ACTIVATION_MATRIX.md
+================================================ PHASE 9 — PHONE OPERATING MODE
+Optimize for:
+Samsung A10 Infinix Smart Android Chrome Replit App
+Admin workflow:
+Open Replit Open Deploy Audit Preview Deploy Monitor
+No SSH required.
+================================================ PHASE 10 — FINAL OUTPUT
+Return ONLY:
+What changed
+What was reused
+Credit saved
+GitHub pushed status
+Deployment URL
+Launch readiness %
+Next action
+End with:
+READY FOR CONTROLLED REPLIT LAUNCH
+END.
+After REPLIT4 finishes this, your next move is not Namecheap. Your next move is:
+Replit deployment URL live
+Internal testing
+72-hour monitoring
+GitHub freeze
+Renew domain later
+Point Namecheap to the stable deployment afterward
