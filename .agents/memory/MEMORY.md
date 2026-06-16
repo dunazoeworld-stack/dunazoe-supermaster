@@ -1,0 +1,1 @@
+- [DUNAZOE architecture](dunazoe-arch.md) — 34-service Node.js/Next.js fintech platform; architecture frozen at v1.0.0-rc1; never add business features

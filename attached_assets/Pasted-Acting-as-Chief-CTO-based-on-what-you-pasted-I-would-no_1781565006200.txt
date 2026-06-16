@@ -1,0 +1,214 @@
+Acting as Chief CTO: based on what you pasted, I would not approve more feature generation now.
+REPLIT4’s report already suggests the project moved into Release Candidate (RC) → Launch Preparation.
+Your bottleneck is now:
+Plain text
+Environment
+↓
+Release Lock
+↓
+GitHub Handover
+↓
+Deployment AI Ownership
+↓
+Production Validation
+↓
+Controlled Beta
+↓
+Activation Engine
+↓
+Scale
+I would make one final architecture change before launch:
+CTO FINAL DECISION
+Move all future operations under:
+Plain text
+DUNAZOE DEPLOYMENT & DEVOPS AI
+Meaning:
+It becomes the single control tower for:
+deployment
+updates
+rollback
+monitoring
+environment validation
+release approval
+feature activation
+scaling
+migration
+infrastructure switching
+production recovery
+No direct deployment again.
+Everything goes through Deployment AI.
+FINAL EXECUTION PROMPT FOR REPLIT4 (COPY INTO REPLIT)
+Writing
+DUNAZOE v1.0.0-rc1 FINALIZATION ORDER
+ROLE: Act as: Chief Release Engineer Chief DevOps Engineer Chief Deployment Architect Chief Reliability Engineer Chief Handover Officer
+Architecture is frozen.
+Do NOT create new business features.
+Current mission:
+FINALIZE VERIFY HANDOVER DEPLOY
+================================================
+OBJECTIVE 1 — DEPLOYMENT AI BECOMES MASTER CONTROL
+Refactor Deployment AI into the ONLY deployment path.
+Route ALL future actions through Deployment AI:
+Manual update Automatic update Feature activation Scaling activation Infrastructure migration Rollback Environment validation Production deployment GitHub release Replit deployment Contabo deployment Namecheap validation
+Nothing bypasses Deployment AI.
+================================================
+OBJECTIVE 2 — BUILD FEATURE ACTIVATION ENGINE
+Create:
+activation-engine/
+Purpose:
+Features exist from day one.
+Activation controlled later.
+States:
+OFF BETA LIMITED ON SCALE_ONLY ADMIN_ONLY
+Activation triggers:
+user_count vendor_count orders revenue traffic cpu memory error_rate manual_approval
+Rules:
+wallet: activate after 100 users
+thrift: activate after 20 successful orders
+chat: activate after 50 vendors
+marketing_ai: activate after 1000 users
+cybersecurity_ai: always enabled
+notification_ai: always enabled
+express: activate after first intercity order
+================================================
+OBJECTIVE 3 — PRIMARY HOSTING CONTROL
+Deployment AI must manage:
+LEVEL 1: Replit Production
+LEVEL 2: Contabo
+LEVEL 3: Multi-host
+Switch rules:
+traffic cost performance manual approval
+Deploy target selector:
+AUTO REPLIT CONTABO HYBRID
+================================================
+OBJECTIVE 4 — GITHUB HANDOVER
+Verify:
+branch: release/v1-go-live
+Generate:
+FINAL_HANDOVER.md
+Include:
+architecture services env routes ports dependencies deployment rollback ownership
+Create:
+tags:
+v1.0.0-rc1
+Push.
+Verify remote.
+Generate:
+GITHUB_VERIFICATION.md
+================================================
+OBJECTIVE 5 — FREE CREDIT MAXIMIZER
+Spend remaining credits ONLY on:
+repository scan
+security
+env validation
+route validation
+mobile validation
+deployment validation
+dependency cleanup
+memory optimization
+bundle reduction
+build optimization
+dead code removal
+production simulation
+rollback simulation
+webhook audit
+recovery validation
+NO FEATURE GENERATION
+================================================
+OBJECTIVE 6 — DEPLOYMENT READINESS
+Generate:
+DEPLOYMENT_FINAL_GATE.md
+PASS CONDITIONS:
+security ≥95
+performance ≥90
+reliability ≥95
+deployment ≥95
+env complete
+routes healthy
+build passing
+If failed:
+BLOCK RELEASE
+================================================
+OBJECTIVE 7 — RELEASE PIPELINE
+Pipeline:
+GitHub ↓ Deployment AI ↓ Audit ↓ Environment ↓ Testing ↓ Activation Engine ↓ Replit Deploy ↓ Health Check ↓ Rollback Monitor
+================================================
+OBJECTIVE 8 — PHONE DEPLOYMENT
+Generate:
+PHONE_LAUNCH_GUIDE.md
+Samsung A10 Infinix Chrome Replit App Termius
+================================================
+FINAL OUTPUT
+Return ONLY:
+DEPLOY READY
+or
+BLOCKERS FOUND
+Include exact files.
+AFTER REPLIT4 FINISHES — YOUR ACTIONS (PHONE)
+1. Open Replit
+Go:
+Plain text
+Version Control
+Check:
+Plain text
+release/v1-go-live
+If missing:
+Create it.
+2. Push to GitHub
+Press:
+Plain text
+Commit
+Message:
+Plain text
+FINAL RC HANDOVER
+Press:
+Plain text
+Push
+Wait.
+3. Open GitHub
+Confirm:
+Plain text
+release/v1-go-live
+Confirm:
+Plain text
+v1.0.0-rc1
+Confirm:
+Plain text
+FINAL_HANDOVER.md
+4. Open Reports
+Read only:
+Plain text
+FINAL_DEPLOYMENT_CHECKLIST.md
+DEPLOYMENT_FINAL_GATE.md
+FINAL_ENV_REPORT.md
+If any CRITICAL exists:
+Stop.
+5. Deploy to Replit first
+Do not move to Contabo yet.
+Use:
+Plain text
+Autoscale
+Test:
+Plain text
+register
+login
+product
+cart
+order
+payment
+logout
+6. Beta Only
+Do not open publicly.
+Limit:
+Plain text
+10 vendors
+100 users
+Success criteria:
+Plain text
+50 orders
+20 payouts
+0 critical incidents
+Only after that:
+Plain text
+Activate next modules.
+That would be my final CTO order before approving DUNAZOE for launch.

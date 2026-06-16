@@ -370,3 +370,24 @@
     environment: { PORT: 4024, SERVICE_NAME: reconciliation-service }
     depends_on:
       postgres: { condition: service_healthy }
+
+  # ── DUNAZOE EXPRESS (logistics orchestrator) ──────────────────
+  dunazoe-express:
+    build: { context: ./services/dunazoe-express, dockerfile: Dockerfile }
+    container_name: dunazoe-express
+    restart: unless-stopped
+    env_file: .env.docker
+    environment: { PORT: 4032, SERVICE_NAME: dunazoe-express }
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  # ── ACTIVATION ENGINE (feature lifecycle control) ─────────────
+  activation-engine:
+    build: { context: ./services/activation-engine, dockerfile: Dockerfile }
+    container_name: dunazoe-activation-engine
+    restart: unless-stopped
+    env_file: .env.docker
+    environment: { PORT: 4033, SERVICE_NAME: activation-engine }
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_healthy }
