@@ -1,0 +1,259 @@
+REPLIT4 did the right thing by moving DUNAZOE into RC (Release Candidate) → Launch Preparation instead of continuing feature expansion.
+As Chief CTO, I would not authorize more architecture growth now. The next move is:
+Plain text
+FREEZE
+VERIFY
+PUSH
+DEPLOY
+OBSERVE
+ACTIVATE
+The final objective is no longer “build”.
+It is:
+Plain text
+Convert DUNAZOE from PROJECT
+→
+OPERATING SYSTEM
+→
+CONTROLLED PRODUCTION
+Below is the Grand Finale Prompt for REPLIT4.
+Copy everything into REPLIT4.
+Writing
+DUNAZOE v1.0.0-rc1 → GRAND FINALE RELEASE ORDER
+ROLE: Act as:
+Chief Technology Officer Chief Platform Architect Chief Release Manager Chief DevOps Lead Chief Security Engineer Chief Reliability Engineer Chief Production Auditor Chief GitHub Handover Officer
+MISSION:
+NO NEW BUSINESS FEATURES.
+Architecture is LOCKED.
+Current objective:
+FINALIZE → VERIFY → PUSH → DEPLOY → OBSERVE → HANDOVER
+================================================
+PHASE 0 — RELEASE LOCK
+Immediately create:
+RELEASE_LOCK.md
+Freeze:
+routes schemas ports microservices API contracts DB migrations dependencies
+Block: new features schema changes new services
+Only allow:
+bug fixes security fixes deployment fixes performance fixes documentation
+================================================
+PHASE 1 — FINAL CREDIT MAXIMIZER
+Use remaining Replit resources ONLY for:
+repository audit
+dependency cleanup
+dead code removal
+bundle optimization
+memory optimization
+build optimization
+security validation
+deployment validation
+route validation
+environment validation
+mobile compatibility validation
+rollback simulation
+production simulation
+webhook validation
+cache validation
+observability validation
+Generate:
+FINAL_OPTIMIZATION_REPORT.md
+Return:
+estimated savings removed files removed packages memory improvement startup improvement
+NO FEATURE BUILDING.
+================================================
+PHASE 2 — DEPLOYMENT AI BECOMES ABSOLUTE AUTHORITY
+Deployment AI becomes mandatory path.
+ALL actions MUST route through:
+Deployment AI
+Actions:
+deploy rollback scale activate audit monitor migrate recover promote shutdown switch hosting
+Generate:
+DEPLOYMENT_AUTHORITY_REPORT.md
+Block direct deployment.
+================================================
+PHASE 3 — FINAL SECURITY SWEEP
+Audit:
+JWT
+RBAC
+webhooks
+Paystack
+Stripe
+Cloudinary
+Supabase
+API keys
+session handling
+rate limiting
+circuit breakers
+dependency vulnerabilities
+HTTPS
+headers
+CORS
+queue retries
+Generate:
+SECURITY_FINAL_REPORT.md
+Release only if:
+security score ≥97
+================================================
+PHASE 4 — GITHUB RELEASE
+Verify:
+release/v1-go-live
+If missing:
+create.
+Create:
+FINAL_HANDOVER.md
+Include:
+services
+ports
+architecture
+dependencies
+environments
+routes
+deployment
+rollback
+ownership
+health endpoints
+Generate:
+GITHUB_VERIFICATION.md
+Then:
+Commit:
+FINAL RC HANDOVER
+Create:
+tag: v1.0.0
+Push.
+Verify remote.
+Generate:
+PUSH_CONFIRMATION.md
+STOP if push fails.
+================================================
+PHASE 5 — FINAL DEPLOYMENT GATE
+Generate:
+DEPLOYMENT_FINAL_GATE.md
+PASS ONLY IF:
+security ≥97
+performance ≥92
+reliability ≥97
+deployment ≥98
+routes healthy
+database healthy
+payments healthy
+monitoring healthy
+observability healthy
+rollback healthy
+If failed:
+BLOCK RELEASE
+================================================
+PHASE 6 — REPLIT FIRST DEPLOYMENT
+Primary target:
+REPLIT ONLY
+Deployment:
+autoscale
+NO Contabo.
+NO Namecheap.
+Deploy only:
+beta
+Run:
+register login vendor products cart order wallet payment notification
+Generate:
+REPLIT_DEPLOYMENT_REPORT.md
+================================================
+PHASE 7 — CONTROLLED BETA
+Enable:
+10 vendors
+100 users
+500 products
+Success conditions:
+50 orders
+20 payouts
+99.5 uptime
+0 critical incidents
+Observe:
+72 hours
+Generate:
+BETA_HEALTH_REPORT.md
+If passed:
+unlock activation engine.
+================================================
+PHASE 8 — ACTIVATION ENGINE
+Feature states:
+OFF BETA LIMITED ON SCALE_ONLY ADMIN_ONLY
+Activation order:
+wallet
+notification
+chat
+thrift
+express
+marketing
+analytics
+support_ai
+cybersecurity
+deployment_ai
+shareholder
+Generate:
+ACTIVATION_STATUS.md
+================================================
+PHASE 9 — PRODUCTION HANDOVER
+Generate:
+GO_LIVE_RUNBOOK.md
+Include:
+deploy
+rollback
+monitor
+restore
+incident
+DNS
+payments
+database
+phone deployment
+Generate:
+FINAL_LAUNCH_CHECKLIST.md
+================================================
+FINAL OUTPUT ONLY:
+DEPLOY READY
+or
+BLOCKERS FOUND
+Return:
+all files created
+all services status
+release tag
+github verification
+deployment readiness
+Do not generate business features.
+Do not generate architecture.
+Do not refactor.
+Finalize.
+After REPLIT4 completes:
+Next REPLIT4 actions :
+Open Replit
+→ Version Control
+→ Confirm:
+Plain text
+release/v1-go-live
+Confirm these files exist:
+Plain text
+FINAL_HANDOVER.md
+GITHUB_VERIFICATION.md
+DEPLOYMENT_FINAL_GATE.md
+GO_LIVE_RUNBOOK.md
+FINAL_LAUNCH_CHECKLIST.md
+Press:
+Plain text
+Commit
+Message:
+Plain text
+FINAL RC HANDOVER
+Press:
+Plain text
+Push
+Open GitHub and verify:
+Plain text
+release/v1-go-live
+tag v1.0.0
+Deploy Replit only.
+Do not switch to Contabo or point Namecheap yet.
+Run beta.
+Only move forward if:
+Plain text
+50 orders
+20 payouts
+72 hours stable
+Then connect production hosting and gradually activate modules.
+That is the final CTO release order I would approve before opening DUNAZOE to real users.
