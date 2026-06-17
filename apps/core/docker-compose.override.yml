@@ -1,0 +1,176 @@
+# =====================================================================
+# DUNAZOE — docker-compose.override.yml
+# MODE: REPLIT BETA (automatically applied by docker compose)
+# =====================================================================
+# Starts ONLY 8 core services + essential infra. Saves ~1.5GB RAM.
+#
+# Usage:
+#   Replit beta (this file):   docker compose up
+#   Full 33-service stack:     docker compose --profile full up
+#
+# Core services (always start):
+#   auth(4001) product(4004) order(4006) payment(4015)
+#   notification(4017) kyc(4023) deployment-ai(4027) activation-engine(4033)
+#   + gateway(3000) frontend(5000) postgres redis rabbitmq
+#
+# Estimated RAM: ~1.4GB (vs ~2.8GB for full stack)
+# =====================================================================
+
+version: '3.8'
+
+services:
+
+  # ── PROFILE: full — disabled in Replit beta mode ──────────────────
+
+  user:
+    profiles: ["full"]
+
+  vendor:
+    profiles: ["full"]
+
+  inventory:
+    profiles: ["full"]
+
+  escrow:
+    profiles: ["full"]
+
+  fraud:
+    profiles: ["full"]
+
+  wallet:
+    profiles: ["full"]
+
+  thrift:
+    profiles: ["full"]
+
+  trust:
+    profiles: ["full"]
+
+  loan:
+    profiles: ["full"]
+
+  commission:
+    profiles: ["full"]
+
+  ai:
+    profiles: ["full"]
+
+  dispute:
+    profiles: ["full"]
+
+  logistics:
+    profiles: ["full"]
+
+  flags:
+    profiles: ["full"]
+
+  upload:
+    profiles: ["full"]
+
+  realtime:
+    profiles: ["full"]
+
+  search:
+    profiles: ["full"]
+
+  reconciliation:
+    profiles: ["full"]
+
+  reliability:
+    profiles: ["full"]
+
+  security-ai:
+    profiles: ["full"]
+
+  self-delivery:
+    profiles: ["full"]
+
+  admin-override:
+    profiles: ["full"]
+
+  social-media:
+    profiles: ["full"]
+
+  payments-ai:
+    profiles: ["full"]
+
+  dunazoe-express:
+    profiles: ["full"]
+
+  # ── INFRA disabled in Replit (too heavy / not needed for beta) ─────
+
+  pgbouncer:
+    profiles: ["full"]
+
+  prometheus:
+    profiles: ["full"]
+
+  grafana:
+    profiles: ["full"]
+
+  nginx:
+    profiles: ["full"]
+
+  certbot:
+    profiles: ["full"]
+
+  # ── MEMORY CAPS — keep Replit under 2GB total ──────────────────────
+
+  postgres:
+    mem_limit: 256m
+    memswap_limit: 256m
+    environment:
+      POSTGRES_SHARED_BUFFERS: 64MB
+      POSTGRES_EFFECTIVE_CACHE_SIZE: 128MB
+
+  redis:
+    mem_limit: 96m
+    memswap_limit: 96m
+
+  rabbitmq:
+    mem_limit: 192m
+    memswap_limit: 192m
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_VM_MEMORY_HIGH_WATERMARK: 0.4
+
+  gateway:
+    mem_limit: 192m
+    memswap_limit: 192m
+
+  frontend:
+    mem_limit: 384m
+    memswap_limit: 384m
+
+  auth:
+    mem_limit: 96m
+    memswap_limit: 96m
+
+  product:
+    mem_limit: 96m
+    memswap_limit: 96m
+
+  order:
+    mem_limit: 96m
+    memswap_limit: 96m
+
+  payment:
+    mem_limit: 96m
+    memswap_limit: 96m
+
+  notification:
+    mem_limit: 80m
+    memswap_limit: 80m
+
+  kyc:
+    mem_limit: 80m
+    memswap_limit: 80m
+
+  deployment-ai:
+    mem_limit: 128m
+    memswap_limit: 128m
+
+  activation-engine:
+    mem_limit: 80m
+    memswap_limit: 80m

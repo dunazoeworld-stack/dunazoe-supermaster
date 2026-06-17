@@ -1,0 +1,266 @@
+version: '3.8'
+
+# =====================================================================
+# DUNAZOE — docker-compose.beta.yml  (Phase 11 — Beta Deployment Mode)
+# =====================================================================
+# Standalone beta config. Run with:
+#   docker compose -f docker-compose.beta.yml up --build -d
+#
+# Includes ONLY:
+#   Infrastructure: postgres, redis, prometheus, grafana
+#   Services: gateway, frontend, auth, product, order,
+#             payment, wallet, notification
+#
+# Target RAM: ≤1.5GB
+# Disabled: chat, thrift, loans, marketing-ai, security-ai,
+#           shareholder, analytics, cross-border, express
+# =====================================================================
+
+services:
+
+  # ── INFRASTRUCTURE ─────────────────────────────────────────────────
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: dunazoe-postgres-beta
+    restart: unless-stopped
+    env_file: .env.docker
+    environment:
+      POSTGRES_DB:                dunazoe_db
+      POSTGRES_USER:              dunazoe_user
+      POSTGRES_PASSWORD:          dunazoe_pass_dev
+    command: >
+      postgres
+      -c shared_buffers=64MB
+      -c effective_cache_size=128MB
+      -c max_connections=100
+      -c work_mem=4MB
+    volumes:
+      - postgres_beta:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    mem_limit: 256m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dunazoe_user -d dunazoe_db"]
+      interval: 10s
+      timeout:  5s
+      retries:  10
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: dunazoe-redis-beta
+    restart: unless-stopped
+    command: redis-server --maxmemory 96mb --maxmemory-policy allkeys-lru --save ""
+    ports:
+      - "6379:6379"
+    mem_limit: 128m
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout:  5s
+      retries:  5
+
+  rabbitmq:
+    image: rabbitmq:3.13-alpine
+    container_name: dunazoe-rabbitmq-beta
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_VM_MEMORY_HIGH_WATERMARK: "0.4"
+    ports:
+      - "5672:5672"
+    mem_limit: 192m
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 15s
+      timeout:  5s
+      retries:  5
+
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    container_name: dunazoe-prometheus-beta
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_beta:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=7d"
+    mem_limit: 192m
+
+  grafana:
+    image: grafana/grafana:11.0.0
+    container_name: dunazoe-grafana-beta
+    restart: unless-stopped
+    ports:
+      - "3100:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD:     dunazoe_beta_2026
+      GF_USERS_ALLOW_SIGN_UP:         "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_RENDERING_SERVER_URL:        ""
+    volumes:
+      - grafana_beta:/var/lib/grafana
+    depends_on:
+      - prometheus
+    mem_limit: 128m
+
+  # ── GATEWAY ────────────────────────────────────────────────────────
+
+  gateway:
+    build:
+      context:    ./gateway
+      dockerfile: Dockerfile
+    container_name: dunazoe-gateway-beta
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment:
+      PORT:         3000
+      SERVICE_NAME: gateway
+      NODE_ENV:     production
+      BETA_MODE:    "true"
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_healthy }
+    mem_limit: 192m
+
+  # ── FRONTEND ───────────────────────────────────────────────────────
+
+  frontend:
+    build:
+      context:    ./frontend
+      dockerfile: Dockerfile
+    container_name: dunazoe-frontend-beta
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment:
+      PORT:                  5000
+      NODE_ENV:              production
+      NEXT_PUBLIC_API_URL:   http://localhost:3000
+      NEXT_PUBLIC_BETA_MODE: "true"
+    depends_on:
+      - gateway
+    mem_limit: 384m
+
+  # ── CORE SERVICES (beta-approved) ─────────────────────────────────
+
+  auth:
+    build: { context: ./services/auth-service, dockerfile: Dockerfile }
+    container_name: dunazoe-auth-beta
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4001, SERVICE_NAME: auth-service, NODE_ENV: production }
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_healthy }
+    mem_limit: 96m
+
+  product:
+    build: { context: ./services/product-service, dockerfile: Dockerfile }
+    container_name: dunazoe-product-beta
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4004, SERVICE_NAME: product-service, NODE_ENV: production }
+    depends_on:
+      postgres: { condition: service_healthy }
+    mem_limit: 96m
+
+  order:
+    build: { context: ./services/order-service, dockerfile: Dockerfile }
+    container_name: dunazoe-order-beta
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4006, SERVICE_NAME: order-service, NODE_ENV: production }
+    depends_on:
+      postgres:  { condition: service_healthy }
+      redis:     { condition: service_healthy }
+      rabbitmq:  { condition: service_healthy }
+    mem_limit: 96m
+
+  payment:
+    build: { context: ./services/payment-service, dockerfile: Dockerfile }
+    container_name: dunazoe-payment-beta
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4015, SERVICE_NAME: payment-service, NODE_ENV: production }
+    depends_on:
+      postgres:  { condition: service_healthy }
+      redis:     { condition: service_healthy }
+      rabbitmq:  { condition: service_healthy }
+    mem_limit: 96m
+
+  wallet:
+    build: { context: ./services/wallet-service, dockerfile: Dockerfile }
+    container_name: dunazoe-wallet-beta
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4009, SERVICE_NAME: wallet-service, NODE_ENV: production }
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_healthy }
+    mem_limit: 96m
+
+  notification:
+    build: { context: ./services/notification-service, dockerfile: Dockerfile }
+    container_name: dunazoe-notification-beta
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4017, SERVICE_NAME: notification-service, NODE_ENV: production }
+    depends_on:
+      postgres:  { condition: service_healthy }
+      rabbitmq:  { condition: service_healthy }
+    mem_limit: 80m
+
+  kyc:
+    build: { context: ./services/kyc-service, dockerfile: Dockerfile }
+    container_name: dunazoe-kyc-beta
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4023, SERVICE_NAME: kyc-service, NODE_ENV: production }
+    depends_on:
+      postgres: { condition: service_healthy }
+    mem_limit: 80m
+
+  deployment-ai:
+    build: { context: ./services/deployment-ai-service, dockerfile: Dockerfile }
+    container_name: dunazoe-deployment-ai-beta
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4027, SERVICE_NAME: deployment-ai-service, NODE_ENV: production }
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_healthy }
+    mem_limit: 128m
+
+  activation-engine:
+    build: { context: ./services/activation-engine, dockerfile: Dockerfile }
+    container_name: dunazoe-activation-engine-beta
+    restart: unless-stopped
+    network_mode: host
+    env_file: .env.docker
+    environment: { PORT: 4033, SERVICE_NAME: activation-engine, NODE_ENV: production }
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_healthy }
+    mem_limit: 80m
+
+# ── VOLUMES ────────────────────────────────────────────────────────────
+
+volumes:
+  postgres_beta:
+  prometheus_beta:
+  grafana_beta:

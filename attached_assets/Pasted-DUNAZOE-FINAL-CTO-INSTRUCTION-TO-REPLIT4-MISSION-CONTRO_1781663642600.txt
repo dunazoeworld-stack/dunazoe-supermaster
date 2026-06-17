@@ -1,0 +1,317 @@
+DUNAZOE — FINAL CTO INSTRUCTION TO REPLIT4
+MISSION: CONTROLLED BETA ACTIVATION + DEVOPS AI GO-LIVE
+
+Current state:
+Code freeze completed.
+Release orchestration completed.
+Docker compose repaired.
+Deployment AI completed.
+Documentation completed.
+GitHub handover prepared.
+
+From this point:
+NO NEW FEATURES.
+NO UI REDESIGN.
+NO NEW SERVICES.
+
+Objective:
+Prepare DUNAZOE for controlled public launch with maximum Replit credit efficiency.
+
+==================================
+PHASE 11 — PRE-LAUNCH STABILIZATION
+
+1. Create BETA deployment mode.
+
+Generate:
+
+docker-compose.beta.yml
+
+Rules:
+Run ONLY:
+
+gateway
+frontend
+auth
+product
+order
+payment
+wallet-ledger
+notification
+
+Infrastructure:
+
+postgres
+redis
+prometheus
+grafana
+
+Disable:
+
+chat
+video
+thrift activation
+marketing AI
+deployment AI self-healing
+shareholder systems
+advanced analytics
+cross-border modules
+cybersecurity external integrations
+
+Target:
+≤1.5GB RAM.
+
+==================================
+PHASE 12 — GITHUB HANDOVER
+
+Create:
+
+RELEASE_TAG=v1.0-beta
+
+Actions:
+
+Push all repositories.
+
+Create:
+
+release/v1.0-beta
+
+Generate:
+
+FINAL_GITHUB_TREE.md
+
+Verify:
+
+No missing folders
+
+No broken imports
+
+No local-only configs
+
+No hidden credentials
+
+Generate:
+
+github_release_check.sh
+
+Output:
+
+PASS / FAIL
+
+==================================
+PHASE 13 — DEPLOYMENT AI EXECUTION
+
+Execute Deployment AI.
+
+Sequence:
+
+Validate Docker
+
+Validate Secrets
+
+Validate APIs
+
+Validate DNS
+
+Validate SSL
+
+Validate Database
+
+Validate Redis
+
+Validate Queue
+
+Validate Cloudinary
+
+Validate Paystack
+
+Validate Stripe
+
+Validate Notifications
+
+Validate Webhooks
+
+Validate Replit Workflows
+
+Output:
+
+deployment-report.json
+
+Required:
+
+GO
+WARNING
+BLOCK
+
+Deployment blocks deployment automatically.
+
+==================================
+PHASE 14 — AUTOMATED TESTING
+
+Generate:
+
+smoke-tests/
+
+Run:
+
+User registration
+
+Vendor registration
+
+Login
+
+Product creation
+
+Order
+
+Payment dry-run
+
+Refund
+
+Notifications
+
+Wallet
+
+Admin dashboard
+
+Load:
+
+100 users
+
+500 users
+
+1000 users
+
+Output:
+
+test-summary.md
+
+Pass threshold:
+
+95%.
+
+==================================
+PHASE 15 — REPLIT CREDIT MAXIMIZATION
+
+Enable:
+
+LOW_CREDIT_MODE=true
+
+Requirements:
+
+No unnecessary rebuilds
+
+Layer caching
+
+Container reuse
+
+Lazy loading
+
+Autosleep workers
+
+Sequential deployment
+
+Deploy changed services only
+
+Generate:
+
+credit-optimizer.md
+
+Target:
+
+≤20% additional credits.
+
+==================================
+PHASE 16 — BETA LAUNCH
+
+Deploy:
+
+beta.dunazoe.com
+
+Users:
+
+20 internal users
+
+5 vendors
+
+100 products
+
+Simulate:
+
+Orders
+
+Wallet
+
+Payments
+
+Refunds
+
+Track:
+
+CPU
+
+Memory
+
+Latency
+
+Errors
+
+Output:
+
+72h-beta-report.md
+
+==================================
+PHASE 17 — PRODUCTION CUTOVER
+
+Production only if:
+
+Error rate <1%
+
+No payment mismatch
+
+No DB failure
+
+No deployment rollback
+
+No webhook failure
+
+No critical logs
+
+Then:
+
+Deploy:
+
+www.dunazoe.com
+
+Activate:
+
+Marketplace
+Wallet
+Notification
+
+Keep OFF:
+
+Thrift
+Express
+Chat
+Marketing AI
+Advanced AI
+
+==================================
+FINAL DELIVERABLE
+
+Return only:
+
+1. Beta URL
+2. GitHub URL
+3. Deployment Report
+4. Test Report
+5. Credit Usage
+6. Production Decision
+
+Allowed:
+
+GO
+NO GO
+GO WITH LIMITATIONS
+
+END.
