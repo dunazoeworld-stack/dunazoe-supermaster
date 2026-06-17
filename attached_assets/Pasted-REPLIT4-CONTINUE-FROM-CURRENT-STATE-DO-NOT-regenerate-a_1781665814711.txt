@@ -1,0 +1,342 @@
+REPLIT4 — CONTINUE FROM CURRENT STATE.
+
+DO NOT regenerate architecture.
+DO NOT rebuild completed modules.
+DO NOT duplicate services.
+
+OBJECTIVE:
+Make DUNAZOE.com production-launch capable TODAY using remaining Replit credits efficiently.
+
+CURRENT STATUS:
+Deployment AI backend exists but is not visible or fully operational inside Replit UI.
+
+PRIORITY:
+Expose Deployment AI → Connect Deployment → GitHub → Prepare Production → Generate Handover.
+
+WORK IN SMALL INCREMENTS.
+
+────────────────────────
+PHASE 26 — DEPLOYMENT AI ACTIVATION
+────────────────────────
+
+Expose Deployment AI completely.
+
+Create or finish:
+
+/deploy
+/deploy/monitor
+/deploy/logs
+/deploy/releases
+/deploy/github
+/deploy/credits
+/deploy/status
+/deploy/health
+/deploy/audit
+/deploy/checklist
+
+Requirements:
+
+Show:
+
+PASS
+WARNING
+FAIL
+
+for:
+
+Backend
+Frontend
+Database
+Redis
+Supabase
+Cloudinary
+Paystack
+Stripe
+Notifications
+Deployment
+GitHub
+SSL
+Domain
+PWA
+
+Add:
+
+Refresh button
+
+Auto refresh:
+30 seconds
+
+Phone responsive.
+
+Must work from Android.
+
+────────────────────────
+PHASE 27 — GITHUB PUSH ENGINE
+────────────────────────
+
+Create Deployment AI GitHub Controller.
+
+Capabilities:
+
+Connect repo
+
+Detect branch
+
+Show commit history
+
+Show pending changes
+
+Push automatically
+
+Rollback safely
+
+Generate release notes
+
+Create tags
+
+Generate deployment reports
+
+Commands:
+
+Sync GitHub
+
+Push Build
+
+Rollback
+
+Create Release
+
+Deploy Production
+
+Do NOT deploy automatically.
+
+Require approval.
+
+────────────────────────
+PHASE 28 — PHONE DEPLOYMENT MODE
+────────────────────────
+
+Create:
+
+PHONE DEPLOY MODE
+
+Requirements:
+
+One tap deploy
+
+One tap rollback
+
+One tap restart
+
+One tap audit
+
+One tap logs
+
+One tap sync
+
+Must work fully inside Replit mobile.
+
+No terminal required.
+
+────────────────────────
+PHASE 29 — REPLIT CREDIT MAXIMIZATION
+────────────────────────
+
+Preserve credits.
+
+Rules:
+
+Sleep inactive services
+
+Build only changed modules
+
+Cache dependencies
+
+Disable unnecessary containers
+
+Reuse images
+
+Lazy-load dashboards
+
+Disable heavy monitoring
+
+Keep docker override active.
+
+Only run:
+
+auth
+payment
+order
+product
+notification
+kyc
+deployment-ai
+activation-engine
+
+Everything else:
+standby mode.
+
+────────────────────────
+PHASE 30 — DEPLOYMENT AUDITOR
+────────────────────────
+
+Before production run:
+
+Check:
+
+environment variables
+
+DNS
+
+SSL
+
+database
+
+queues
+
+cron jobs
+
+GitHub
+
+notifications
+
+payment webhooks
+
+PWA
+
+mobile install
+
+Build:
+
+PRE_DEPLOY_REPORT.json
+
+GO_LIVE_REPORT.json
+
+────────────────────────
+PHASE 31 — NAMECHEAP DEPLOYMENT SUPPORT
+────────────────────────
+
+Build deployment support for cPanel.
+
+Capabilities:
+
+Verify DNS
+
+Verify SSL
+
+Verify domain
+
+Generate deployment instructions
+
+Generate rollback instructions
+
+Generate mobile deployment guide
+
+Do not change DNS automatically.
+
+────────────────────────
+PHASE 32 — PRODUCTION GO-LIVE
+────────────────────────
+
+Prepare:
+
+BETA MODE
+
+Feature flags:
+
+Wallet → OFF
+
+Thrift → OFF
+
+Express → OFF
+
+Chat → OFF
+
+AI Marketing → OFF
+
+Marketplace → ON
+
+Payments → ON
+
+Notifications → ON
+
+Admin → ON
+
+Goal:
+
+Launch stable.
+
+────────────────────────
+PHASE 33 — HANDOVER PACKAGE
+────────────────────────
+
+Generate:
+
+HANDOVER.md
+
+DEPLOYMENT_MANUAL.md
+
+RELEASE_NOTES.md
+
+ADMIN_GUIDE.md
+
+PHONE_GUIDE.md
+
+RECOVERY_GUIDE.md
+
+PROJECT_STRUCTURE.md
+
+Include:
+
+where everything exists
+
+how to deploy
+
+how to rollback
+
+how to connect GitHub
+
+how to reconnect Replit
+
+────────────────────────
+PHASE 34 — FINAL OUTPUT
+────────────────────────
+
+When complete provide:
+
+1. 
+
+Deployment URL
+
+2. 
+
+GitHub status
+
+3. 
+
+Remaining credits estimate
+
+4. 
+
+Launch checklist
+
+5. 
+
+Features enabled
+
+6. 
+
+Features disabled
+
+7. 
+
+Safe next step
+
+IMPORTANT:
+
+Do not destroy existing work.
+Do not regenerate completed modules.
+Do not exceed free credits.
+Commit all changes.
+Push GitHub.
+Prepare for handover.
