@@ -1,0 +1,308 @@
+ROLE:
+You are REPLIT4 operating as Chief DevOps Engineer, Chief Deployment Engineer, Release Manager, Production CTO and Handover Engineer for DUNAZOE.
+
+DO NOT build new business features.
+
+OBJECTIVE:
+Convert existing DUNAZOE architecture into FINAL RELEASE CANDIDATE (RC1) and prepare DUNAZOE.COM for controlled public launch.
+
+MISSION:
+Expose Deployment AI visibly inside Replit and provide deployment monitoring UI and operational handover.
+
+FREE CREDIT POLICY:
+Maximize remaining free credits.
+Reuse existing infrastructure.
+No unnecessary containers.
+No duplicate services.
+No expensive observability stacks unless lightweight.
+Prefer static dashboards where possible.
+
+═══════════════
+PHASE 18 — DEPLOYMENT AI VISIBILITY
+═══════════════
+
+Create:
+
+/apps/frontend/pages/deployment-ai
+
+OR
+
+/apps/web/src/pages/deployment-ai
+
+Deploy as visible UI.
+
+Create:
+
+GET /deployment/status
+
+GET /deployment/health
+
+GET /deployment/monitor
+
+GET /deployment/credits
+
+GET /deployment/audit
+
+GET /deployment/releases
+
+GET /deployment/logs
+
+GET /deployment/github
+
+Dashboard must show:
+
+SYSTEM HEALTH
+
+Database
+Redis
+Gateway
+Payments
+Notifications
+Wallet
+Thrift
+Logistics
+Chat
+AI
+Deployment
+
+Display:
+
+PASS
+WARNING
+FAIL
+
+Color badges.
+
+Add:
+
+Refresh every 30 seconds.
+
+Add:
+
+Manual refresh button.
+
+═══════════════
+PHASE 19 — REPLIT DEPLOYMENT CONTROL PANEL
+═══════════════
+
+Create visible page:
+
+/deploy
+
+Sections:
+
+Overview
+
+Start Deployment
+
+Stop Deployment
+
+Restart Services
+
+Rollback
+
+GitHub Sync
+
+Deploy To Production
+
+Build Status
+
+Logs
+
+Credit Usage
+
+Buttons:
+
+RUN TESTS
+
+RUN AUDIT
+
+VERIFY ENV
+
+VERIFY DNS
+
+VERIFY SSL
+
+VERIFY PAYMENTS
+
+VERIFY DATABASE
+
+DEPLOY
+
+DISABLE buttons if checks fail.
+
+═══════════════
+PHASE 20 — LIGHTWEIGHT OBSERVABILITY
+═══════════════
+
+DO NOT install heavy stacks.
+
+Build:
+
+Realtime Health Monitor
+
+Metrics:
+
+CPU
+RAM
+Requests
+Orders/hr
+Payments
+Failures
+Latency
+
+Store only:
+
+72 hours
+
+Create:
+
+/deploy/monitor
+
+Phone friendly.
+
+Export:
+
+JSON
+CSV
+
+═══════════════
+PHASE 21 — DEPLOYMENT AI PUBLIC LINKS
+═══════════════
+
+Generate URLs:
+
+https://dunazoe.com/deploy
+
+https://dunazoe.com/deploy/monitor
+
+https://dunazoe.com/deploy/status
+
+https://dunazoe.com/deploy/github
+
+https://dunazoe.com/deploy/release
+
+https://dunazoe.com/deploy/credits
+
+Protect all with:
+
+Admin auth.
+
+═══════════════
+PHASE 22 — GITHUB HANDOVER
+═══════════════
+
+Push all code.
+
+Create:
+
+FINAL_RELEASE_NOTES.md
+
+HANDOVER.md
+
+DEPLOYMENT_MANUAL.md
+
+ADMIN_OPERATIONS.md
+
+RELEASE_TAG.txt
+
+VERSION:
+v1.0.0-RC1
+
+Create:
+
+FINAL_GITHUB_PUSH.sh
+
+Must:
+
+Commit
+Tag
+Push
+
+Generate exact commands.
+
+═══════════════
+PHASE 23 — GO LIVE AUDIT
+═══════════════
+
+Generate:
+
+GO_LIVE_CHECKLIST.md
+
+Verify:
+
+Domain
+SSL
+Payments
+Database
+Storage
+Webhook Security
+Wallet
+Notifications
+Monitoring
+Backups
+
+Return:
+
+GO
+NO GO
+
+with reasons.
+
+═══════════════
+PHASE 24 — FINAL BETA MODE
+═══════════════
+
+Default startup:
+
+docker compose up
+
+Only:
+
+gateway
+frontend
+auth
+product
+order
+payment
+deployment-ai
+activation-engine
+postgres
+redis
+
+All others:
+sleep mode.
+
+═══════════════
+PHASE 25 — PRODUCTION HANDOVER
+═══════════════
+
+Generate:
+
+FINAL_HANDOVER_PACKAGE/
+
+Include:
+
+Architecture
+Repo Tree
+API List
+Deployment Guide
+Monitoring Guide
+Rollback Guide
+Emergency Guide
+Environment Guide
+
+═══════════════
+FINAL OUTPUT REQUIRED
+═══════════════
+
+1. Files created
+2. URLs created
+3. GitHub push status
+4. Deployment AI screenshots/preview paths
+5. Replit launch instructions
+6. Production GO/NO-GO
+7. Remaining free credit estimate
+8. Exact next button to press on Replit
+
+Do NOT stop until all phases complete.
