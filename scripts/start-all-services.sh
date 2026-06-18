@@ -4,7 +4,7 @@
 # Usage: bash scripts/start-all-services.sh
 # Credit-efficient: single workflow hosts all services
 
-set -euo pipefail
+set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SVC="$ROOT/apps/core/services"
