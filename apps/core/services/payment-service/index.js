@@ -224,7 +224,7 @@ app.post("/payments/initialize", requireAuth, asyncHandler(async (req, res) => {
   }
 
   return res.status(400).json({ success: false, error: "Currency must be NGN or USD" });
-})));
+}));
 
 // ── VERIFY PAYMENT (client callback) ─────────────────────────
 /**
