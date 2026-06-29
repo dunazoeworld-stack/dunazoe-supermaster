@@ -34,7 +34,12 @@ function DeployNav() {
 }
 
 export default function APIsPage() {
-  const [token] = useState(() => typeof window !== "undefined" ? localStorage.getItem("dunazoe_token") || "" : "");
+  const [token] = useState(() => {
+    if (typeof window === "undefined") return "";
+    const p = new URLSearchParams(window.location.search);
+    if (p.get("preview") === "1") return "dev-preview";
+    return localStorage.getItem("dunazoe_token") || "";
+  });
   const [selected, setSelected] = useState(null);
   const [values, setValues] = useState({});
   const [status, setStatus] = useState({});

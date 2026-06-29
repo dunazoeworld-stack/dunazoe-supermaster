@@ -33,3 +33,13 @@ waitForPort = 5000
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[userenv]
+
+[userenv.shared]
+NEXT_PUBLIC_SUPABASE_URL = "https://rwdegxvapmofgdoticvf.supabase.co"
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_g4pa0Z7ZTK7H6Ia-FH7oTA_QFdTeZbF"
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY = "pk_test_51TfomTRueCCnJCpPwOdRSd2JhXyuCi2IPafIYWfwQw1SlnQ60Z7145gBYlLYKzmUFY41wuODg1g4PyqLZNhhDV8P00y6ViIGYa"
+NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY = "pk_live_d60055e5fd9e2fbdb2e86ab309774c6f719e49dc"
+CLOUDINARY_CLOUD_NAME = "dtx17sg1m"
+CLOUDINARY_API_KEY = "634966339231127"

@@ -33,6 +33,9 @@
 | Docker Compose | ✅ 33 services | `docker-compose.yml` |
 | CI/CD | ✅ 3 pipelines | `.github/workflows/` |
 | **Deployment AI Control Plane** | ✅ **10 Phases — COMPLETE** | `services/deployment-ai-service/` + `frontend/src/app/deploy/` |
+| **Navbar component** | ✅ Created | `frontend/src/components/Navbar.jsx` |
+| **App Download Section** | ✅ Live on homepage | Android APK + iOS + PWA install instructions |
+| **API Secrets Wiring** | ✅ Env-var backed | control-plane validates from Replit Secrets |
 
 ---
 

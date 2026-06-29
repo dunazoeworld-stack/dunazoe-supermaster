@@ -96,6 +96,26 @@ export default function HomePage() {
             <Link href="/thrift" style={{padding:"16px 40px",borderRadius:"14px",fontSize:"1rem",fontWeight:700,color:"#fff",background:"linear-gradient(135deg,#00A3FF,#0066FF)",textDecoration:"none",boxShadow:"0 0 30px rgba(0,163,255,0.4)"}}>⬡ Open Ajo Account Free</Link>
           </div>
         </section>
+        {/* GET THE APP */}
+        <section style={{background:"linear-gradient(135deg,rgba(0,20,50,0.95),rgba(10,14,26,0.98))",borderTop:"1px solid rgba(0,163,255,0.15)",padding:"80px 24px",textAlign:"center"}}>
+          <div style={{maxWidth:"680px",margin:"0 auto"}}>
+            <div style={{fontSize:"3rem",marginBottom:"16px"}}>📲</div>
+            <h2 style={{marginBottom:"12px",background:"linear-gradient(135deg,#00A3FF,#0066FF)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>Get the DUNAZOE App</h2>
+            <p style={{color:"#8A9AB5",lineHeight:1.7,marginBottom:"36px"}}>Shop, sell, save and ship — all from your phone. Install once, works offline.</p>
+            <div style={{display:"flex",gap:"16px",justifyContent:"center",flexWrap:"wrap",marginBottom:"28px"}}>
+              <a href="/dunazoe.apk" download style={{display:"flex",alignItems:"center",gap:"10px",padding:"14px 28px",borderRadius:"14px",background:"linear-gradient(135deg,#00A3FF,#0066FF)",color:"#fff",textDecoration:"none",fontWeight:700,fontSize:"0.95rem",boxShadow:"0 0 24px rgba(0,163,255,0.35)"}}>
+                <span style={{fontSize:"1.3rem"}}>🤖</span> Download Android APK
+              </a>
+              <a href="/dunazoe.ipa" download style={{display:"flex",alignItems:"center",gap:"10px",padding:"14px 28px",borderRadius:"14px",border:"2px solid rgba(0,163,255,0.3)",color:"#00A3FF",textDecoration:"none",fontWeight:700,fontSize:"0.95rem",background:"rgba(0,163,255,0.06)"}}>
+                <span style={{fontSize:"1.3rem"}}>🍎</span> iOS / TestFlight
+              </a>
+            </div>
+            <div style={{padding:"18px 24px",background:"rgba(0,163,255,0.06)",border:"1px solid rgba(0,163,255,0.15)",borderRadius:"14px",color:"#8A9AB5",fontSize:"0.84rem",lineHeight:1.8}}>
+              <strong style={{color:"#fff"}}>Install as Web App (any phone):</strong><br/>
+              Open <span style={{color:"#00A3FF",fontWeight:600}}>dunazoe.com</span> in Chrome or Safari → tap the share/menu button → <em>Add to Home Screen</em>
+            </div>
+          </div>
+        </section>
         {/* FOOTER */}
         <footer style={{background:"#060B14",borderTop:"1px solid rgba(0,163,255,0.1)",padding:"40px 24px 24px"}}>
           <div style={{maxWidth:"1280px",margin:"0 auto",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"16px"}}>

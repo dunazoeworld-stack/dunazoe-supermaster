@@ -84,15 +84,18 @@ module.exports = function registerControlPlaneRoutes(app, pool, requireAuth, req
     asyncHandler(async (req, res) => {
       const { provider, secrets: providerSecrets = {} } = req.body;
 
+      // Check submitted values first, then fall back to env vars
+      const env = process.env;
+      const v = (key) => providerSecrets[key] || env[key] || "";
       const validations = {
-        paystack:   () => !!(providerSecrets.PAYSTACK_SECRET_KEY || "").startsWith("sk_"),
-        stripe:     () => !!(providerSecrets.STRIPE_SECRET_KEY || "").startsWith("sk_"),
-        openai:     () => !!(providerSecrets.OPENAI_API_KEY || "").startsWith("sk-"),
-        cloudinary: () => !!(providerSecrets.CLOUDINARY_CLOUD_NAME && providerSecrets.CLOUDINARY_API_KEY),
-        supabase:   () => !!(providerSecrets.SUPABASE_URL || "").includes("supabase.co"),
-        smtp:       () => !!(providerSecrets.SMTP_HOST && providerSecrets.SMTP_USER),
-        github:     () => !!(providerSecrets.GITHUB_TOKEN && providerSecrets.GITHUB_REPO),
-        namecheap:  () => !!(providerSecrets.NAMECHEAP_API_KEY),
+        paystack:   () => v("PAYSTACK_SECRET_KEY").startsWith("sk_"),
+        stripe:     () => v("STRIPE_SECRET_KEY").startsWith("sk_"),
+        openai:     () => v("OPENAI_API_KEY").startsWith("sk-"),
+        cloudinary: () => !!(v("CLOUDINARY_CLOUD_NAME") && v("CLOUDINARY_API_KEY")),
+        supabase:   () => v("NEXT_PUBLIC_SUPABASE_URL").includes("supabase.co"),
+        smtp:       () => !!(v("SMTP_HOST") && v("SMTP_USER")),
+        github:     () => !!(v("GITHUB_TOKEN") && (providerSecrets.GITHUB_REPO || env.GITHUB_REPO)),
+        namecheap:  () => !!v("NAMECHEAP_API_KEY"),
       };
 
       const isValid = validations[provider] ? validations[provider]() : false;
