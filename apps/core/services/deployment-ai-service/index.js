@@ -856,6 +856,14 @@ app.get("/deployment/checklist", requireAuth,
   })
 );
 
+// ── CONTROL PLANE ROUTES (Phases 1-9) ────────────────────────
+try {
+  const registerControlPlane = require("./control-plane-routes");
+  registerControlPlane(app, pool, requireAuth, requireRole, asyncHandler, logger);
+} catch (e) {
+  logger.warn("Control plane routes failed to load", { error: e.message });
+}
+
 app.use(errorHandler);
-app.listen(PORT, () => logger.info(`✅ Deployment AI (Update #95) running on port ${PORT}`));
+app.listen(PORT, () => logger.info(`✅ Deployment AI (Update #96) — Control Plane running on port ${PORT}`));
 module.exports = app;

@@ -238,6 +238,29 @@ export default function DeployPage() {
         ].map((step, i) => <StepCard key={i} num={i + 1} text={step} />)}
       </div>
 
+      {/* CONTROL PLANE NAV */}
+      <div style={{ background: "rgba(13,21,37,0.9)", border: "1px solid rgba(0,163,255,0.08)", borderRadius: "14px", padding: "14px 16px", marginBottom: "16px" }}>
+        <p style={{ fontSize: "0.72rem", color: "#3D4F6E", margin: "0 0 10px", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>🎛️ Control Plane</p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6px" }}>
+          {[
+            ["/deploy/studio","🏗️","Studio"],
+            ["/deploy/assistant","🤖","Assistant"],
+            ["/deploy/apis","🔌","APIs"],
+            ["/deploy/scaling","📈","Scaling"],
+            ["/deploy/portability","📦","Portability"],
+            ["/deploy/features","⚙️","Features"],
+            ["/deploy/self","🔧","Self Mgmt"],
+            ["/deploy/github","🐙","GitHub"],
+            ["/deploy/monitor","📡","Monitor"],
+          ].map(([href, icon, label]) => (
+            <Link key={href} href={href} style={{ padding: "9px 6px", borderRadius: "9px", background: "rgba(0,163,255,0.04)", border: "1px solid rgba(0,163,255,0.1)", color: "#8A9AB5", textDecoration: "none", fontSize: "0.72rem", fontWeight: 600, textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "3px" }}>
+              <span style={{ fontSize: "1rem" }}>{icon}</span>
+              <span>{label}</span>
+            </Link>
+          ))}
+        </div>
+      </div>
+
       {/* BACK LINK */}
       <div style={{ textAlign: "center", marginTop: "20px" }}>
         <Link href="/" style={{ color: "#3D4F6E", fontSize: "0.82rem", textDecoration: "none" }}>← Back to DUNAZOE</Link>

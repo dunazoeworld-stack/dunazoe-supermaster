@@ -1,0 +1,244 @@
+[29/06, 00:17] DY-Niwajuoluwa: DUNAZOE DEPLOYMENT AI — CONTROL PLANE UPDATE
+Mode: PATCH ONLY
+Priority: Upgrade existing Deployment AI into a portable operations platform
+RULES
+No rebuild.
+No architecture replacement.
+No destructive migrations.
+Preserve existing routes.
+Credit maximization.
+GitHub-aware.
+Generate handover.
+Operator-first.
+Phone-first.
+All dangerous actions require confirmation.
+================================================
+MISSION
+Upgrade Deployment AI into a controlled Platform Operations System.
+Deployment AI must manage DUNAZOE and itself.
+Support:
+Manual input
+Assisted execution
+Controlled automation
+Import
+Export
+Activate
+Deactivate
+Deploy
+Publish
+Rollback
+================================================
+PHASE 1 — BUILD STUDIO
+Create:
+/deploy/studio
+Purpose:
+Allow operator to submit:
+Code
+Feature ideas
+Update files
+GitHub commits
+ZIP imports
+Markdown plans
+Functions:
+Analyze
+Suggest architecture
+Generate patch plan
+Build proposal
+Run tests
+Preview changes
+Create deployment package
+Buttons:
+Import
+Analyze
+Generate
+Test
+Preview
+Deploy
+Rollback
+Rules:
+Never overwrite production automatically.
+Generate:
+BUILD_PLAN.md
+CHANGESET.md
+================================================
+PHASE 2 — OPERATOR ASSISTANT
+Create:
+/deploy/assistant
+Purpose:
+Guide operator.
+Features:
+What should I do next
+Warnings
+Optimization
+Estimated cost
+Rollback advice
+Scaling advice
+Explain buttons
+Explain risks
+Modes:
+Beginner
+Intermediate
+Advanced
+Output:
+STEP_GUIDE.md
+================================================
+PHASE 3 — API CONTROL CENTER
+Create:
+/deploy/apis
+Manage:
+Paystack
+Stripe
+OpenAI
+Cloudinary
+Supabase
+SMTP
+Namecheap
+GitHub
+Future providers
+Functions:
+Connect
+Validate
+Rotate
+Replace
+Switch provider
+Disable
+Retry
+Monitor
+Show:
+Quota
+Rate limits
+Errors
+Health
+Generate:
+API_MAP.md
+================================================
+PHASE 4 — SCALE MIGRATION CENTER
+Create:
+/deploy/scaling
+Purpose:
+Allow external provider transitions.
+Examples:
+Supabase → managed Postgres
+Cloudinary → S3
+Paystack → another gateway
+Functions:
+Compatibility score
+Migration steps
+Dependency impact
+Rollback
+Generate:
+SCALING_PLAN.md
+================================================
+PHASE 5 — PORTABILITY MODE
+Create:
+/deploy/portability
+Goal:
+Allow Deployment AI to move beyond Replit.
+Targets:
+Docker
+Node
+VPS
+Contabo
+Standalone
+Self-hosted
+Admin panel mode
+Functions:
+Export package
+Generate env
+Generate startup guide
+Health monitor
+Generate:
+PORTABILITY.md
+================================================
+PHASE 6 — FEATURE CONTROL CENTER
+Create:
+/deploy/features
+Allow:
+Activate
+Deactivate
+Beta
+Hidden
+Maintenance
+Rules:
+No delete.
+Toggle only.
+Areas:
+Wallet
+Thrift
+Notifications
+AI
+Payments
+Logistics
+Chat
+Admin
+Generate:
+FEATURE_MATRIX.md
+================================================
+PHASE 7 — DEPLOYMENT ENGINE
+Upgrade:
+/deploy
+Flow:
+Validate
+Build
+Test
+Preview
+Deploy
+Publish
+Observe
+Rollback
+Every action shows:
+Purpose
+Time
+Risk
+Recovery
+================================================
+PHASE 8 — SELF MANAGEMENT
+Create:
+/deploy/self
+Purpose:
+Deployment AI manages itself.
+Functions:
+Version
+Backup
+Logs
+Health
+Export
+Restore
+Update
+Restart
+Generate:
+SELF_MANAGEMENT.md
+================================================
+PHASE 9 — MOBILE APP MODE
+Upgrade PWA.
+Add:
+Install App
+Offline
+Operator Mode
+Tablet Mode
+Desktop Mode
+Generate:
+PHONE_INSTALL.md
+================================================
+PHASE 10 — HANDOVER
+Generate:
+CONTROL_PLANE.md
+OPERATOR_GUIDE.md
+API_GUIDE.md
+PORTABILITY_GUIDE.md
+SELF_HOST_GUIDE.md
+FINAL_HANDOVER.md
+================================================
+FINAL OUTPUT ONLY
+New Routes
+Updated Routes
+Portable = YES / NO
+Build Studio = READY
+Operator Assistant = READY
+API Center = READY
+Feature Control = READY
+Publish Ready = YES / NO
+STOP
+Do not publish automatically.
+[29/06, 00:21] DY-Niwajuoluwa: https://replit.com/@lhyrian94outloo/dunazoe-supermaster-1
+[29/06, 00:21] DY-Niwajuoluwa: https://dunazoe-supermaster-1--lhyrian94outloo.replit.app
