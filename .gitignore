@@ -67,3 +67,6 @@ postgres_data/
 
 # Archives
 *.tar.gz
+
+# Attached assets (may contain pasted secrets — never commit)
+attached_assets/
