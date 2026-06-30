@@ -1,43 +1,25 @@
 {
-  "name": "DUNAZOE — Buy Anything · Sell Everything",
+  "name": "DUNAZOE",
   "short_name": "DUNAZOE",
-  "description": "Nigeria's AI-powered super e-commerce + fintech platform.",
+  "description": "Nigeria's AI-powered super marketplace — buy, sell, save with Ajo, ship worldwide.",
   "start_url": "/",
-  "scope": "/",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#0A0E1A",
-  "theme_color": "#00A3FF",
+  "background_color": "#04091C",
+  "theme_color": "#0066FF",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
   "categories": ["shopping", "finance", "business"],
   "icons": [
-    {
-      "src": "/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/assets/dunazoe-logo.jpg", "sizes": "any", "type": "image/jpeg" }
   ],
   "shortcuts": [
-    {
-      "name": "Shop",
-      "url": "/products",
-      "description": "Browse products"
-    },
-    {
-      "name": "My Orders",
-      "url": "/dashboard/orders",
-      "description": "View your orders"
-    },
-    {
-      "name": "Wallet",
-      "url": "/dashboard/wallet",
-      "description": "Check your wallet balance"
-    }
-  ]
+    { "name": "Shop", "url": "/products", "description": "Browse products" },
+    { "name": "My Wallet", "url": "/wallet", "description": "View your wallet" },
+    { "name": "Ajo Savings", "url": "/thrift", "description": "Your Ajo groups" },
+    { "name": "Orders", "url": "/orders", "description": "Track your orders" }
+  ],
+  "prefer_related_applications": false
 }
