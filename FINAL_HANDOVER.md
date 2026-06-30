@@ -1,7 +1,7 @@
 # FINAL HANDOVER
 **Project:** DUNAZOE Supermaster  
 **Version:** v1.0.0-rc1  
-**Date:** 2026-06-29 (updated with Control Plane)
+**Date:** 2026-06-30 (Connection bug fixed)
 
 ---
 
@@ -28,6 +28,8 @@
 | Reliability engine | ✅ Complete | `services/reliability-service/`, `shared/reliability/` |
 | Reconciliation | ✅ Complete | `services/reconciliation-service/` |
 | Frontend (Next.js) | ✅ Homepage, Login, Register, PWA | `frontend/src/app/` |
+| **Next.js API Routes** | ✅ `/api/auth/register`, `/api/auth/login`, `/api/auth/logout` — direct Postgres | `frontend/src/app/api/auth/` |
+| **Database Schema** | ✅ Applied to Replit Postgres — users, sessions, vendors, products tables live | Replit Postgres |
 | PWA | ✅ manifest.json + sw.js + SW registered | `frontend/public/` |
 | Database schemas | ✅ Phases 1–10 | `shared/schema*.sql` |
 | Docker Compose | ✅ 33 services | `docker-compose.yml` |
