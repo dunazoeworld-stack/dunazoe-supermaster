@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect } from "react";
-import { use } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import PageShell from "../../../components/PageShell";
@@ -8,7 +7,7 @@ import PageShell from "../../../components/PageShell";
 const API = process.env.NEXT_PUBLIC_API_URL || "/api";
 
 export default function ProductDetailPage({ params }) {
-  const { id } = use(params);
+  const { id } = params;
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [qty, setQty] = useState(1);

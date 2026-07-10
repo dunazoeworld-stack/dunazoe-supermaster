@@ -1,13 +1,12 @@
 "use client";
 import { useState, useEffect } from "react";
-import { use } from "react";
 import Link from "next/link";
 import PageShell from "../../../components/PageShell";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "/api";
 
 export default function OrderDetailPage({ params }) {
-  const { id } = use(params);
+  const { id } = params;
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
