@@ -1,1 +1,2 @@
 - [DUNAZOE architecture](dunazoe-arch.md) — 34-service Node.js/Next.js fintech platform; architecture frozen at v1.0.0-rc1; never add business features
+- [DUNAZOE frontend bugs fixed](frontend-bugs-fixed.md) — July 2026 bug-fix session: dynamic routes, JWT security, autocomplete, viewport export, next.config, ops↔deploy link
