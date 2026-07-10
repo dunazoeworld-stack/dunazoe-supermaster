@@ -8,7 +8,10 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false },
 });
 
-const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || "dunazoe_secret_change_in_prod";
+const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET;
+if (!JWT_SECRET) {
+  console.error("[auth/login] FATAL: JWT_SECRET / SESSION_SECRET not set. Auth endpoint will reject all requests.");
+}
 const SESSION_DAYS = 7;
 
 function issueToken(user_id, role) {

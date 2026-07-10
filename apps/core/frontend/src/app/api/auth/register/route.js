@@ -8,7 +8,10 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false },
 });
 
-const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || "dunazoe_secret_change_in_prod";
+const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET;
+if (!JWT_SECRET) {
+  console.error("[auth/register] FATAL: JWT_SECRET / SESSION_SECRET not set. Auth endpoint will reject all requests.");
+}
 const SALT_ROUNDS = 12;
 const SESSION_DAYS = 7;
 

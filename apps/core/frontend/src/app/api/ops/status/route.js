@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || "dunazoe_secret_change_in_prod";
+const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET;
+if (!JWT_SECRET) {
+  console.error("[ops/status] FATAL: JWT_SECRET / SESSION_SECRET not set. Ops endpoint disabled.");
+}
 
 const REQUIRED_SECRETS = [
   { key: "DATABASE_URL",              category: "Database",  critical: true  },
@@ -37,6 +40,7 @@ function maskValue(val) {
 }
 
 function verifyOperator(req) {
+  if (!JWT_SECRET) return null; // fail closed if secret not configured
   const auth = req.headers.get("authorization") || "";
   const token = auth.replace("Bearer ", "").trim();
   if (!token) return null;
