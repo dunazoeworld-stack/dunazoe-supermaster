@@ -6,9 +6,6 @@ export const metadata = {
   keywords: "ecommerce, Nigeria, marketplace, fintech, ajo, savings, shipping",
   authors: [{ name: "DUNAZOE" }],
   creator: "DUNAZOE",
-  themeColor: "#0066FF",
-  colorScheme: "dark",
-  viewport: "width=device-width, initial-scale=1, viewport-fit=cover",
   appleWebApp: {
     capable: true,
     title: "DUNAZOE",
@@ -20,6 +17,14 @@ export const metadata = {
     type: "website",
     locale: "en_NG",
   },
+};
+
+export const viewport = {
+  themeColor: "#0066FF",
+  colorScheme: "dark",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }) {

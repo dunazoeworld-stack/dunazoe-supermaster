@@ -116,8 +116,8 @@ export default function DeployPage() {
         </div>
         {error && <div style={{ background: "rgba(255,59,92,0.1)", border: "1px solid rgba(255,59,92,0.3)", borderRadius: "10px", padding: "10px 12px", marginBottom: "16px", fontSize: "0.83rem", color: "#FF3B5C" }}>⚠️ {error}</div>}
         <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-          <div><label style={{ fontSize: "0.78rem", color: "#8A9AB5", display: "block", marginBottom: "5px" }}>Admin Email</label><input name="email" type="email" required placeholder="admin@dunazoe.com" style={inp} /></div>
-          <div><label style={{ fontSize: "0.78rem", color: "#8A9AB5", display: "block", marginBottom: "5px" }}>Password</label><input name="password" type="password" required placeholder="••••••••" style={inp} /></div>
+          <div><label style={{ fontSize: "0.78rem", color: "#8A9AB5", display: "block", marginBottom: "5px" }}>Admin Email</label><input name="email" type="email" autoComplete="email" required placeholder="admin@dunazoe.com" style={inp} /></div>
+          <div><label style={{ fontSize: "0.78rem", color: "#8A9AB5", display: "block", marginBottom: "5px" }}>Password</label><input name="password" type="password" autoComplete="current-password" required placeholder="••••••••" style={inp} /></div>
           <button type="submit" disabled={loading} style={{ padding: "13px", borderRadius: "12px", background: "linear-gradient(135deg,#00A3FF,#0066FF)", border: "none", color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: "0.95rem" }}>{loading ? "Signing in..." : "Enter Deployment AI →"}</button>
         </form>
       </div>
@@ -263,7 +263,8 @@ export default function DeployPage() {
 
       {/* BACK LINK */}
       <div style={{ textAlign: "center", marginTop: "20px" }}>
-        <Link href="/" style={{ color: "#3D4F6E", fontSize: "0.82rem", textDecoration: "none" }}>← Back to DUNAZOE</Link>
+        <Link href="/" style={{ color: "#3D4F6E", fontSize: "0.82rem", textDecoration: "none", marginRight: "16px" }}>← Back to DUNAZOE</Link>
+        <Link href="/ops" style={{ color: "#00A3FF", fontSize: "0.82rem", textDecoration: "none" }}>🛸 Operator Cockpit →</Link>
       </div>
     </div>
   );

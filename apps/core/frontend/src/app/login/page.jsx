@@ -34,8 +34,8 @@ export default function LoginPage() {
         </div>
         {error&&<div data-testid="error-message" style={{background:"rgba(255,59,92,0.1)",border:"1px solid rgba(255,59,92,0.3)",borderRadius:"10px",padding:"12px",marginBottom:"20px",fontSize:"0.85rem",color:"#FF3B5C"}}>⚠️ {error}</div>}
         <form onSubmit={handleSubmit} style={{display:"flex",flexDirection:"column",gap:"16px"}}>
-          <div><label style={{fontSize:"0.82rem",color:"#8A9AB5",marginBottom:"6px",display:"block"}}>Email</label><input name="email" type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} placeholder="your@email.com" required style={inp}/></div>
-          <div><label style={{fontSize:"0.82rem",color:"#8A9AB5",marginBottom:"6px",display:"block"}}>Password</label><input name="password" type="password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})} placeholder="••••••••" required style={inp}/></div>
+          <div><label style={{fontSize:"0.82rem",color:"#8A9AB5",marginBottom:"6px",display:"block"}}>Email</label><input name="email" type="email" autoComplete="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} placeholder="your@email.com" required style={inp}/></div>
+          <div><label style={{fontSize:"0.82rem",color:"#8A9AB5",marginBottom:"6px",display:"block"}}>Password</label><input name="password" type="password" autoComplete="current-password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})} placeholder="••••••••" required style={inp}/></div>
           <div style={{textAlign:"right"}}><Link href="/forgot-password" style={{fontSize:"0.82rem",color:"#00A3FF",textDecoration:"none"}}>Forgot password?</Link></div>
           <button type="submit" disabled={loading} style={{padding:"14px",borderRadius:"12px",background:loading?"rgba(0,163,255,0.4)":"linear-gradient(135deg,#00A3FF,#0066FF)",border:"none",color:"#fff",fontSize:"1rem",fontWeight:700,cursor:loading?"not-allowed":"pointer"}}>
             {loading?"Signing in...":"Sign In →"}
