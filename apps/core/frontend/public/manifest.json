@@ -13,13 +13,13 @@
   "icons": [
     { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
     { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
-    { "src": "/assets/dunazoe-logo.jpg", "sizes": "any", "type": "image/jpeg" }
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
   ],
   "shortcuts": [
-    { "name": "Shop", "url": "/products", "description": "Browse products" },
-    { "name": "My Wallet", "url": "/wallet", "description": "View your wallet" },
-    { "name": "Ajo Savings", "url": "/thrift", "description": "Your Ajo groups" },
-    { "name": "Orders", "url": "/orders", "description": "Track your orders" }
+    { "name": "Shop",        "url": "/products", "description": "Browse products"   },
+    { "name": "My Wallet",   "url": "/wallet",   "description": "View your wallet"  },
+    { "name": "Ajo Savings", "url": "/thrift",   "description": "Your Ajo groups"   },
+    { "name": "Orders",      "url": "/orders",   "description": "Track your orders" }
   ],
   "prefer_related_applications": false
 }
