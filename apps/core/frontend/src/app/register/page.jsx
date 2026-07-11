@@ -1,12 +1,13 @@
 "use client";
-import { useState, useEffect } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+const API = process.env.NEXT_PUBLIC_API_URL || "/api";
 
-export default function RegisterPage() {
+// Inner component — useSearchParams() must live inside <Suspense>
+function RegisterContent() {
   const router = useRouter();
   const params = useSearchParams();
   const defaultRole = params.get("role") === "vendor" ? "vendor" : "customer";
@@ -19,37 +20,65 @@ export default function RegisterPage() {
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
   async function handleSubmit(e) {
-    e.preventDefault(); setError(""); setLoading(true);
+    e.preventDefault();
+    setError("");
+    setLoading(true);
     if (form.password !== form.confirm) { setError("Passwords do not match."); setLoading(false); return; }
     if (form.password.length < 8) { setError("Password must be at least 8 characters."); setLoading(false); return; }
     try {
       const body = { name: form.name, email: form.email, phone: form.phone, password: form.password, role };
       if (role === "vendor") body.business_name = form.business_name;
-      const res = await fetch(`${API}/auth/register`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const res = await fetch(`${API}/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
       const data = await res.json();
       if (!data.success) { setError(data.error || "Registration failed. Try again."); return; }
       localStorage.setItem("dunazoe_token", data.token);
       localStorage.setItem("dunazoe_user", JSON.stringify({ user_id: data.user_id, name: data.name, email: data.email, role: data.role }));
-      if (role === "vendor") router.push("/vendor/dashboard");
-      else router.push("/dashboard");
-    } catch (_) { setError("Connection failed. Check your internet and try again."); }
-    finally { setLoading(false); }
+      router.push(role === "vendor" ? "/vendor/dashboard" : "/dashboard");
+    } catch (_) {
+      setError("Connection failed. Check your internet and try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
-  const inp = { width: "100%", padding: "12px 14px", background: "rgba(255,255,255,0.05)", border: "1.5px solid rgba(0,163,255,0.2)", borderRadius: "10px", color: "#fff", fontSize: "0.95rem", outline: "none", boxSizing: "border-box" };
-  const tab = (active) => ({ flex: 1, padding: "10px", borderRadius: "10px", border: "none", cursor: "pointer", fontWeight: 700, fontSize: "0.9rem", background: active ? "linear-gradient(135deg,#00A3FF,#0066FF)" : "transparent", color: active ? "#fff" : "#8A9AB5", transition: "all 0.2s" });
+  const inp = {
+    width: "100%", padding: "12px 14px",
+    background: "rgba(255,255,255,0.05)",
+    border: "1.5px solid rgba(0,163,255,0.2)",
+    borderRadius: "10px", color: "#fff",
+    fontSize: "0.95rem", outline: "none", boxSizing: "border-box",
+  };
+  const tab = (active) => ({
+    flex: 1, padding: "10px", borderRadius: "10px", border: "none",
+    cursor: "pointer", fontWeight: 700, fontSize: "0.9rem",
+    background: active ? "linear-gradient(135deg,#00A3FF,#0066FF)" : "transparent",
+    color: active ? "#fff" : "#8A9AB5", transition: "all 0.2s",
+  });
 
   function PwdField({ label, field, show, toggle, placeholder, autoComp }) {
     return (
       <div>
         <label style={{ fontSize: "0.82rem", color: "#8A9AB5", marginBottom: "6px", display: "block" }}>{label}</label>
         <div style={{ position: "relative" }}>
-          <input type={show ? "text" : "password"} autoComplete={autoComp}
-            value={form[field]} onChange={set(field)} placeholder={placeholder} required
-            style={{ ...inp, paddingRight: "48px" }} />
-          <button type="button" aria-label={show ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`}
+          <input
+            type={show ? "text" : "password"}
+            autoComplete={autoComp}
+            value={form[field]}
+            onChange={set(field)}
+            placeholder={placeholder}
+            required
+            style={{ ...inp, paddingRight: "48px" }}
+          />
+          <button
+            type="button"
+            aria-label={show ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`}
             onClick={toggle}
-            style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: "4px", fontSize: "1.1rem", color: "#8A9AB5", lineHeight: 1 }}>
+            style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: "4px", fontSize: "1.1rem", color: "#8A9AB5", lineHeight: 1 }}
+          >
             {show ? "🙈" : "👁️"}
           </button>
         </div>
@@ -60,8 +89,12 @@ export default function RegisterPage() {
   return (
     <div style={{ minHeight: "100vh", background: "#0A0E1A", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
       <div style={{ width: "100%", maxWidth: "460px", background: "linear-gradient(145deg,#0D1525,#0A1020)", border: "1px solid rgba(0,163,255,0.2)", borderRadius: "24px", padding: "40px", boxShadow: "0 24px 80px rgba(0,0,0,0.5)" }}>
+
         <div style={{ textAlign: "center", marginBottom: "28px" }}>
-          <Link href="/"><Image src="/assets/dunazoe-logo.jpg" alt="DUNAZOE" width={72} height={72} style={{ borderRadius: "16px", boxShadow: "0 0 30px rgba(0,163,255,0.45)", border: "2px solid rgba(0,163,255,0.3)", marginBottom: "12px" }} /></Link>
+          <Link href="/">
+            <Image src="/icon-192.png" alt="DUNAZOE" width={72} height={72}
+              style={{ borderRadius: "16px", boxShadow: "0 0 30px rgba(0,163,255,0.45)", border: "2px solid rgba(0,163,255,0.3)", marginBottom: "12px" }} />
+          </Link>
           <h1 style={{ fontSize: "1.8rem", fontWeight: 800, letterSpacing: "0.08em", background: "linear-gradient(135deg,#00A3FF,#0066FF)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", marginBottom: "6px" }}>DUNAZOE</h1>
           <p style={{ color: "#8A9AB5", fontSize: "0.88rem" }}>Create your free account.</p>
         </div>
@@ -71,7 +104,11 @@ export default function RegisterPage() {
           <button type="button" onClick={() => setRole("vendor")} style={tab(role === "vendor")}>🏪 Vendor / Seller</button>
         </div>
 
-        {error && <div data-testid="error-message" style={{ background: "rgba(255,59,92,0.1)", border: "1px solid rgba(255,59,92,0.3)", borderRadius: "10px", padding: "12px", marginBottom: "20px", fontSize: "0.85rem", color: "#FF3B5C" }}>⚠️ {error}</div>}
+        {error && (
+          <div data-testid="error-message" style={{ background: "rgba(255,59,92,0.1)", border: "1px solid rgba(255,59,92,0.3)", borderRadius: "10px", padding: "12px", marginBottom: "20px", fontSize: "0.85rem", color: "#FF3B5C" }}>
+            ⚠️ {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
           <div>
@@ -109,5 +146,14 @@ export default function RegisterPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Suspense boundary required by Next.js 14 when useSearchParams() is used in a client component
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: "100vh", background: "#0A0E1A" }} />}>
+      <RegisterContent />
+    </Suspense>
   );
 }

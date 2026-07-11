@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { Suspense, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import PageShell from "../../components/PageShell";
@@ -8,17 +8,18 @@ import Image from "next/image";
 const API = process.env.NEXT_PUBLIC_API_URL || "/api";
 
 const CATS = [
-  { icon: "👗", label: "Fashion", slug: "fashion" },
-  { icon: "📱", label: "Phones", slug: "phones_tablets" },
-  { icon: "🛒", label: "Food", slug: "food_groceries" },
-  { icon: "💄", label: "Beauty", slug: "beauty_health" },
+  { icon: "👗", label: "Fashion",     slug: "fashion" },
+  { icon: "📱", label: "Phones",      slug: "phones_tablets" },
+  { icon: "🛒", label: "Food",        slug: "food_groceries" },
+  { icon: "💄", label: "Beauty",      slug: "beauty_health" },
   { icon: "⚡", label: "Electronics", slug: "electronics" },
-  { icon: "☀️", label: "Solar", slug: "solar_energy" },
-  { icon: "👶", label: "Baby", slug: "baby_kids" },
-  { icon: "💼", label: "Services", slug: "services" },
+  { icon: "☀️", label: "Solar",       slug: "solar_energy" },
+  { icon: "👶", label: "Baby",        slug: "baby_kids" },
+  { icon: "💼", label: "Services",    slug: "services" },
 ];
 
-export default function ProductsPage() {
+// Inner component — useSearchParams() must live inside <Suspense>
+function ProductsContent() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -51,18 +52,28 @@ export default function ProductsPage() {
   }
 
   return (
-    <PageShell title={category ? CATS.find(c => c.slug === category)?.label || "Products" : "All Products"}
-      icon="🛒" authRequired={false}
+    <PageShell
+      title={category ? CATS.find(c => c.slug === category)?.label || "Products" : "All Products"}
+      icon="🛒"
+      authRequired={false}
       subtitle="Discover quality products from verified vendors across Nigeria"
-      actions={<Link href="/cart" className="btn btn-outline btn-sm">🛒 View Cart</Link>}>
+      actions={<Link href="/cart" className="btn btn-outline btn-sm">🛒 View Cart</Link>}
+    >
       <div style={{ marginBottom: "24px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
-        <input className="form-input" value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="Search products..." style={{ flex: 1, minWidth: "200px" }}
-          onKeyDown={e => e.key === "Enter" && load()} />
+        <input
+          className="form-input"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search products..."
+          style={{ flex: 1, minWidth: "200px" }}
+          onKeyDown={e => e.key === "Enter" && load()}
+        />
         <button onClick={load} className="btn btn-primary">Search</button>
       </div>
+
       <div style={{ display: "flex", gap: "8px", marginBottom: "28px", overflowX: "auto", paddingBottom: "4px" }}>
-        <Link href="/products" className={`badge ${!category ? "badge-info" : "badge-muted"}`} style={{ whiteSpace: "nowrap", textDecoration: "none", padding: "6px 14px", fontSize: "0.82rem" }}>All</Link>
+        <Link href="/products" className={`badge ${!category ? "badge-info" : "badge-muted"}`}
+          style={{ whiteSpace: "nowrap", textDecoration: "none", padding: "6px 14px", fontSize: "0.82rem" }}>All</Link>
         {CATS.map(c => (
           <Link key={c.slug} href={`/products?category=${c.slug}`}
             className={`badge ${category === c.slug ? "badge-info" : "badge-muted"}`}
@@ -71,16 +82,23 @@ export default function ProductsPage() {
           </Link>
         ))}
       </div>
+
       {loading ? (
-        <div className="grid-auto">{Array(8).fill(0).map((_, i) => <div key={i} className="skeleton" style={{ height: "280px", borderRadius: "16px" }} />)}</div>
+        <div className="grid-auto">
+          {Array(8).fill(0).map((_, i) => (
+            <div key={i} className="skeleton" style={{ height: "280px", borderRadius: "16px" }} />
+          ))}
+        </div>
       ) : products.length > 0 ? (
         <div className="grid-auto">
           {products.map(p => (
             <div key={p.id} className="card" style={{ overflow: "hidden", display: "flex", flexDirection: "column" }}>
               <Link href={`/products/${p.id}`} style={{ textDecoration: "none", display: "block" }}>
                 <div style={{ width: "100%", height: "180px", background: p.images ? `url(${p.images}) center/cover` : "var(--bg-3)", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
-                  {!p.images && <Image src="/assets/dunazoe-logo.jpg" alt="" width={48} height={48} style={{ borderRadius: "10px", opacity: 0.25 }} />}
-                  {p.ajo_enabled && <span className="badge badge-info" style={{ position: "absolute", top: "10px", right: "10px" }}>⬡ Ajo</span>}
+                  {!p.images && <span style={{ fontSize: "2rem", opacity: 0.25 }}>🛍️</span>}
+                  {p.ajo_enabled && (
+                    <span className="badge badge-info" style={{ position: "absolute", top: "10px", right: "10px" }}>⬡ Ajo</span>
+                  )}
                 </div>
                 <div style={{ padding: "14px" }}>
                   <p style={{ fontWeight: 600, fontSize: "0.88rem", marginBottom: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</p>
@@ -105,5 +123,14 @@ export default function ProductsPage() {
         </div>
       )}
     </PageShell>
+  );
+}
+
+// Suspense boundary required by Next.js 14 when useSearchParams() is used in a client component
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: "100vh", background: "var(--bg-1, #04091C)" }} />}>
+      <ProductsContent />
+    </Suspense>
   );
 }
