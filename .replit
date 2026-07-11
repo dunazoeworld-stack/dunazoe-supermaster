@@ -44,3 +44,8 @@ NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY = "pk_live_d60055e5fd9e2fbdb2e86ab309774c6f719e4
 CLOUDINARY_CLOUD_NAME = "dtx17sg1m"
 CLOUDINARY_API_KEY = "634966339231127"
 NEXT_PUBLIC_API_URL = "/api"
+
+[deployment]
+deploymentTarget = "autoscale"
+run = ["bash", "-c", "cd apps/core/frontend && npm run start"]
+build = ["bash", "-c", "cd apps/core/frontend && npm run build"]
