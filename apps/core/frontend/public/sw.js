@@ -1,11 +1,11 @@
-const CACHE_NAME = "dunazoe-v2";
+const CACHE_NAME = "dunazoe-v3";
 const STATIC_ASSETS = [
   "/",
   "/offline",
   "/manifest.json",
   "/icon-192.png",
   "/icon-512.png",
-  "/assets/dunazoe-logo.jpg",
+  "/apple-touch-icon.png",
 ];
 
 const NEVER_CACHE = [

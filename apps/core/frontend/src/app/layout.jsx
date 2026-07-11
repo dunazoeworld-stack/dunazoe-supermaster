@@ -38,10 +38,8 @@ export default function RootLayout({ children }) {
         <meta name="apple-mobile-web-app-title" content="DUNAZOE" />
         <meta name="msapplication-TileColor" content="#0066FF" />
         <link rel="manifest" href="/manifest.json" />
-        <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
-        <link rel="icon" href="/icon-512.png" type="image/png" sizes="512x512" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+        {/* icon.png + apple-icon.png in src/app/ are served by Next.js with content-hash URLs (auto cache-busted).
+            No manual <link rel="icon"> needed — App Router injects them automatically. */}
         <meta name="format-detection" content="telephone=no" />
         <meta name="HandheldFriendly" content="true" />
       </head>
