@@ -47,5 +47,5 @@ NEXT_PUBLIC_API_URL = "/api"
 
 [deployment]
 deploymentTarget = "autoscale"
-run = ["bash", "-c", "cd apps/core/frontend && npm run start"]
-build = ["bash", "-c", "cd apps/core/frontend && npm run build"]
+run = ["bash", "deploy-start.sh"]
+build = ["bash", "deploy-build.sh"]
