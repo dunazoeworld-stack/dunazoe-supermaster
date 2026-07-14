@@ -4,6 +4,8 @@ import Link from "next/link";
 import Navbar from "../../components/Navbar";
 import NetworkBanner from "../../components/NetworkBanner";
 
+const DEPLOYED_URL = "https://dunazoe-supermaster-1--dunazoeworld.replit.app";
+
 export default function OpsPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -15,7 +17,19 @@ export default function OpsPage() {
   // STAE state
   const [stae, setStae] = useState(null);
   const [staeLoading, setStaeLoading] = useState(false);
-  const [staeMsg, setStaeMsg] = useState(null); // { type: "success"|"error", text }
+  const [staeMsg, setStaeMsg] = useState(null);
+
+  // Product AI state
+  const [productAI, setProductAI] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiMsg, setAiMsg] = useState(null);
+  const [aiResult, setAiResult] = useState(null);
+  const [aiForm, setAiForm] = useState({ type: "demand_forecast", category: "fashion", city: "lagos", cost_price: "", name: "", description: "", price: "", images: "1", has_cost_price: true, segment: "new_user" });
+
+  // Site Test state
+  const [siteTests, setSiteTests] = useState(null);
+  const [testLoading, setTestLoading] = useState(false);
+  const [testTarget, setTestTarget] = useState("deployed");
 
   useEffect(() => {
     try { const u = JSON.parse(localStorage.getItem("dunazoe_user") || "{}"); setUser(u); } catch (_) {}
@@ -69,14 +83,69 @@ export default function OpsPage() {
 
   useEffect(() => {
     if (tab === "stae" && !stae) loadStae();
+    if (tab === "productai" && !productAI) loadProductAI();
   }, [tab]);
+
+  async function loadProductAI() {
+    setAiLoading(true); setAiMsg(null);
+    const token = localStorage.getItem("dunazoe_token");
+    try {
+      const res = await fetch("/api/ops/product-ai", { headers: { Authorization: `Bearer ${token}` } });
+      const d = await res.json();
+      if (d.success) setProductAI(d);
+      else setAiMsg({ type: "error", text: d.error || "Product AI access denied." });
+    } catch (_) { setAiMsg({ type: "error", text: "Could not reach Product AI endpoint." }); }
+    finally { setAiLoading(false); }
+  }
+
+  async function runProductAI() {
+    setAiLoading(true); setAiMsg(null); setAiResult(null);
+    const token = localStorage.getItem("dunazoe_token");
+    const payload = { type: aiForm.type, data: {} };
+    if (aiForm.type === "demand_forecast")    payload.data = { category: aiForm.category, city: aiForm.city };
+    if (aiForm.type === "optimize_price")     payload.data = { cost_price: +aiForm.cost_price, category: aiForm.category, city: aiForm.city, name: aiForm.name };
+    if (aiForm.type === "listing_assistant")  payload.data = { name: aiForm.name, description: aiForm.description, price: +aiForm.price, category: aiForm.category, images: +aiForm.images, has_cost_price: aiForm.has_cost_price };
+    if (aiForm.type === "marketing_copy")     payload.data = { segment: aiForm.segment, product_name: aiForm.name, price: +aiForm.price };
+    if (aiForm.type === "recommend")          payload.data = { city: aiForm.city };
+    if (aiForm.type === "vendor_insights")    payload.data = { city: aiForm.city };
+    if (aiForm.type === "site_health")        payload.data = { base_url: testTarget === "deployed" ? DEPLOYED_URL : "http://localhost:5000" };
+    try {
+      const res = await fetch("/api/ops/product-ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
+      });
+      const d = await res.json();
+      if (d.success) { setAiResult(d); setAiMsg({ type: "success", text: `✅ ${aiForm.type} completed.` }); }
+      else setAiMsg({ type: "error", text: d.error || "AI operation failed." });
+    } catch (_) { setAiMsg({ type: "error", text: "Network error running AI operation." }); }
+    finally { setAiLoading(false); }
+  }
+
+  async function runSiteTests() {
+    setTestLoading(true); setSiteTests(null); setAiMsg(null);
+    const token = localStorage.getItem("dunazoe_token");
+    const base_url = testTarget === "deployed" ? DEPLOYED_URL : "http://localhost:5000";
+    try {
+      const res = await fetch("/api/ops/product-ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ type: "site_health", data: { base_url } }),
+      });
+      const d = await res.json();
+      if (d.success) setSiteTests(d.result);
+      else setAiMsg({ type: "error", text: d.error || "Site test failed." });
+    } catch (_) { setAiMsg({ type: "error", text: "Could not run site tests." }); }
+    finally { setTestLoading(false); }
+  }
 
   function copyToClipboard(text) {
     navigator.clipboard?.writeText(text).catch(() => {});
   }
 
-  const TABS = ["overview", "secrets", "webhooks", "stae", "deploy", "distribution"];
-  const TAB_ICONS = { overview: "📊", secrets: "🔐", webhooks: "🔗", stae: "⚡", deploy: "🚀", distribution: "📱" };
+  const TABS = ["overview", "secrets", "webhooks", "stae", "productai", "sitetest", "deploy", "distribution"];
+  const TAB_ICONS = { overview: "📊", secrets: "🔐", webhooks: "🔗", stae: "⚡", productai: "🤖", sitetest: "🧪", deploy: "🚀", distribution: "📱" };
+  const TAB_LABELS = { overview: "Overview", secrets: "Secrets", webhooks: "Webhooks", stae: "STAE", productai: "Product AI", sitetest: "Site Tests", deploy: "Deploy", distribution: "Distribution" };
 
   if (loading) return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "16px" }}>
@@ -145,7 +214,7 @@ export default function OpsPage() {
               cursor: "pointer", fontWeight: 600, fontSize: "0.85rem", whiteSpace: "nowrap",
               transition: "all 0.15s",
             }}>
-              {TAB_ICONS[t]} {t === "stae" ? "STAE" : t.charAt(0).toUpperCase() + t.slice(1)}
+              {TAB_ICONS[t]} {TAB_LABELS[t]}
             </button>
           ))}
         </div>
@@ -385,6 +454,234 @@ export default function OpsPage() {
 
             {!stae && !staeLoading && (
               <button onClick={loadStae} className="btn btn-primary">Load STAE Status</button>
+            )}
+          </div>
+        )}
+
+        {/* ── PRODUCT AI ────────────────────────────────────────────────────── */}
+        {tab === "productai" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            {/* Status banner */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", padding: "16px 20px", background: "var(--elevated)", borderRadius: "14px", border: "1px solid var(--border)" }}>
+              <div>
+                <p style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginBottom: "4px" }}>PRODUCT AI STATUS</p>
+                <p style={{ fontSize: "1.4rem", fontWeight: 900, color: "var(--success)", lineHeight: 1 }}>
+                  {productAI ? "🟢 ACTIVE" : aiLoading ? "⏳ LOADING…" : "⚪ NOT LOADED"}
+                </p>
+              </div>
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                {productAI && <span className="badge badge-success">{productAI.product_ai.categories_indexed} categories indexed</span>}
+                {productAI && <span className={`badge ${productAI.product_ai.ai_service_port4014.startsWith("online") ? "badge-success" : "badge-warning"}`}>
+                  AI Service: {productAI.product_ai.ai_service_port4014.startsWith("online") ? "Online :4014" : "Inline fallback"}
+                </span>}
+              </div>
+              <button onClick={loadProductAI} className="btn btn-ghost btn-sm" disabled={aiLoading}>{aiLoading ? "…" : "🔄 Refresh"}</button>
+            </div>
+
+            <div className="alert alert-info" style={{ fontSize: "0.82rem" }}>
+              🤖 <strong>Product Listing AI</strong> — Rule-based engine (no external API cost). Operations: demand forecasting, price optimisation, listing scoring, marketing copy generation, vendor insights, and full site health tests. Superuser only.
+            </div>
+
+            {aiMsg && <div className={`alert ${aiMsg.type === "success" ? "alert-success" : "alert-error"}`}>{aiMsg.text}</div>}
+
+            {/* Operation runner */}
+            <div className="card">
+              <div className="card-body">
+                <p style={{ fontWeight: 700, marginBottom: "14px" }}>⚙️ Run AI Operation</p>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "10px", marginBottom: "14px" }}>
+                  {/* Operation type */}
+                  <div>
+                    <label style={{ fontSize: "0.75rem", color: "var(--text-secondary)", fontWeight: 600 }}>OPERATION</label>
+                    <select className="form-input" value={aiForm.type} onChange={e => setAiForm(f => ({ ...f, type: e.target.value }))} style={{ marginTop: "4px" }}>
+                      <option value="demand_forecast">📊 Demand Forecast</option>
+                      <option value="optimize_price">💰 Price Optimiser</option>
+                      <option value="listing_assistant">🏷️ Listing Assistant</option>
+                      <option value="marketing_copy">📣 Marketing Copy</option>
+                      <option value="recommend">⭐ Recommendations</option>
+                      <option value="vendor_insights">📈 Vendor Insights</option>
+                      <option value="site_health">🧪 Site Health</option>
+                    </select>
+                  </div>
+                  {/* Category */}
+                  {["demand_forecast","optimize_price","listing_assistant"].includes(aiForm.type) && (
+                    <div>
+                      <label style={{ fontSize: "0.75rem", color: "var(--text-secondary)", fontWeight: 600 }}>CATEGORY</label>
+                      <select className="form-input" value={aiForm.category} onChange={e => setAiForm(f => ({ ...f, category: e.target.value }))} style={{ marginTop: "4px" }}>
+                        {["fashion","electronics","food_groceries","beauty_health","phones_tablets","thrift_fashion","solar_energy","baby_kids","services","books_education","sports_fitness","furniture","agriculture","automotive"].map(c => (
+                          <option key={c} value={c}>{c.replace(/_/g," ")}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  {/* City */}
+                  {["demand_forecast","optimize_price","recommend","vendor_insights"].includes(aiForm.type) && (
+                    <div>
+                      <label style={{ fontSize: "0.75rem", color: "var(--text-secondary)", fontWeight: 600 }}>CITY</label>
+                      <select className="form-input" value={aiForm.city} onChange={e => setAiForm(f => ({ ...f, city: e.target.value }))} style={{ marginTop: "4px" }}>
+                        {["lagos","abuja","port harcourt","kano","ibadan","enugu","abeokuta"].map(c => (
+                          <option key={c} value={c}>{c.charAt(0).toUpperCase()+c.slice(1)}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  {/* Cost price */}
+                  {aiForm.type === "optimize_price" && (
+                    <div>
+                      <label style={{ fontSize: "0.75rem", color: "var(--text-secondary)", fontWeight: 600 }}>COST PRICE (₦)</label>
+                      <input className="form-input" type="number" min="0" value={aiForm.cost_price} onChange={e => setAiForm(f => ({ ...f, cost_price: e.target.value }))} placeholder="e.g. 5000" style={{ marginTop: "4px" }} />
+                    </div>
+                  )}
+                  {/* Product name */}
+                  {["optimize_price","listing_assistant","marketing_copy"].includes(aiForm.type) && (
+                    <div>
+                      <label style={{ fontSize: "0.75rem", color: "var(--text-secondary)", fontWeight: 600 }}>PRODUCT NAME</label>
+                      <input className="form-input" value={aiForm.name} onChange={e => setAiForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Ankara Dress" style={{ marginTop: "4px" }} />
+                    </div>
+                  )}
+                  {/* Price */}
+                  {["listing_assistant","marketing_copy"].includes(aiForm.type) && (
+                    <div>
+                      <label style={{ fontSize: "0.75rem", color: "var(--text-secondary)", fontWeight: 600 }}>PRICE (₦)</label>
+                      <input className="form-input" type="number" min="0" value={aiForm.price} onChange={e => setAiForm(f => ({ ...f, price: e.target.value }))} placeholder="e.g. 12000" style={{ marginTop: "4px" }} />
+                    </div>
+                  )}
+                  {/* Segment */}
+                  {aiForm.type === "marketing_copy" && (
+                    <div>
+                      <label style={{ fontSize: "0.75rem", color: "var(--text-secondary)", fontWeight: 600 }}>CUSTOMER SEGMENT</label>
+                      <select className="form-input" value={aiForm.segment} onChange={e => setAiForm(f => ({ ...f, segment: e.target.value }))} style={{ marginTop: "4px" }}>
+                        {["new_user","loyal","champion","at_risk","thrift_seeker","price_sensitive"].map(s => (
+                          <option key={s} value={s}>{s.replace(/_/g," ")}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  {/* Description */}
+                  {aiForm.type === "listing_assistant" && (
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <label style={{ fontSize: "0.75rem", color: "var(--text-secondary)", fontWeight: 600 }}>DESCRIPTION</label>
+                      <textarea className="form-input" rows={2} value={aiForm.description} onChange={e => setAiForm(f => ({ ...f, description: e.target.value }))} placeholder="Product description text…" style={{ marginTop: "4px", resize: "vertical" }} />
+                    </div>
+                  )}
+                </div>
+                <button onClick={runProductAI} disabled={aiLoading} className="btn btn-primary" style={{ width: "100%" }}>
+                  {aiLoading ? "⏳ Running…" : "▶ Run Operation"}
+                </button>
+              </div>
+            </div>
+
+            {/* Results */}
+            {aiResult && (
+              <div className="card" style={{ borderColor: "rgba(0,200,150,0.3)" }}>
+                <div className="card-body">
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                    <p style={{ fontWeight: 700 }}>🤖 AI Result — <span style={{ color: "var(--dz-blue)" }}>{aiResult.type}</span></p>
+                    <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{new Date(aiResult.ts).toLocaleTimeString("en-NG")}</span>
+                  </div>
+                  <pre style={{ fontSize: "0.78rem", background: "var(--bg-3)", padding: "14px", borderRadius: "10px", overflowX: "auto", whiteSpace: "pre-wrap", color: "var(--text-secondary)", maxHeight: "360px", overflowY: "auto" }}>
+                    {JSON.stringify(aiResult.result, null, 2)}
+                  </pre>
+                  {aiResult.source && <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "6px" }}>Source: {aiResult.source}</p>}
+                </div>
+              </div>
+            )}
+
+            {/* Demand index matrix quick-view */}
+            {productAI?.demand_index && (
+              <div className="card">
+                <div className="card-body">
+                  <p style={{ fontWeight: 700, marginBottom: "12px" }}>📊 Demand Index — Nigerian Market</p>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "8px" }}>
+                    {Object.entries(productAI.demand_index).sort(([,a],[,b]) => b-a).map(([cat, score]) => (
+                      <div key={cat} style={{ padding: "8px 12px", background: "var(--surface)", borderRadius: "8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span style={{ fontSize: "0.78rem", fontWeight: 600, textTransform: "capitalize" }}>{cat.replace(/_/g," ")}</span>
+                        <span style={{ fontSize: "0.82rem", fontWeight: 800, color: score >= 0.85 ? "var(--success)" : score >= 0.70 ? "var(--warning)" : "var(--text-secondary)" }}>
+                          {(score * 100).toFixed(0)}%
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── SITE TESTS ────────────────────────────────────────────────────── */}
+        {tab === "sitetest" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div className="alert alert-info" style={{ fontSize: "0.82rem" }}>
+              🧪 <strong>Site Testing</strong> — Run health checks against all key routes. Tests both the <strong>Deployed app</strong> and the <strong>Dev server</strong>. All fixes should be verified here after deployment.
+            </div>
+
+            {/* Target selector */}
+            <div className="card">
+              <div className="card-body">
+                <p style={{ fontWeight: 700, marginBottom: "12px" }}>🎯 Test Target</p>
+                <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "14px" }}>
+                  {[
+                    { key: "deployed", label: "🌐 Deployed App", url: DEPLOYED_URL },
+                    { key: "dev",      label: "🖥️ Dev Server",   url: "http://localhost:5000" },
+                  ].map(({ key, label, url }) => (
+                    <button key={key} onClick={() => setTestTarget(key)} style={{
+                      padding: "10px 20px", borderRadius: "10px", border: "none", cursor: "pointer", fontWeight: 700, fontSize: "0.85rem",
+                      background: testTarget === key ? "rgba(0,163,255,0.12)" : "var(--surface)",
+                      color: testTarget === key ? "var(--dz-blue)" : "var(--text-secondary)",
+                      outline: testTarget === key ? "2px solid var(--dz-blue)" : "1px solid var(--border)",
+                    }}>
+                      {label}<br /><span style={{ fontSize: "0.68rem", fontWeight: 400, opacity: 0.7 }}>{url}</span>
+                    </button>
+                  ))}
+                </div>
+                <button onClick={runSiteTests} disabled={testLoading} className="btn btn-primary">
+                  {testLoading ? "⏳ Running tests…" : "▶ Run All Tests"}
+                </button>
+              </div>
+            </div>
+
+            {aiMsg && tab === "sitetest" && <div className={`alert ${aiMsg.type === "error" ? "alert-error" : "alert-success"}`}>{aiMsg.text}</div>}
+
+            {/* Results */}
+            {siteTests && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                {/* Summary */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px" }}>
+                  {[
+                    { label: "Passed",    value: siteTests.passed,     color: "var(--success)"   },
+                    { label: "Failed",    value: siteTests.failed,     color: siteTests.failed > 0 ? "var(--danger)" : "var(--text-muted)" },
+                    { label: "Total",     value: siteTests.total,      color: "var(--text)"      },
+                    { label: "Avg ms",    value: siteTests.avg_latency_ms, color: siteTests.avg_latency_ms > 2000 ? "var(--warning)" : "var(--success)" },
+                  ].map(({ label, value, color }) => (
+                    <div key={label} className="stat-tile">
+                      <p style={{ fontSize: "1.5rem", fontWeight: 900, color }}>{value}</p>
+                      <p className="stat-label">{label}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Route results */}
+                <div className="card">
+                  <div className="card-body">
+                    <p style={{ fontWeight: 700, marginBottom: "12px" }}>Route Results</p>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                      {siteTests.routes.map(r => (
+                        <div key={r.path} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 12px", background: r.ok ? "rgba(0,204,136,0.04)" : "rgba(255,59,92,0.06)", borderRadius: "8px", border: `1px solid ${r.ok ? "rgba(0,204,136,0.15)" : "rgba(255,59,92,0.2)"}` }}>
+                          <div>
+                            <span style={{ fontWeight: 600, fontSize: "0.85rem" }}>{r.label}</span>
+                            <code style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginLeft: "8px" }}>{r.path}</code>
+                          </div>
+                          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{r.latency_ms}ms</span>
+                            <span className={`badge ${r.ok ? "badge-success" : "badge-danger"}`}>
+                              {r.ok ? `✓ ${r.status}` : r.status ? `✗ ${r.status}` : "✗ Error"}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         )}

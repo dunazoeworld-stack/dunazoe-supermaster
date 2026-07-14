@@ -91,28 +91,104 @@ function ProductsContent() {
         </div>
       ) : products.length > 0 ? (
         <div className="grid-auto">
-          {products.map(p => (
-            <div key={p.id} className="card" style={{ overflow: "hidden", display: "flex", flexDirection: "column" }}>
-              <Link href={`/products/${p.id}`} style={{ textDecoration: "none", display: "block" }}>
-                <div style={{ width: "100%", height: "180px", background: p.images ? `url(${p.images}) center/cover` : "var(--bg-3)", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
-                  {!p.images && <span style={{ fontSize: "2rem", opacity: 0.25 }}>🛍️</span>}
-                  {p.ajo_enabled && (
-                    <span className="badge badge-info" style={{ position: "absolute", top: "10px", right: "10px" }}>⬡ Ajo</span>
-                  )}
+          {products.map(p => {
+            // Infer product type for icon
+            const cat = (p.product_type || p.type || p.category || "").toLowerCase();
+            const typeIcon = cat.includes("digital") || cat.includes("download") || p.is_digital ? "💾"
+                           : cat.includes("service") || cat.includes("consult") || p.is_service  ? "🛠️"
+                           : "📦";
+            // Parse first image
+            let imgSrc = null;
+            if (p.images) {
+              if (typeof p.images === "string") {
+                try { const a = JSON.parse(p.images); imgSrc = Array.isArray(a) ? a[0] : p.images; } catch { imgSrc = p.images; }
+              } else if (Array.isArray(p.images)) { imgSrc = p.images[0]; }
+            }
+            // Sizes / colors quick-peek
+            function peekArr(raw) {
+              if (!raw) return [];
+              if (Array.isArray(raw)) return raw.slice(0, 4);
+              try { const a = JSON.parse(raw); if (Array.isArray(a)) return a.slice(0, 4); } catch {}
+              return String(raw).split(",").map(s => s.trim()).filter(Boolean).slice(0, 4);
+            }
+            const sizes  = peekArr(p.sizes);
+            const colors = peekArr(p.colors);
+            const isDigital = typeIcon === "💾";
+            const isService = typeIcon === "🛠️";
+
+            return (
+              <div key={p.id} className="card" style={{ overflow: "hidden", display: "flex", flexDirection: "column" }}>
+                <Link href={`/products/${p.id}`} style={{ textDecoration: "none", display: "block" }}>
+                  {/* Image / hero */}
+                  <div style={{ width: "100%", height: "180px", background: imgSrc ? `url(${imgSrc}) center/cover no-repeat` : "var(--bg-3)", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", flexShrink: 0 }}>
+                    {!imgSrc && <span style={{ fontSize: "2.4rem", opacity: 0.22 }}>{typeIcon}</span>}
+                    {/* Type badge top-left */}
+                    <span style={{ position: "absolute", top: "8px", left: "8px", padding: "2px 7px", borderRadius: "12px", fontSize: "0.68rem", fontWeight: 700, background: "rgba(0,0,0,0.55)", color: "#fff", backdropFilter: "blur(4px)" }}>
+                      {typeIcon} {isDigital ? "Digital" : isService ? "Service" : "Physical"}
+                    </span>
+                    {p.ajo_enabled && (
+                      <span className="badge badge-info" style={{ position: "absolute", top: "8px", right: "8px", fontSize: "0.68rem" }}>⬡ Ajo</span>
+                    )}
+                    {p.weight && !isDigital && !isService && (
+                      <span style={{ position: "absolute", bottom: "8px", left: "8px", padding: "2px 7px", borderRadius: "10px", fontSize: "0.65rem", fontWeight: 600, background: "rgba(0,0,0,0.5)", color: "#ccc" }}>
+                        ⚖️ {p.weight}kg
+                      </span>
+                    )}
+                  </div>
+
+                  <div style={{ padding: "12px 14px 8px" }}>
+                    <p style={{ fontWeight: 700, fontSize: "0.88rem", marginBottom: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</p>
+                    <p style={{ fontSize: "0.72rem", color: "var(--text-secondary)", marginBottom: "6px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {p.business_name || "DUNAZOE Store"}{p.location ? ` · 📍${p.location}` : ""}
+                    </p>
+
+                    {/* Size pills */}
+                    {sizes.length > 0 && (
+                      <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", marginBottom: "5px" }}>
+                        {sizes.map(s => (
+                          <span key={s} style={{ padding: "1px 6px", borderRadius: "6px", fontSize: "0.62rem", fontWeight: 700, background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text-secondary)" }}>{s}</span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Color dots */}
+                    {colors.length > 0 && (
+                      <div style={{ display: "flex", gap: "4px", marginBottom: "5px", alignItems: "center" }}>
+                        {colors.map(c => /^#[0-9A-Fa-f]{3,6}$/.test(c)
+                          ? <span key={c} style={{ width: "12px", height: "12px", borderRadius: "50%", background: c, border: "1px solid var(--border)", flexShrink: 0 }} />
+                          : <span key={c} style={{ padding: "1px 6px", borderRadius: "6px", fontSize: "0.62rem", fontWeight: 700, background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text-secondary)" }}>{c}</span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Digital info */}
+                    {isDigital && p.file_format && (
+                      <p style={{ fontSize: "0.68rem", color: "var(--dz-blue)", marginBottom: "4px" }}>📥 {p.file_format}{p.file_size ? ` · ${p.file_size}` : ""}</p>
+                    )}
+
+                    {/* Service info */}
+                    {isService && (p.service_duration || p.service_area) && (
+                      <p style={{ fontSize: "0.68rem", color: "#9B5DE5", marginBottom: "4px" }}>⏳ {p.service_duration || "—"}{p.service_area ? ` · ${p.service_area}` : ""}</p>
+                    )}
+
+                    <span style={{ fontSize: "1.1rem", fontWeight: 900, background: "var(--dz-gradient)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+                      ₦{parseFloat(p.price || 0).toLocaleString("en-NG")}
+                    </span>
+                    {p.ajo_enabled && p.price > 0 && (
+                      <span style={{ fontSize: "0.68rem", color: "#00C8E0", marginLeft: "6px", fontWeight: 600 }}>
+                        or ₦{Math.ceil(p.price * 1.05 / 6).toLocaleString()}/mo
+                      </span>
+                    )}
+                  </div>
+                </Link>
+                <div style={{ padding: "0 14px 14px", marginTop: "auto" }}>
+                  <button onClick={() => addToCart(p)} className="btn btn-primary btn-sm" style={{ width: "100%" }}>
+                    {isDigital ? "💾 Buy & Download" : isService ? "🗓️ Book" : "🛒 Add to Cart"}
+                  </button>
                 </div>
-                <div style={{ padding: "14px" }}>
-                  <p style={{ fontWeight: 600, fontSize: "0.88rem", marginBottom: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</p>
-                  <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginBottom: "8px" }}>{p.business_name || "DUNAZOE Store"}</p>
-                  <span style={{ fontSize: "1.1rem", fontWeight: 800, background: "var(--dz-gradient)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
-                    ₦{parseFloat(p.price || 0).toLocaleString("en-NG")}
-                  </span>
-                </div>
-              </Link>
-              <div style={{ padding: "0 14px 14px" }}>
-                <button onClick={() => addToCart(p)} className="btn btn-primary btn-sm" style={{ width: "100%" }}>Add to Cart</button>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <div className="empty-state">
