@@ -1,5 +1,6 @@
 import "./globals.css";
 import ChatWidget from "../components/ChatWidget";
+import UpdateNotifier from "../components/UpdateNotifier";
 
 export const metadata = {
   title: "DUNAZOE — Buy Anything · Sell Everything · Ship Worldwide",
@@ -39,14 +40,14 @@ export default function RootLayout({ children }) {
         <meta name="apple-mobile-web-app-title" content="DUNAZOE" />
         <meta name="msapplication-TileColor" content="#0066FF" />
         <link rel="manifest" href="/manifest.json" />
-        {/* icon.png + apple-icon.png in src/app/ are served by Next.js with content-hash URLs (auto cache-busted).
-            No manual <link rel="icon"> needed — App Router injects them automatically. */}
         <meta name="format-detection" content="telephone=no" />
         <meta name="HandheldFriendly" content="true" />
       </head>
       <body>
         {children}
-        {/* Global chat widget — floating, only visible when logged in */}
+        {/* Auto-update banner — appears when a new version is detected */}
+        <UpdateNotifier />
+        {/* Global floating chat widget — only visible when logged in */}
         <ChatWidget />
       </body>
     </html>

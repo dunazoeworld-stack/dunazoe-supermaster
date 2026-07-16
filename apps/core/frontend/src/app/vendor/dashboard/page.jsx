@@ -34,10 +34,12 @@ export default function VendorDashboardPage() {
   ];
 
   const QUICK = [
-    { href: "/vendor/onboard", icon: "➕", label: "Add Product" },
-    { href: "/wallet", icon: "💳", label: "Payout" },
-    { href: "/orders?vendor=me", icon: "📦", label: "Orders" },
-    { href: "/disputes", icon: "⚖️", label: "Disputes" },
+    { href: "/vendor/onboard",   icon: "➕",  label: "Add Product" },
+    { href: "/wallet",           icon: "💳",  label: "Payout" },
+    { href: "/orders?vendor=me", icon: "📦",  label: "Orders" },
+    { href: "/disputes",         icon: "⚖️",  label: "Disputes" },
+    { href: "/vendor/marketing", icon: "📣",  label: "Marketing AI" },
+    { href: "/deploy/download",  icon: "🚀",  label: "Deploy Panel" },
   ];
 
   return (
@@ -56,7 +58,7 @@ export default function VendorDashboardPage() {
           </div>
         ))}
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px", marginBottom: "36px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(90px, 1fr))", gap: "10px", marginBottom: "36px" }}>
         {QUICK.map(({ href, icon, label }) => (
           <Link key={href} href={href} className="card" style={{ textDecoration: "none" }}>
             <div className="card-body" style={{ textAlign: "center", padding: "14px" }}>
