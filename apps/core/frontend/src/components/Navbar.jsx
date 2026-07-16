@@ -3,10 +3,11 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
+import NotificationBell from "./NotificationBell";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [user, setUser] = useState(null);
+  const [user, setUser]         = useState(null);
   const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
 
@@ -67,18 +68,30 @@ export default function Navbar() {
             ))}
           </div>
 
-          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+            {/* Cart */}
             <Link href="/cart" style={{ position: "relative", display: "flex", alignItems: "center", padding: "7px", borderRadius: "9px", color: "var(--text-secondary)", textDecoration: "none", fontSize: "1.1rem" }} aria-label="Cart">🛒</Link>
+
+            {/* Notification Bell (logged in only) */}
+            <NotificationBell />
+
             {user ? (
-              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
                 <Link href="/dashboard" style={{ padding: "7px 14px", borderRadius: "9px", fontSize: "0.85rem", fontWeight: 600, color: "var(--text-secondary)", textDecoration: "none" }}>
                   {user.name?.split(" ")[0]}
                 </Link>
+                {/* Vendor shortcut */}
+                {user.role === "vendor" && (
+                  <Link href="/vendor/dashboard" style={{ padding: "7px 10px", borderRadius: "9px", fontSize: "0.78rem", fontWeight: 600, color: "var(--dz-blue)", textDecoration: "none", background: "rgba(0,163,255,0.1)" }}>
+                    🏪
+                  </Link>
+                )}
                 <button onClick={handleLogout} className="btn btn-ghost btn-sm">Sign Out</button>
               </div>
             ) : (
               <Link href="/login" className="btn btn-primary btn-sm">Sign In</Link>
             )}
+
             {/* Mobile hamburger */}
             <button
               onClick={() => setMenuOpen(!menuOpen)}
@@ -99,13 +112,14 @@ export default function Navbar() {
             padding: "16px 24px 24px", display: "flex", flexDirection: "column", gap: "4px",
           }}>
             {[
-              { href: "/products", label: "🛒 Shop" },
-              { href: "/vendors", label: "🏪 Vendors" },
-              { href: "/thrift", label: "⬡ Ajo Savings" },
-              { href: "/services", label: "⚡ Services" },
-              { href: "/cart", label: "🛒 Cart" },
-              { href: "/wallet", label: "💳 Wallet" },
-              { href: "/orders", label: "📦 Orders" },
+              { href: "/products",         label: "🛒 Shop" },
+              { href: "/vendors",          label: "🏪 Vendors" },
+              { href: "/thrift",           label: "⬡ Ajo Savings" },
+              { href: "/services",         label: "⚡ Services" },
+              { href: "/cart",             label: "🛒 Cart" },
+              { href: "/wallet",           label: "💳 Wallet" },
+              { href: "/orders",           label: "📦 Orders" },
+              { href: "/vendor/marketing", label: "📣 Marketing AI" },
             ].map(({ href, label }) => (
               <Link key={href} href={href} style={{
                 padding: "12px 14px", borderRadius: "10px", fontSize: "0.95rem", fontWeight: 600,

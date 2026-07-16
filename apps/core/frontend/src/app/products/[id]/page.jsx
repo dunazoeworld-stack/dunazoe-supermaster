@@ -262,6 +262,46 @@ export default function ProductDetailPage({ params }) {
                   <Link href="/cart" className="btn btn-outline btn-lg">View Cart</Link>
                 </div>
 
+                {/* Share + Chat row */}
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                  {/* Share button */}
+                  <button
+                    onClick={() => {
+                      const link = product.shareable_link ? `https://${product.shareable_link}` : window.location.href;
+                      const text = `Check out '${product.name}' on DUNAZOE: ${link}`;
+                      if (navigator.share) {
+                        navigator.share({ title: product.name, text, url: link }).catch(() => {});
+                      } else {
+                        navigator.clipboard.writeText(link);
+                        alert("Link copied to clipboard!");
+                      }
+                    }}
+                    className="btn btn-ghost btn-sm"
+                    style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                  >
+                    📤 Share
+                  </button>
+                  {/* WhatsApp share */}
+                  <a
+                    href={`https://wa.me/?text=${encodeURIComponent(`Check out '${product.name}' on DUNAZOE: ${product.shareable_link ? `https://${product.shareable_link}` : window.location.href}`)}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="btn btn-ghost btn-sm"
+                  >
+                    📱 WhatsApp
+                  </a>
+                  {/* Chat Vendor */}
+                  <button
+                    onClick={() => {
+                      // Opens chat widget pre-filled with vendor
+                      window.__dunazoe_open_chat = { receiver_id: product.vendor_id, name: product.business_name || product.vendor_name || "Vendor" };
+                      document.dispatchEvent(new CustomEvent("dz:open-chat", { detail: window.__dunazoe_open_chat }));
+                    }}
+                    className="btn btn-ghost btn-sm"
+                  >
+                    💬 Chat Vendor
+                  </button>
+                </div>
+
                 {/* Ajo info */}
                 {product.ajo_enabled && (
                   <div className="alert alert-info" style={{ marginTop: "4px" }}>

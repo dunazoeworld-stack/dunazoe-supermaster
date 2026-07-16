@@ -1,4 +1,5 @@
 import "./globals.css";
+import ChatWidget from "../components/ChatWidget";
 
 export const metadata = {
   title: "DUNAZOE — Buy Anything · Sell Everything · Ship Worldwide",
@@ -43,7 +44,11 @@ export default function RootLayout({ children }) {
         <meta name="format-detection" content="telephone=no" />
         <meta name="HandheldFriendly" content="true" />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        {/* Global chat widget — floating, only visible when logged in */}
+        <ChatWidget />
+      </body>
     </html>
   );
 }
