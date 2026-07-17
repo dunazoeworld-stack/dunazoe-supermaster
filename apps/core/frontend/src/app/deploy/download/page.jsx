@@ -39,8 +39,8 @@ const INSTALL_STEPS = {
 };
 
 const CONTROL_ACTIONS = [
-  { label: "▶ Run Full Audit",    path: "/deployment/audit",              method: "POST", color: "#0066FF", body: {} },
-  { label: "📊 Platform Status",  path: "/deployment/status",             method: "GET",  color: "#00A3FF", body: null },
+  { label: "▶ Run Full Audit",    path: "/deployment/audit",              method: "POST", color: "#FF4500", body: {} },
+  { label: "📊 Platform Status",  path: "/deployment/status",             method: "GET",  color: "#FF6B00", body: null },
   { label: "⏱ Monitor Health",   path: "/deployment/monitor",            method: "GET",  color: "#10B981", body: null },
   { label: "🐙 GitHub Status",    path: "/deployment/github",             method: "GET",  color: "#6D28D9", body: null },
   { label: "💾 Backup State",     path: "/deployment/self/backup",        method: "POST", color: "#F59E0B", body: {} },
@@ -116,8 +116,8 @@ export default function DeployDownloadPage() {
       {!isPWA && (
         <div style={{
           padding: "20px 24px", borderRadius: "16px", marginBottom: "32px",
-          background: "linear-gradient(135deg, rgba(0,102,255,0.18), rgba(0,163,255,0.08))",
-          border: "1px solid rgba(0,163,255,0.3)",
+          background: "linear-gradient(135deg, rgba(255,70,0,0.18), rgba(255,107,0,0.08))",
+          border: "1px solid rgba(255,107,0,0.3)",
         }}>
           <h2 style={{ fontSize: "1.05rem", fontWeight: 800, marginBottom: "8px" }}>
             📲 Install Superuser App on Your Phone
@@ -163,7 +163,7 @@ export default function DeployDownloadPage() {
             📎 Share this URL to your phone:{" "}
             <span
               onClick={() => { navigator.clipboard?.writeText(pageUrl); }}
-              style={{ color: "#00A3FF", cursor: "pointer", fontWeight: 600, wordBreak: "break-all" }}
+              style={{ color: "#FF6B00", cursor: "pointer", fontWeight: 600, wordBreak: "break-all" }}
             >
               {pageUrl}
             </span>
@@ -188,7 +188,7 @@ export default function DeployDownloadPage() {
             </div>
           ) : status?.offline ? (
             <p style={{ fontSize: "0.83rem", color: "var(--text-muted)" }}>
-              ⚠️ {status.message} — Start <code style={{ color: "#00A3FF" }}>deployment-ai-service</code> on port 4027 to enable remote control.
+              ⚠️ {status.message} — Start <code style={{ color: "#FF6B00" }}>deployment-ai-service</code> on port 4027 to enable remote control.
             </p>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "10px" }}>
@@ -199,10 +199,10 @@ export default function DeployDownloadPage() {
                 { label: "Audits",   value: status?.total_audits || status?.audits || "—" },
               ].map(({ label, value }) => (
                 <div key={label} style={{
-                  padding: "12px", borderRadius: "10px", background: "rgba(0,163,255,0.06)",
+                  padding: "12px", borderRadius: "10px", background: "rgba(255,107,0,0.06)",
                   border: "1px solid var(--border)", textAlign: "center",
                 }}>
-                  <p style={{ fontSize: "1.1rem", fontWeight: 800, color: "#00A3FF" }}>{String(value)}</p>
+                  <p style={{ fontSize: "1.1rem", fontWeight: 800, color: "#FF6B00" }}>{String(value)}</p>
                   <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "2px" }}>{label}</p>
                 </div>
               ))}
@@ -295,7 +295,7 @@ export default function DeployDownloadPage() {
       {/* ── Version Info ──────────────────────────────────────────────────── */}
       <div style={{
         padding: "16px 20px", borderRadius: "12px",
-        background: "rgba(0,163,255,0.04)", border: "1px solid var(--border)",
+        background: "rgba(255,107,0,0.04)", border: "1px solid var(--border)",
         fontSize: "0.78rem", color: "var(--text-muted)", lineHeight: 1.8,
       }}>
         <strong style={{ color: "var(--text)" }}>Platform v2.0.0</strong> · 34 microservices ·

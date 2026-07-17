@@ -1,0 +1,78 @@
+/**
+ * deploy-theme.css
+ * Overrides the global blue DUNAZOE palette with the orange Superuser / Deployment AI palette.
+ * Applied via .deploy-theme wrapper in deploy/layout.jsx — scoped to all /deploy/* pages.
+ */
+
+.deploy-theme {
+  /* Core orange accent — replaces --dz-blue */
+  --dz-blue:         #FF6B00;
+  --dz-blue-light:   #FF8C33;
+  --dz-gradient:     linear-gradient(135deg, #FF6B00, #FF4500);
+  --dz-accent:       #FF6B00;
+  --dz-accent-glow:  rgba(255, 107, 0, 0.35);
+  --dz-accent-bg:    rgba(255, 107, 0, 0.10);
+  --dz-accent-border:rgba(255, 107, 0, 0.30);
+}
+
+/* Gradient text (headings that use .text-gradient) */
+.deploy-theme .text-gradient {
+  background: linear-gradient(135deg, #FF6B00, #FF4500) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+}
+
+/* Primary buttons */
+.deploy-theme .btn-primary {
+  background: linear-gradient(135deg, #FF6B00, #FF4500) !important;
+  box-shadow: 0 0 20px rgba(255,107,0,0.3) !important;
+}
+.deploy-theme .btn-primary:hover {
+  box-shadow: 0 0 28px rgba(255,107,0,0.5) !important;
+}
+
+/* Outlined buttons */
+.deploy-theme .btn-outline {
+  border-color: rgba(255,107,0,0.4) !important;
+  color: #FF6B00 !important;
+}
+.deploy-theme .btn-outline:hover {
+  background: rgba(255,107,0,0.08) !important;
+}
+
+/* Card border accent on hover */
+.deploy-theme .card:hover {
+  border-color: rgba(255,107,0,0.25) !important;
+}
+
+/* Nav active link dot / underline */
+.deploy-theme .nav-link-active {
+  color: #FF6B00 !important;
+  border-bottom-color: #FF6B00 !important;
+}
+
+/* Spinner color */
+.deploy-theme .dz-spinner {
+  border-top-color: #FF6B00 !important;
+}
+
+/* Form input focus ring */
+.deploy-theme .form-input:focus {
+  border-color: #FF6B00 !important;
+  box-shadow: 0 0 0 3px rgba(255,107,0,0.15) !important;
+}
+
+/* Badge / pill */
+.deploy-theme .badge-blue {
+  background: rgba(255,107,0,0.12) !important;
+  color: #FF6B00 !important;
+  border-color: rgba(255,107,0,0.3) !important;
+}
+
+/* Alert info */
+.deploy-theme .alert-info {
+  border-color: rgba(255,107,0,0.3) !important;
+  background: rgba(255,107,0,0.07) !important;
+  color: #FF8C33 !important;
+}

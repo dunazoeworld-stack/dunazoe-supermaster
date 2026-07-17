@@ -6,9 +6,10 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 
-const CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || "";
-const API_KEY    = process.env.CLOUDINARY_API_KEY    || "";
-const API_SECRET = process.env.CLOUDINARY_API_SECRET || "";
+// .trim() prevents trailing newline/whitespace from Replit secrets causing "Invalid Signature"
+const CLOUD_NAME = (process.env.CLOUDINARY_CLOUD_NAME || "").trim();
+const API_KEY    = (process.env.CLOUDINARY_API_KEY    || "").trim();
+const API_SECRET = (process.env.CLOUDINARY_API_SECRET || "").trim();
 const FOLDER     = "dunazoe_products";
 
 const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
