@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+const API = process.env.NEXT_PUBLIC_API_URL || "/api";
 
 function DeployNav() {
   const links = [["/deploy","🚀"],["/deploy/monitor","📡"],["/deploy/status","💚"],["/deploy/logs","📋"],["/deploy/releases","🏷️"],["/deploy/github","🐙"],["/deploy/credits","⚡"],["/deploy/checklist","✅"]];

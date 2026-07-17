@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+const API = process.env.NEXT_PUBLIC_API_URL || "/api";
 
 const STATUS_COLOR = { PASS:"#00CC88", FAIL:"#FF3B5C", WARN:"#F5A623", RUNNING:"#00A3FF", ON:"#00CC88", OFF:"#3D4F6E" };
 

@@ -65,6 +65,60 @@ function TagInput({ placeholder, items, onAdd, onRemove }) {
   );
 }
 
+// ─── Client-side image compression (Canvas → WebP/JPEG) ──────────────────────
+async function compressImage(file) {
+  return new Promise(resolve => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      const MAX = 1400;
+      let { width, height } = img;
+      if (width > MAX || height > MAX) {
+        if (width >= height) { height = Math.round(height * MAX / width); width = MAX; }
+        else { width = Math.round(width * MAX / height); height = MAX; }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width; canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(blob => {
+        if (blob) { resolve(new File([blob], file.name.replace(/\.[^.]+$/, ".webp"), { type: "image/webp" })); return; }
+        canvas.toBlob(jblob => resolve(jblob
+          ? new File([jblob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" })
+          : file), "image/jpeg", 0.92);
+      }, "image/webp", 0.92);
+    };
+    img.onerror = () => { URL.revokeObjectURL(objectUrl); resolve(file); };
+    img.src = objectUrl;
+  });
+}
+
+/** Upload one file with exponential-backoff retry (max 3 attempts). */
+async function uploadWithRetry(file, token, apiBase, maxAttempts = 3) {
+  let lastErr;
+  for (let i = 0; i < maxAttempts; i++) {
+    if (!navigator.onLine) throw new Error("You are offline — image will upload when you reconnect.");
+    try {
+      const fd = new FormData();
+      fd.append("image", file);
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 30_000);
+      const r = await fetch(`${apiBase}/upload/product-image`, {
+        method: "POST", headers: { Authorization: `Bearer ${token}` },
+        body: fd, signal: ctrl.signal,
+      });
+      clearTimeout(timer);
+      const d = await r.json();
+      if (d.success && d.url) return d;
+      if (r.status < 500) throw new Error(d.error || "Upload failed"); // 4xx: do not retry
+      lastErr = new Error(d.error || `Server error ${r.status}`);
+    } catch (err) { lastErr = err; }
+    if (i < maxAttempts - 1) await new Promise(res => setTimeout(res, Math.pow(2, i) * 1200));
+  }
+  throw lastErr;
+}
+
 // ─── Image upload tile ────────────────────────────────────────────────────────
 function ImageUploadTile({ url, onRemove }) {
   return (
@@ -122,6 +176,7 @@ export default function VendorOnboardPage() {
   const [sizes,     setSizes]     = useState([]);
   const [images,    setImages]    = useState([]); // [{url, public_id}]
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(""); // "" | "Compressing…" | "Uploading (1/2)…" | etc.
 
   const P = (k, v) => setProduct(p => ({ ...p, [k]: v }));
   const V = (k, v) => setVendor(p => ({ ...p, [k]: v }));
@@ -153,31 +208,34 @@ export default function VendorOnboardPage() {
     finally { setAiLoading(false); }
   }
 
-  // ── Image upload ──────────────────────────────────────────────
+  // ── Image upload — compress + retry + offline detection ──────────────────────
   async function handleImageUpload(e) {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
     if (images.length + files.length > 5) {
       setError("Maximum 5 images allowed."); return;
     }
-    setUploading(true);
-    const token = localStorage.getItem("dunazoe_token");
-    for (const file of files) {
-      try {
-        const fd = new FormData();
-        fd.append("image", file);
-        const r = await fetch(`${API}/upload/product-image`, {
-          method: "POST", headers: { Authorization: `Bearer ${token}` }, body: fd,
-        });
-        const d = await r.json();
-        if (d.success && d.url) {
-          setImages(prev => [...prev, { url: d.url, public_id: d.public_id }]);
-        } else {
-          setError(d.error || "Image upload failed");
-        }
-      } catch (_) { setError("Upload error — check connection."); }
+    if (!navigator.onLine) {
+      setError("You appear to be offline. Please reconnect and try again."); return;
     }
-    setUploading(false);
+    setUploading(true); setError("");
+    const token = localStorage.getItem("dunazoe_token");
+    for (let idx = 0; idx < files.length; idx++) {
+      const raw = files[idx];
+      try {
+        // Step 1: compress client-side
+        setUploadProgress(`Compressing image ${idx + 1} of ${files.length}…`);
+        const compressed = await compressImage(raw);
+
+        // Step 2: upload with retry
+        setUploadProgress(`Uploading image ${idx + 1} of ${files.length}…`);
+        const d = await uploadWithRetry(compressed, token, API);
+        setImages(prev => [...prev, { url: d.url, public_id: d.public_id }]);
+      } catch (err) {
+        setError(`Image ${idx + 1}: ${err.message || "Upload failed — check connection."}`);
+      }
+    }
+    setUploading(false); setUploadProgress("");
     if (fileRef.current) fileRef.current.value = "";
   }
 
@@ -417,11 +475,16 @@ export default function VendorOnboardPage() {
                 )}
               </div>
               <input ref={fileRef} type="file" accept=".jpg,.jpeg,.png,.webp" multiple hidden onChange={handleImageUpload} />
-              {images.length === 0 && (
+              {uploadProgress ? (
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "10px" }}>
+                  <span className="dz-spinner dz-spinner-sm" />
+                  <p style={{ fontSize: "0.78rem", color: "var(--dz-blue)", fontWeight: 600 }}>{uploadProgress}</p>
+                </div>
+              ) : images.length === 0 ? (
                 <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "8px" }}>
                   ⚠️ No image = lower visibility. Add at least one photo.
                 </p>
-              )}
+              ) : null}
             </div></div>
 
             {/* Core details */}

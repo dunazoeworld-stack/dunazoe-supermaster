@@ -31,6 +31,12 @@ export default function OpsPage() {
   const [testLoading, setTestLoading] = useState(false);
   const [testTarget, setTestTarget] = useState("deployed");
 
+  // Activation Engine state
+  const [actFeatures, setActFeatures] = useState(null);
+  const [actLoading, setActLoading]   = useState(false);
+  const [actMsg, setActMsg]           = useState(null);
+  const [actToggles, setActToggles]   = useState({}); // feature name → boolean (toggling)
+
   useEffect(() => {
     try { const u = JSON.parse(localStorage.getItem("dunazoe_user") || "{}"); setUser(u); } catch (_) {}
     loadStatus();
@@ -84,6 +90,7 @@ export default function OpsPage() {
   useEffect(() => {
     if (tab === "stae" && !stae) loadStae();
     if (tab === "productai" && !productAI) loadProductAI();
+    if (tab === "activation" && !actFeatures) loadActivation();
   }, [tab]);
 
   async function loadProductAI() {
@@ -139,13 +146,55 @@ export default function OpsPage() {
     finally { setTestLoading(false); }
   }
 
+  // ── Activation Engine ───────────────────────────────────────────────────────
+  async function loadActivation() {
+    setActLoading(true); setActMsg(null);
+    const token = localStorage.getItem("dunazoe_token");
+    try {
+      const res = await fetch("/api/activation/features", { headers: { Authorization: `Bearer ${token}` } });
+      const d = await res.json();
+      if (d.success || d.features) {
+        setActFeatures(d.features || d);
+        if (d.offline) setActMsg({ type: "warn", text: "⚠️ Activation engine offline (port 4033) — showing mock state." });
+      } else {
+        setActMsg({ type: "error", text: d.error || "Could not load activation features." });
+      }
+    } catch (_) { setActMsg({ type: "error", text: "Could not reach activation engine." }); }
+    finally { setActLoading(false); }
+  }
+
+  async function activateFeature(name, currentState) {
+    setActToggles(t => ({ ...t, [name]: true }));
+    const token = localStorage.getItem("dunazoe_token");
+    const nextState = currentState === "ON" ? "OFF" : "ON";
+    try {
+      const res = await fetch(`/api/activation/features/${encodeURIComponent(name)}/activate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ state: nextState }),
+      });
+      const d = await res.json();
+      if (d.success) {
+        setActMsg({ type: "success", text: `✅ ${name} → ${nextState}` });
+        // Optimistically update local state for instant feedback
+        setActFeatures(prev => {
+          if (!Array.isArray(prev)) return prev;
+          return prev.map(f => f.name === name ? { ...f, state: nextState } : f);
+        });
+      } else {
+        setActMsg({ type: "error", text: d.error || `Failed to toggle ${name}.` });
+      }
+    } catch (_) { setActMsg({ type: "error", text: `Network error toggling ${name}.` }); }
+    finally { setActToggles(t => ({ ...t, [name]: false })); }
+  }
+
   function copyToClipboard(text) {
     navigator.clipboard?.writeText(text).catch(() => {});
   }
 
-  const TABS = ["overview", "secrets", "webhooks", "stae", "productai", "sitetest", "deploy", "distribution"];
-  const TAB_ICONS = { overview: "📊", secrets: "🔐", webhooks: "🔗", stae: "⚡", productai: "🤖", sitetest: "🧪", deploy: "🚀", distribution: "📱" };
-  const TAB_LABELS = { overview: "Overview", secrets: "Secrets", webhooks: "Webhooks", stae: "STAE", productai: "Product AI", sitetest: "Site Tests", deploy: "Deploy", distribution: "Distribution" };
+  const TABS = ["overview", "secrets", "webhooks", "stae", "productai", "sitetest", "deploy", "distribution", "activation"];
+  const TAB_ICONS  = { overview: "📊", secrets: "🔐", webhooks: "🔗", stae: "⚡", productai: "🤖", sitetest: "🧪", deploy: "🚀", distribution: "📱", activation: "🎛️" };
+  const TAB_LABELS = { overview: "Overview", secrets: "Secrets", webhooks: "Webhooks", stae: "STAE", productai: "Product AI", sitetest: "Site Tests", deploy: "Deploy", distribution: "Distribution", activation: "Activation" };
 
   if (loading) return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "16px" }}>
@@ -707,6 +756,90 @@ export default function OpsPage() {
                 </div>
               </Link>
             ))}
+          </div>
+        )}
+
+        {/* ── ACTIVATION ENGINE ─────────────────────────────────────────────── */}
+        {tab === "activation" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <h2 style={{ fontWeight: 800, fontSize: "1.1rem" }}>🎛️ Feature Activation Engine</h2>
+                <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: "2px" }}>Toggle features ON/OFF/BETA across the 34-service platform.</p>
+              </div>
+              <button className="btn btn-ghost btn-sm" onClick={loadActivation} disabled={actLoading}>
+                {actLoading ? "Loading…" : "🔄 Refresh"}
+              </button>
+            </div>
+
+            {actMsg && (
+              <div style={{
+                padding: "10px 16px", borderRadius: "10px", fontSize: "0.85rem",
+                background: actMsg.type === "success" ? "rgba(16,185,129,0.08)" : actMsg.type === "warn" ? "rgba(245,158,11,0.08)" : "rgba(239,68,68,0.08)",
+                border: `1px solid ${actMsg.type === "success" ? "rgba(16,185,129,0.3)" : actMsg.type === "warn" ? "rgba(245,158,11,0.3)" : "rgba(239,68,68,0.3)"}`,
+                color: actMsg.type === "success" ? "#10B981" : actMsg.type === "warn" ? "#F59E0B" : "#EF4444",
+              }}>{actMsg.text}</div>
+            )}
+
+            {actLoading && !actFeatures ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                {[1,2,3,4,5,6].map(i => <div key={i} className="skeleton" style={{ height: "64px", borderRadius: "12px" }} />)}
+              </div>
+            ) : !actFeatures ? (
+              <div className="card"><div className="card-body" style={{ textAlign: "center", padding: "32px" }}>
+                <p style={{ fontSize: "2rem", marginBottom: "8px" }}>⚡</p>
+                <p style={{ color: "var(--text-muted)", fontSize: "0.88rem", marginBottom: "16px" }}>
+                  Activation engine unreachable (port 4033).<br />Start the service to toggle live features.
+                </p>
+                <button className="btn btn-outline btn-sm" onClick={loadActivation}>Retry</button>
+              </div></div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                {(Array.isArray(actFeatures)
+                  ? actFeatures
+                  : Object.entries(actFeatures).map(([name, val]) => ({ name, ...(typeof val === "object" ? val : { state: val }) }))
+                ).map(feature => {
+                  const isOn   = feature.state === "ON";
+                  const isBeta = feature.state === "BETA";
+                  const isOff  = !isOn && !isBeta;
+                  const stateColor = isOn ? "var(--success)" : isBeta ? "#F59E0B" : "var(--text-muted)";
+                  const toggling = !!actToggles[feature.name];
+                  return (
+                    <div key={feature.name} className="card">
+                      <div className="card-body" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", padding: "14px 18px" }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: feature.description ? "4px" : 0 }}>
+                            <p style={{ fontWeight: 700, fontSize: "0.88rem", fontFamily: "monospace" }}>{feature.name}</p>
+                            <span style={{
+                              padding: "2px 9px", borderRadius: "999px", fontSize: "0.68rem", fontWeight: 700,
+                              background: `${stateColor}20`, color: stateColor, border: `1px solid ${stateColor}40`,
+                            }}>{feature.state || "UNKNOWN"}</span>
+                          </div>
+                          {feature.description && (
+                            <p style={{ fontSize: "0.76rem", color: "var(--text-muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              {feature.description}
+                            </p>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => activateFeature(feature.name, feature.state)}
+                          disabled={toggling}
+                          style={{
+                            flexShrink: 0, padding: "7px 16px", borderRadius: "8px", cursor: "pointer",
+                            background: isOn ? "rgba(239,68,68,0.1)" : "rgba(16,185,129,0.1)",
+                            border: `1px solid ${isOn ? "rgba(239,68,68,0.3)" : "rgba(16,185,129,0.3)"}`,
+                            color: isOn ? "#EF4444" : "#10B981",
+                            fontWeight: 700, fontSize: "0.79rem", minWidth: "76px",
+                          }}
+                        >
+                          {toggling ? "…" : isOn ? "Turn OFF" : "Turn ON"}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 

@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+const API = process.env.NEXT_PUBLIC_API_URL || "/api";
 
 export default function LoginPage() {
   const router = useRouter();

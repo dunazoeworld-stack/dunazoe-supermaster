@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+const API = process.env.NEXT_PUBLIC_API_URL || "/api";
 const S = {
   bg:"#0A0E1A", card:"rgba(13,21,37,0.95)", accent:"#00A3FF",
   border:"rgba(0,163,255,0.12)",

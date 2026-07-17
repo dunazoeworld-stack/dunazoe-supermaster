@@ -10,7 +10,7 @@ if (typeof window !== "undefined" && "serviceWorker" in navigator) {
   });
 }
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+const API = process.env.NEXT_PUBLIC_API_URL || "/api";
 
 export default function HomePage() {
   const [products, setProducts] = useState([]);

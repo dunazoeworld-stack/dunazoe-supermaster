@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+const API = process.env.NEXT_PUBLIC_API_URL || "/api";
 
 const BADGE = { PASS:"#00CC88", WARN:"#F5A623", FAIL:"#FF3B5C", RUNNING:"#00A3FF", ON:"#00CC88", OFF:"#3D4F6E" };
 const BADGE_BG = { PASS:"rgba(0,204,136,0.1)", WARN:"rgba(245,166,35,0.1)", FAIL:"rgba(255,59,92,0.1)", RUNNING:"rgba(0,163,255,0.1)", ON:"rgba(0,204,136,0.1)", OFF:"rgba(255,255,255,0.04)" };

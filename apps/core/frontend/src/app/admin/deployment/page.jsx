@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+const API = process.env.NEXT_PUBLIC_API_URL || "/api";
 const DEPLOY_AI = process.env.NEXT_PUBLIC_DEPLOY_AI_URL || "http://localhost:4027";
 
 const SERVICES = [

@@ -1,0 +1,24 @@
+{
+  "name": "DUNAZOE Superuser",
+  "short_name": "DZ Control",
+  "description": "DUNAZOE Deployment AI & Superuser Control Panel — remote control for the 34-service platform.",
+  "start_url": "/deploy/download",
+  "display": "standalone",
+  "background_color": "#04091C",
+  "theme_color": "#FF6B00",
+  "orientation": "portrait-primary",
+  "scope": "/deploy/",
+  "lang": "en",
+  "categories": ["business", "productivity", "utilities"],
+  "icons": [
+    { "src": "/icon-deploy-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-deploy-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Audit",   "url": "/deploy/audit",   "description": "Run deployment audit" },
+    { "name": "Monitor", "url": "/deploy/monitor",  "description": "Live service health" },
+    { "name": "GitHub",  "url": "/deploy/github",   "description": "GitHub sync" },
+    { "name": "Scaling", "url": "/deploy/scaling",  "description": "Autoscaling controls" }
+  ],
+  "prefer_related_applications": false
+}

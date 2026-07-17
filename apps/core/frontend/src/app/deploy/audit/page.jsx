@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+const API = process.env.NEXT_PUBLIC_API_URL || "/api";
 const THRESHOLDS = { security:90, reliability:90, scalability:85, performance:85, readiness:90 };
 
 function ScoreBar({ label, score, threshold }) {
