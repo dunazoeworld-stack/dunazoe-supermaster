@@ -1,10 +1,15 @@
 "use client";
 /**
  * PageShell — main layout wrapper.
- * Hidden Deploy AI / Superuser Panel access:
- *   • Click the "DUNAZOE" text in the footer 5× rapidly → opens /deploy/download
- *   • Keyboard: Ctrl+Shift+D (or Cmd+Shift+D on Mac) anywhere on the page
- * Neither trigger is labelled or visible to regular users.
+ *
+ * Deployment AI / Superuser Panel — TWO secret access methods:
+ *   1. Keyboard: Ctrl+Shift+D (or Cmd+Shift+D on Mac) anywhere on site
+ *   2. Footer:  click the "DUNAZOE" text 5× rapidly within 2 s
+ *
+ * BOTH methods are restricted to the two authorised superuser accounts:
+ *   • dunazoeworld@gmail.com
+ *   • comfortwins@gmail.com
+ * Any other account silently ignores the trigger (no error shown).
  */
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter }  from "next/navigation";
@@ -12,11 +17,19 @@ import Link           from "next/link";
 import Navbar         from "./Navbar";
 import NetworkBanner  from "./NetworkBanner";
 
+const SUPERUSERS = ["dunazoeworld@gmail.com", "comfortwins@gmail.com"];
+
+function isSuperuser() {
+  try {
+    const user = JSON.parse(localStorage.getItem("dunazoe_user") || "{}");
+    return SUPERUSERS.includes((user.email || "").toLowerCase().trim());
+  } catch { return false; }
+}
+
 export default function PageShell({ title, icon, authRequired = true, children, actions, subtitle, breadcrumb }) {
   const router = useRouter();
   const [ready, setReady] = useState(!authRequired);
 
-  // ── Hidden superuser trigger state ──────────────────────────────────────────
   const logoClickCount = useRef(0);
   const logoClickTimer = useRef(null);
 
@@ -34,23 +47,23 @@ export default function PageShell({ title, icon, authRequired = true, children, 
     function onKey(e) {
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "D") {
         e.preventDefault();
-        router.push("/deploy/download");
+        if (isSuperuser()) router.push("/deploy/download");
+        // silently ignored for non-superusers
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [router]);
 
-  // ── 5-click logo trigger ─────────────────────────────────────────────────────
+  // ── 5-rapid-click logo trigger ───────────────────────────────────────────────
   const handleLogoClick = useCallback(() => {
     logoClickCount.current += 1;
     if (logoClickTimer.current) clearTimeout(logoClickTimer.current);
     if (logoClickCount.current >= 5) {
       logoClickCount.current = 0;
-      router.push("/deploy/download");
+      if (isSuperuser()) router.push("/deploy/download");
       return;
     }
-    // Reset counter after 2 s of inactivity
     logoClickTimer.current = setTimeout(() => { logoClickCount.current = 0; }, 2000);
   }, [router]);
 
@@ -102,15 +115,11 @@ export default function PageShell({ title, icon, authRequired = true, children, 
         <div className="container">
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "16px" }}>
 
-            {/* ── Logo — 5-click secret trigger ─────────────────────────────── */}
+            {/* Hidden 5-click trigger — looks like a normal logo */}
             <button
               onClick={handleLogoClick}
-              style={{
-                display: "flex", alignItems: "center", gap: "8px",
-                background: "none", border: "none", cursor: "default", padding: 0,
-              }}
-              aria-hidden="true"
-              tabIndex={-1}
+              style={{ display: "flex", alignItems: "center", gap: "8px", background: "none", border: "none", cursor: "default", padding: 0 }}
+              aria-hidden="true" tabIndex={-1}
             >
               <span style={{ fontSize: "0.9rem", fontWeight: 700, color: "var(--dz-blue)" }}>DUNAZOE</span>
               <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>v1.0.0-rc1</span>
@@ -118,8 +127,8 @@ export default function PageShell({ title, icon, authRequired = true, children, 
 
             <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
               {[
-                ["/products","Shop"], ["/thrift","Ajo"], ["/wallet","Wallet"],
-                ["/orders","Orders"], ["/disputes","Disputes"], ["/track","Track"],
+                ["/products","Shop"],["/thrift","Ajo"],["/wallet","Wallet"],
+                ["/orders","Orders"],["/disputes","Disputes"],["/track","Track"],
               ].map(([href, label]) => (
                 <Link key={href} href={href} style={{ fontSize: "0.82rem", color: "var(--text-muted)", textDecoration: "none" }}>
                   {label}
@@ -127,9 +136,7 @@ export default function PageShell({ title, icon, authRequired = true, children, 
               ))}
             </div>
 
-            <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
-              © 2026 DUNAZOE. All rights reserved.
-            </span>
+            <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>© 2026 DUNAZOE. All rights reserved.</span>
           </div>
         </div>
       </footer>

@@ -56,6 +56,8 @@ function fmt(d) {
   return d.toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
 
+const SUPERUSERS = ["dunazoeworld@gmail.com", "comfortwins@gmail.com"];
+
 export default function DeployDownloadPage() {
   const [platform,      setPlatform]      = useState("android");
   const [status,        setStatus]        = useState(null);
@@ -65,10 +67,14 @@ export default function DeployDownloadPage() {
   const [isPWA,         setIsPWA]         = useState(false);
   const [pageUrl,       setPageUrl]       = useState("/deploy/download");
 
+  // ── Superuser access guard ────────────────────────────────────
+  const [accessGranted, setAccessGranted] = useState(false);
+  const [accessChecked, setAccessChecked] = useState(false);
+
   // ── Live clock ────────────────────────────────────────────────
   const [clock,          setClock]          = useState("");
-  const [secsAgo,        setSecsAgo]        = useState(0);   // seconds since last status poll
-  const [versionSecsAgo, setVersionSecsAgo] = useState(0);   // seconds since last version check
+  const [secsAgo,        setSecsAgo]        = useState(0);
+  const [versionSecsAgo, setVersionSecsAgo] = useState(0);
   const lastStatusPoll   = useRef(Date.now());
   const lastVersionCheck = useRef(Date.now());
 
@@ -77,7 +83,7 @@ export default function DeployDownloadPage() {
   const [updateBanner,   setUpdateBanner]   = useState(null);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
 
-  // ── Activity log (visible auto-update proof) ──────────────────
+  // ── Activity log ──────────────────────────────────────────────
   const [activityLog, setActivityLog] = useState([]);
   const addLog = useCallback((icon, msg) => {
     const id = ++LOG_SEQ;
@@ -89,6 +95,19 @@ export default function DeployDownloadPage() {
 
   // ── Pulsing fetch indicator ────────────────────────────────────
   const [fetching, setFetching] = useState(false);
+
+  // ── Access check — runs once on mount ─────────────────────────
+  useEffect(() => {
+    try {
+      const token = localStorage.getItem("dunazoe_token");
+      const user  = JSON.parse(localStorage.getItem("dunazoe_user") || "{}");
+      const email = (user.email || "").toLowerCase().trim();
+      if (token && SUPERUSERS.includes(email)) {
+        setAccessGranted(true);
+      }
+    } catch (_) {}
+    setAccessChecked(true);
+  }, []);
 
   // Detect PWA + capture URL
   useEffect(() => {
@@ -192,6 +211,27 @@ export default function DeployDownloadPage() {
 
   const statusColor = status?.offline ? "#EF4444" : status?.ok === false ? "#F59E0B" : "#10B981";
   const statusText  = status?.offline ? "Offline" : (status?.platform?.status || (status?.ok === false ? "Degraded" : "Online"));
+
+  // ── Access gate ────────────────────────────────────────────────
+  if (!accessChecked) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div className="dz-spinner" />
+      </div>
+    );
+  }
+  if (!accessGranted) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "12px", padding: "24px" }}>
+        <span style={{ fontSize: "3rem" }}>🔒</span>
+        <h2 style={{ fontWeight: 800, fontSize: "1.2rem", textAlign: "center" }}>Restricted Area</h2>
+        <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", textAlign: "center", maxWidth: "320px" }}>
+          This panel is not publicly accessible.
+        </p>
+        <a href="/" style={{ marginTop: "8px", fontSize: "0.82rem", color: "var(--dz-blue)" }}>← Go back</a>
+      </div>
+    );
+  }
 
   return (
     <PageShell
