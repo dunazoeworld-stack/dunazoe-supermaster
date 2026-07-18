@@ -58,23 +58,25 @@ export async function POST(request) {
       );
     }
 
-    // Sign upload
-    const timestamp     = Math.round(Date.now() / 1000).toString();
-    const folder        = "dunazoe_digital_products";
-    const resource_type = "raw";
-    const paramsToSign  = `folder=${folder}&resource_type=${resource_type}&timestamp=${timestamp}`;
-    const signature     = crypto
+    // Sign upload — resource_type is in the URL path, NOT a form param, so exclude from sig
+    const timestamp = Math.round(Date.now() / 1000).toString();
+    const folder    = "dunazoe_digital_products";
+    const signParams = { folder, timestamp };
+    const paramsToSign = Object.keys(signParams)
+      .sort()
+      .map(k => `${k}=${signParams[k]}`)
+      .join("&");
+    const signature = crypto
       .createHash("sha1")
       .update(paramsToSign + API_SECRET)
       .digest("hex");
 
     const uploadForm = new FormData();
-    uploadForm.append("file",          new Blob([bytes]), name);
-    uploadForm.append("api_key",       API_KEY);
-    uploadForm.append("timestamp",     timestamp);
-    uploadForm.append("signature",     signature);
-    uploadForm.append("folder",        folder);
-    uploadForm.append("resource_type", resource_type);
+    uploadForm.append("file",      new Blob([bytes]), name);
+    uploadForm.append("api_key",   API_KEY);
+    uploadForm.append("timestamp", timestamp);
+    uploadForm.append("signature", signature);
+    uploadForm.append("folder",    folder);
 
     const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/raw/upload`;
     const response  = await fetch(uploadUrl, { method: "POST", body: uploadForm });

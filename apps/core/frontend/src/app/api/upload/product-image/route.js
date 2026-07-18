@@ -57,10 +57,16 @@ export async function POST(request) {
     // ── Build signed upload request ──────────────────────────────────────────
     const timestamp = Math.round(Date.now() / 1000).toString();
     const folder    = "dunazoe_products";
+    const eager     = "w_1200,h_1200,c_limit/q_auto:good/f_auto";
 
-    // Params to sign — must be sorted alphabetically, exclude api_key/file/resource_type
-    const paramsToSign = `folder=${folder}&timestamp=${timestamp}`;
-    const signature    = crypto
+    // Cloudinary signature: ALL sent params except api_key, file, resource_type
+    // Must be sorted alphabetically and concatenated as key=value&...
+    const signParams = { eager, folder, timestamp };
+    const paramsToSign = Object.keys(signParams)
+      .sort()
+      .map(k => `${k}=${signParams[k]}`)
+      .join("&");
+    const signature = crypto
       .createHash("sha1")
       .update(paramsToSign + API_SECRET)
       .digest("hex");
@@ -72,7 +78,7 @@ export async function POST(request) {
     uploadForm.append("timestamp", timestamp);
     uploadForm.append("signature", signature);
     uploadForm.append("folder",    folder);
-    uploadForm.append("eager",     "w_1200,h_1200,c_limit/q_auto:good/f_auto");
+    uploadForm.append("eager",     eager);
 
     const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
     const response  = await fetch(uploadUrl, { method: "POST", body: uploadForm });
