@@ -2,4 +2,5 @@
 - [DUNAZOE frontend bugs fixed](frontend-bugs-fixed.md) — July 2026 bug-fix session: dynamic routes, JWT security, autocomplete, viewport export, next.config, ops↔deploy link
 - [Ops Cockpit extensions](ops-product-ai-sitetest.md) — Product AI tab + Site Tests tab added to /ops; product pages upgraded with type/size/color/weight/digital/service specs
 - [July 2026 feature activation](july-2026-features.md) — Chat widget, notification bell, product listing overhaul, marketing AI, logistics self-delivery zones, share button, deployment AI download page
-- [Cloudinary upload fix](cloudinary-upload-fix.md) — manual SHA1 signing removed; Next.js upload route now uses Cloudinary SDK v2 upload_stream (cloudinary installed at root node_modules)
+- [Cloudinary upload fix](cloudinary-upload-fix.md) — use native crypto+fetch REST API; SDK import fails in App Router (not in frontend package.json); creds must be read inside handler
+- [Logistics AI](logistics-ai.md) — /api/logistics/quote covers all 36 NG states + international; dunazoe-express /express/quote+/zones added; no courier API keys needed for quoting
