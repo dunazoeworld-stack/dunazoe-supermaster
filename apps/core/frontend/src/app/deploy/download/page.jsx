@@ -56,6 +56,12 @@ export default function DeployDownloadPage() {
   const [isPWA,        setIsPWA]       = useState(false);
   const [pageUrl,      setPageUrl]     = useState("/deploy/download");
 
+  // ── Auto-update: version + changelog ─────────────────────────
+  const [versionInfo,    setVersionInfo]    = useState(null);
+  const [updateBanner,   setUpdateBanner]   = useState(null);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const lastVersionRef = useState(() => typeof window !== "undefined" ? localStorage.getItem("dunazoe_app_version") || null : null)[0];
+
   // Detect if already running as PWA + capture URL client-side (avoids SSR hydration mismatch)
   useEffect(() => {
     const standalone = window.matchMedia("(display-mode: standalone)").matches
@@ -63,6 +69,24 @@ export default function DeployDownloadPage() {
     setIsPWA(standalone);
     setPageUrl(window.location.href);
   }, []);
+
+  // ── Fetch version info + check for updates ────────────────────
+  async function checkVersion(showBanner = false) {
+    setCheckingUpdate(true);
+    try {
+      const r = await fetch(`${API}/api/version`, { cache: "no-store" });
+      const d = await r.json();
+      setVersionInfo(d);
+      const stored = localStorage.getItem("dunazoe_app_version");
+      if (stored && stored !== d.version) {
+        setUpdateBanner({ from: stored, to: d.version, features: d.features || [], updated: d.updated });
+      } else if (showBanner) {
+        setUpdateBanner({ current: true, version: d.version, updated: d.updated, features: d.features || [] });
+      }
+      localStorage.setItem("dunazoe_app_version", d.version);
+    } catch (_) {}
+    finally { setCheckingUpdate(false); }
+  }
 
   // Fetch platform status on mount
   useEffect(() => {
@@ -78,8 +102,11 @@ export default function DeployDownloadPage() {
       }
     }
     fetchStatus();
+    checkVersion();
     const t = setInterval(fetchStatus, 30000);
-    return () => clearInterval(t);
+    const uCheck = setInterval(() => checkVersion(false), 5 * 60 * 1000); // check every 5 min
+    return () => { clearInterval(t); clearInterval(uCheck); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function runAction(action) {
@@ -111,6 +138,49 @@ export default function DeployDownloadPage() {
       subtitle={isPWA ? "Running as installed app ✓" : "Install this page as a PWA for full phone control"}
       authRequired={false}
     >
+
+      {/* ── Auto-Update Banner ─────────────────────────────────────────────── */}
+      {updateBanner && (
+        <div style={{
+          padding: "16px 20px", borderRadius: "14px", marginBottom: "20px",
+          background: updateBanner.current ? "rgba(16,185,129,0.08)" : "linear-gradient(135deg,rgba(255,107,0,0.18),rgba(255,70,0,0.08))",
+          border: `1px solid ${updateBanner.current ? "rgba(16,185,129,0.3)" : "rgba(255,107,0,0.4)"}`,
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div>
+              <p style={{ fontWeight: 800, fontSize: "0.9rem", marginBottom: "4px", color: updateBanner.current ? "#10B981" : "#FF6B00" }}>
+                {updateBanner.current ? `✅ Platform v${updateBanner.version} — Up to Date` : `🔔 Update Available: v${updateBanner.from} → v${updateBanner.to}`}
+              </p>
+              <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginBottom: updateBanner.features?.length ? "10px" : 0 }}>
+                Last updated: {updateBanner.updated || versionInfo?.updated || "—"}
+              </p>
+              {updateBanner.features?.length > 0 && (
+                <ul style={{ paddingLeft: "16px", margin: 0, fontSize: "0.78rem", color: "var(--text-secondary)", lineHeight: 1.7 }}>
+                  {updateBanner.features.map((f, i) => <li key={i}>{f}</li>)}
+                </ul>
+              )}
+            </div>
+            <button onClick={() => setUpdateBanner(null)} style={{
+              background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", fontSize: "1.1rem", padding: "0 4px",
+            }}>✕</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Check for Updates Button ───────────────────────────────────────── */}
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "16px" }}>
+        <button
+          onClick={() => checkVersion(true)}
+          disabled={checkingUpdate}
+          style={{
+            padding: "7px 14px", borderRadius: "8px", border: "1px solid rgba(255,107,0,0.3)",
+            background: "rgba(255,107,0,0.06)", color: "#FF6B00", fontWeight: 700,
+            fontSize: "0.78rem", cursor: "pointer",
+          }}
+        >
+          {checkingUpdate ? "⏳ Checking…" : `🔄 Check for Updates${versionInfo ? ` · v${versionInfo.version}` : ""}`}
+        </button>
+      </div>
 
       {/* ── PWA Install Banner ─────────────────────────────────────────────── */}
       {!isPWA && (
@@ -292,15 +362,17 @@ export default function DeployDownloadPage() {
         ))}
       </div>
 
-      {/* ── Version Info ──────────────────────────────────────────────────── */}
+      {/* ── Version Info (live from API) ───────────────────────────────────── */}
       <div style={{
         padding: "16px 20px", borderRadius: "12px",
         background: "rgba(255,107,0,0.04)", border: "1px solid var(--border)",
         fontSize: "0.78rem", color: "var(--text-muted)", lineHeight: 1.8,
       }}>
-        <strong style={{ color: "var(--text)" }}>Platform v2.0.0</strong> · 34 microservices ·
-        Chat AI · Notification AI · Marketing AI · Logistics AI · Deployment AI ·
-        Built by DUNAZOE Engineering · Last updated 16 Jul 2026
+        <strong style={{ color: "var(--text)" }}>Platform {versionInfo ? `v${versionInfo.version}` : "v2.0.0"}</strong>
+        {" · 34 microservices · "}
+        {versionInfo?.features ? versionInfo.features.slice(0, 3).join(" · ") : "Chat AI · Notification AI · Marketing AI"}
+        {" · Built by DUNAZOE Engineering"}
+        {versionInfo?.updated ? ` · Updated ${versionInfo.updated}` : " · Last updated 16 Jul 2026"}
       </div>
     </PageShell>
   );

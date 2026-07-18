@@ -177,6 +177,9 @@ export default function VendorOnboardPage() {
   const [images,    setImages]    = useState([]); // [{url, public_id}]
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(""); // "" | "Compressing…" | "Uploading (1/2)…" | etc.
+  const [digitalFile, setDigitalFile] = useState(null);   // {name, size, url} for digital products
+  const [digitalUploading, setDigitalUploading] = useState(false);
+  const digitalFileRef = useRef(null);
 
   const P = (k, v) => setProduct(p => ({ ...p, [k]: v }));
   const V = (k, v) => setVendor(p => ({ ...p, [k]: v }));
@@ -186,8 +189,8 @@ export default function VendorOnboardPage() {
   }, []);
 
   // ── AI listing assistant ──────────────────────────────────────
-  async function runAI() {
-    if (!product.name && !product.category) return;
+  async function runAI(imageUrls = []) {
+    if (!product.name && !product.category && imageUrls.length === 0) return;
     setAiLoading(true);
     try {
       const token = localStorage.getItem("dunazoe_token");
@@ -195,17 +198,57 @@ export default function VendorOnboardPage() {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          name:      product.name,
-          cost:      product.cost || product.price,
-          category:  product.category,
-          ajo_weeks: product.ajo_weeks || 0,
+          name:        product.name,
+          cost:        product.cost || product.price,
+          category:    product.category,
+          ajo_weeks:   product.ajo_weeks || 0,
           description: product.description,
+          image_urls:  imageUrls,          // AI analyses uploaded images
+          product_type: product.product_type,
         }),
       });
       const d = await r.json();
       if (d.success) setAiTip(d);
     } catch (_) {}
     finally { setAiLoading(false); }
+  }
+
+  // ── Digital file upload ───────────────────────────────────────
+  async function handleDigitalFileUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const MAX = 100 * 1024 * 1024; // 100 MB
+    if (file.size > MAX) { setError("Digital file must be under 100 MB."); return; }
+    setDigitalUploading(true); setError("");
+    try {
+      const token = localStorage.getItem("dunazoe_token");
+      const fd = new FormData();
+      fd.append("file", file);
+      const r = await fetch(`${API}/upload/digital-file`, {
+        method: "POST", headers: { Authorization: `Bearer ${token}` }, body: fd,
+      });
+      const d = await r.json();
+      if (d.success && d.url) {
+        setDigitalFile({ name: file.name, size: (file.size / (1024 * 1024)).toFixed(1) + " MB", url: d.url });
+        if (!product.file_size) P("file_size", (file.size / (1024 * 1024)).toFixed(1) + " MB");
+        const ext = file.name.split(".").pop()?.toUpperCase() || "";
+        if (!product.file_format && ext) P("file_format", ext);
+      } else {
+        // Store locally until service is available
+        setDigitalFile({ name: file.name, size: (file.size / (1024 * 1024)).toFixed(1) + " MB", url: null, queued: true });
+        if (!product.file_size) P("file_size", (file.size / (1024 * 1024)).toFixed(1) + " MB");
+        const ext = file.name.split(".").pop()?.toUpperCase() || "";
+        if (!product.file_format && ext) P("file_format", ext);
+      }
+    } catch (_) {
+      setDigitalFile({ name: file.name, size: (file.size / (1024 * 1024)).toFixed(1) + " MB", url: null, queued: true });
+      const ext = file.name.split(".").pop()?.toUpperCase() || "";
+      if (!product.file_size) P("file_size", (file.size / (1024 * 1024)).toFixed(1) + " MB");
+      if (!product.file_format && ext) P("file_format", ext);
+    } finally {
+      setDigitalUploading(false);
+      if (digitalFileRef.current) digitalFileRef.current.value = "";
+    }
   }
 
   // ── Image upload — compress + retry + offline detection ──────────────────────
@@ -220,6 +263,7 @@ export default function VendorOnboardPage() {
     }
     setUploading(true); setError("");
     const token = localStorage.getItem("dunazoe_token");
+    const newImages = [];
     for (let idx = 0; idx < files.length; idx++) {
       const raw = files[idx];
       try {
@@ -230,19 +274,34 @@ export default function VendorOnboardPage() {
         // Step 2: upload with retry
         setUploadProgress(`Uploading image ${idx + 1} of ${files.length}…`);
         const d = await uploadWithRetry(compressed, token, API);
-        setImages(prev => [...prev, { url: d.url, public_id: d.public_id }]);
+        const img = { url: d.url, public_id: d.public_id };
+        setImages(prev => [...prev, img]);
+        newImages.push(img);
       } catch (err) {
         setError(`Image ${idx + 1}: ${err.message || "Upload failed — check connection."}`);
       }
     }
     setUploading(false); setUploadProgress("");
     if (fileRef.current) fileRef.current.value = "";
+
+    // Auto-run AI analysis after successful image upload
+    if (newImages.length > 0) {
+      const allUrls = [...images, ...newImages].map(i => i.url).filter(Boolean);
+      runAI(allUrls);
+    }
   }
 
   // ── Submit ────────────────────────────────────────────────────
   async function handleSubmit(e) {
     e.preventDefault(); setError(""); setLoading(true);
     try {
+      // ── Guard: require at least one uploaded image ──────────────
+      if (images.length === 0) {
+        setError("Please upload at least one product image before publishing. Images boost visibility and buyer trust.");
+        setLoading(false);
+        return;
+      }
+
       const token = localStorage.getItem("dunazoe_token");
       if (!isVendor) {
         const vRes = await fetch(`${API}/vendor/onboard`, {
@@ -649,6 +708,53 @@ export default function VendorOnboardPage() {
               <div className="card"><div className="card-body">
                 <h3 style={{ fontWeight: 700, marginBottom: "14px" }}>💾 Digital Product Info</h3>
                 <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+
+                  {/* Digital file upload */}
+                  <div className="form-group">
+                    <label className="form-label">📁 Upload Your Digital File *</label>
+                    <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: "10px" }}>
+                      Upload the file buyers will receive after payment. PDF, ZIP, MP4, PSD, etc. Max 100 MB.
+                    </p>
+                    {digitalFile ? (
+                      <div style={{
+                        display: "flex", alignItems: "center", gap: "12px", padding: "12px 16px",
+                        borderRadius: "10px", background: digitalFile.queued ? "rgba(255,190,0,0.08)" : "rgba(0,200,130,0.08)",
+                        border: `1px solid ${digitalFile.queued ? "rgba(255,190,0,0.3)" : "rgba(0,200,130,0.3)"}`,
+                      }}>
+                        <span style={{ fontSize: "1.4rem" }}>📄</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ fontWeight: 700, fontSize: "0.85rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{digitalFile.name}</p>
+                          <p style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                            {digitalFile.size} · {digitalFile.queued ? "⏳ Queued — will sync when service is live" : "✅ Uploaded"}
+                          </p>
+                        </div>
+                        <button type="button" onClick={() => { setDigitalFile(null); }} style={{
+                          background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", fontSize: "1rem",
+                        }}>✕</button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => digitalFileRef.current?.click()}
+                        disabled={digitalUploading}
+                        style={{
+                          width: "100%", padding: "18px", borderRadius: "12px",
+                          border: "2px dashed var(--border-strong)", background: "var(--surface)",
+                          cursor: "pointer", display: "flex", flexDirection: "column",
+                          alignItems: "center", justifyContent: "center", gap: "6px",
+                          color: "var(--text-muted)",
+                        }}
+                      >
+                        {digitalUploading ? (
+                          <><span className="dz-spinner dz-spinner-sm" /><span style={{ fontSize: "0.8rem" }}>Uploading…</span></>
+                        ) : (
+                          <><span style={{ fontSize: "1.8rem" }}>📤</span><span style={{ fontWeight: 700, fontSize: "0.85rem" }}>Click to upload digital file</span><span style={{ fontSize: "0.72rem" }}>PDF, ZIP, MP4, PSD, EPUB, EXE — up to 100 MB</span></>
+                        )}
+                      </button>
+                    )}
+                    <input ref={digitalFileRef} type="file" hidden accept=".pdf,.zip,.mp4,.mov,.psd,.ai,.epub,.docx,.xlsx,.png,.jpg,.webp,.exe,.apk,.dmg,.rar,.7z" onChange={handleDigitalFileUpload} />
+                  </div>
+
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                     <div className="form-group">
                       <label className="form-label">📥 File Format</label>

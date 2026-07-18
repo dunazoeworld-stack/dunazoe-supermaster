@@ -1,44 +1,56 @@
 /**
- * Product Image Upload — direct to Cloudinary with signed request.
- * Replaces the old proxy to upload-service (port 4020).
- * Validates MIME, signs with SHA-1, retries up to 3× on 5xx.
+ * Product Image Upload — uses Cloudinary Node.js SDK (v2) for server-side upload.
+ * SDK handles all signing internally — eliminates manual SHA1 signature bugs.
+ * Validates MIME type + magic bytes before upload.
  */
 import { NextResponse } from "next/server";
-import crypto from "crypto";
+import { v2 as cloudinary } from "cloudinary";
 
-// .trim() prevents trailing newline/whitespace from Replit secrets causing "Invalid Signature"
-const CLOUD_NAME = (process.env.CLOUDINARY_CLOUD_NAME || "").trim();
-const API_KEY    = (process.env.CLOUDINARY_API_KEY    || "").trim();
-const API_SECRET = (process.env.CLOUDINARY_API_SECRET || "").trim();
-const FOLDER     = "dunazoe_products";
+// .trim() prevents trailing newline/whitespace from env secrets causing auth failures
+const CLOUD_NAME  = (process.env.CLOUDINARY_CLOUD_NAME  || "").trim();
+const API_KEY     = (process.env.CLOUDINARY_API_KEY     || "").trim();
+const API_SECRET  = (process.env.CLOUDINARY_API_SECRET  || "").trim();
+const FOLDER      = "dunazoe_products";
+
+// Configure once per cold start
+if (CLOUD_NAME && API_KEY && API_SECRET) {
+  cloudinary.config({ cloud_name: CLOUD_NAME, api_key: API_KEY, api_secret: API_SECRET, secure: true });
+}
 
 const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
-/** Retry a fetch up to maxAttempts; exponential backoff on 5xx / network error. */
-async function fetchWithRetry(url, options, maxAttempts = 3) {
-  let lastErr;
-  for (let i = 0; i < maxAttempts; i++) {
-    try {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 35_000);
-      const resp = await fetch(url, { ...options, signal: ctrl.signal });
-      clearTimeout(timer);
-      if (resp.ok || resp.status < 500) return resp;
-      lastErr = new Error(`Cloudinary responded with HTTP ${resp.status}`);
-    } catch (err) {
-      lastErr = err;
-    }
-    if (i < maxAttempts - 1) {
-      await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
-    }
-  }
-  throw lastErr;
+/** Upload buffer to Cloudinary using SDK upload_stream (handles signing automatically). */
+async function uploadBuffer(buffer, mimeType) {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder: FOLDER,
+        resource_type: "image",
+        transformation: [
+          { width: 1200, height: 1200, crop: "limit" },
+          { quality: "auto:good" },
+          { fetch_format: "auto" },
+        ],
+        unique_filename: true,
+      },
+      (err, result) => {
+        if (err) reject(err);
+        else resolve(result);
+      }
+    );
+    // Write buffer directly to the upload stream
+    const { Readable } = require("stream");
+    const readable = new Readable();
+    readable.push(buffer);
+    readable.push(null);
+    readable.pipe(stream);
+  });
 }
 
 export async function POST(request) {
   // ── Guard: credentials ──────────────────────────────────────────────────────
   if (!CLOUD_NAME || !API_KEY || !API_SECRET) {
-    console.error("[Upload] Missing Cloudinary credentials");
+    console.error("[Upload] Missing Cloudinary credentials — set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET");
     return NextResponse.json(
       { success: false, error: "Image upload service not configured — contact support." },
       { status: 503 }
@@ -53,7 +65,7 @@ export async function POST(request) {
     }
 
     // ── MIME validation ────────────────────────────────────────────────────────
-    const mime = file.type?.toLowerCase() || "";
+    const mime = (file.type || "").toLowerCase();
     if (!ALLOWED_MIME.has(mime)) {
       return NextResponse.json(
         { success: false, error: `Unsupported file type: ${mime || "unknown"}. Use JPEG, PNG, or WebP.` },
@@ -61,63 +73,45 @@ export async function POST(request) {
       );
     }
 
-    // ── Magic-byte check (JPEG / PNG) ──────────────────────────────────────────
+    // ── Magic-byte check ───────────────────────────────────────────────────────
     const bytes = await file.arrayBuffer();
     const header = new Uint8Array(bytes.slice(0, 4));
     const isJpeg = header[0] === 0xFF && header[1] === 0xD8;
     const isPng  = header[0] === 0x89 && header[1] === 0x50 && header[2] === 0x4E && header[3] === 0x47;
-    const isWebp = new TextDecoder().decode(header) === "RIFF";
-    if (!isJpeg && !isPng && !isWebp && !mime.includes("gif")) {
+    const isWebp = header[0] === 0x52 && header[1] === 0x49 && header[2] === 0x46 && header[3] === 0x46;
+    const isGif  = mime.includes("gif");
+    if (!isJpeg && !isPng && !isWebp && !isGif) {
       return NextResponse.json(
         { success: false, error: "File header does not match a valid image." },
         { status: 400 }
       );
     }
 
-    // ── Cloudinary signed upload ───────────────────────────────────────────────
-    const timestamp = Math.round(Date.now() / 1000);
-    // Params must be sorted alphabetically (Cloudinary requirement)
-    const paramsToSign = `folder=${FOLDER}&timestamp=${timestamp}`;
-    const signature = crypto
-      .createHash("sha1")
-      .update(paramsToSign + API_SECRET)
-      .digest("hex");
+    // ── Upload via SDK (no manual signing needed) ──────────────────────────────
+    const result = await uploadBuffer(Buffer.from(bytes), mime);
 
-    const uploadForm = new FormData();
-    uploadForm.append("file", new Blob([bytes], { type: mime }), file.name || "upload");
-    uploadForm.append("api_key",   API_KEY);
-    uploadForm.append("timestamp", String(timestamp));
-    uploadForm.append("folder",    FOLDER);
-    uploadForm.append("signature", signature);
-
-    const resp = await fetchWithRetry(
-      `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
-      { method: "POST", body: uploadForm }
-    );
-
-    const data = await resp.json();
-
-    if (data.secure_url) {
+    if (result?.secure_url) {
+      console.log(`[Upload] ✅ Cloudinary upload OK: ${result.public_id}`);
       return NextResponse.json({
         success:   true,
-        url:       data.secure_url,
-        public_id: data.public_id,
-        format:    data.format,
-        bytes:     data.bytes,
-        width:     data.width,
-        height:    data.height,
+        url:       result.secure_url,
+        public_id: result.public_id,
+        format:    result.format,
+        bytes:     result.bytes,
+        width:     result.width,
+        height:    result.height,
       });
     }
 
-    const errMsg = data.error?.message || "Cloudinary upload failed.";
-    console.error("[Upload] Cloudinary error:", errMsg);
-    return NextResponse.json({ success: false, error: errMsg }, { status: 400 });
+    throw new Error("Cloudinary returned no URL");
 
   } catch (err) {
-    console.error("[Upload] Fatal error:", err.message);
-    return NextResponse.json(
-      { success: false, error: `Upload failed: ${err.message}` },
-      { status: 500 }
-    );
+    console.error("[Upload] Error:", err.message || err);
+    const msg = err.message?.includes("Must supply api_key")
+      ? "Upload credentials invalid — check CLOUDINARY_API_KEY."
+      : err.message?.includes("Unknown API key")
+      ? "Unknown Cloudinary API key — verify CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY."
+      : `Upload failed: ${err.message || "Unknown error"}`;
+    return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }
 }
