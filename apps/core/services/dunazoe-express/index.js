@@ -547,6 +547,156 @@ app.post("/express/courier/performance", asyncHandler(async (req, res) => {
   return res.json({ success:true });
 }));
 
+// ── REAL-TIME QUOTE (no DB write) ─────────────────────────────
+/**
+ * POST /express/quote
+ * Returns AI-ranked shipping quotes for the checkout page.
+ * No assignment is created — pure cost/ETA estimation.
+ * Works without auth so frontend can call it from checkout.
+ */
+app.post("/express/quote", asyncHandler(async (req, res) => {
+  const {
+    origin_city = "", origin_state = "",
+    dest_city   = "", dest_state   = "",
+    dest_country= "nigeria",
+    origin_lat, origin_lng, dest_lat, dest_lng,
+    order_amount = 0,
+  } = req.body;
+
+  const isIntl    = !["nigeria","ng","","null","undefined"].includes((dest_country||"").toLowerCase().trim());
+  const distKm    = (origin_lat && dest_lat)
+    ? haversineKm(origin_lat, origin_lng, dest_lat, dest_lng)
+    : null;
+  const same_zone = _isSameZone(origin_city || origin_state, dest_city || dest_state);
+
+  // Get historical performance for scoring
+  let perf_map = {};
+  try {
+    const perf = await pool.query(
+      "SELECT courier_name,success_count,total_shipments,avg_days,avg_cost_ngn FROM courier_performance"
+    );
+    perf_map = Object.fromEntries(perf.rows.map(r => [r.courier_name, r]));
+  } catch (_) { /* DB offline — use defaults */ }
+
+  // Build courier quotes
+  const quotes = [];
+
+  // 1. DUNAZOE Express local — if same zone and not international
+  if (!isIntl && same_zone) {
+    const localCost = _estimateLocalDeliveryCost(distKm || 20);
+    quotes.push({
+      id: "dunazoe_express", name: "DUNAZOE Express", icon: "⚡",
+      description: "DUNAZOE verified delivery agent — fastest local option",
+      eta_label: "Same day – Next day", cost_ngn: localCost,
+      is_free: false, badge: "FASTEST", badge_color: "#FF6B00",
+      type: "dunazoe_express", score: 0.92,
+    });
+  }
+
+  // 2. All configured couriers
+  const zoneKey = isIntl ? "intl" : same_zone ? "ng_same" : "ng_diff";
+  const INTL_BASE = { shipbubble:18000, gig:22000, dhl:28000, fedex:32000, ups:34000 };
+
+  // Full rate table (mirrors the frontend quote API for consistency)
+  const BASE_RATES = {
+    shipbubble:    { ng_same:1000,  ng_diff:2000,  intl:18000 },
+    gig:           { ng_same:1200,  ng_diff:2500,  intl:22000 },
+    jumia_express: { ng_same:1500,  ng_diff:3000,  intl:null  },
+    dhl:           { ng_same:3500,  ng_diff:5000,  intl:28000 },
+    fedex:         { ng_same:4000,  ng_diff:6000,  intl:32000 },
+    ups:           { ng_same:4200,  ng_diff:6500,  intl:34000 },
+  };
+  const ETA_DAYS = {
+    shipbubble:    { ng_same:1, ng_diff:2, intl:7  },
+    gig:           { ng_same:1, ng_diff:3, intl:10 },
+    jumia_express: { ng_same:1, ng_diff:3, intl:99 },
+    dhl:           { ng_same:1, ng_diff:2, intl:3  },
+    fedex:         { ng_same:1, ng_diff:2, intl:3  },
+    ups:           { ng_same:1, ng_diff:2, intl:4  },
+  };
+  const COURIER_NAMES = {
+    shipbubble:"Shipbubble", gig:"GIG Logistics",
+    jumia_express:"Jumia Express", dhl:"DHL Express", fedex:"FedEx", ups:"UPS",
+  };
+
+  // Use all couriers (not just ones with API keys) for quoting — keys only needed for booking
+  for (const [name, rates] of Object.entries(BASE_RATES)) {
+    const base = rates[zoneKey];
+    if (!base || base === null) continue;
+    const distMul  = distKm && distKm > 200 ? 1 + (distKm - 200) * 0.003 : 1;
+    const cost_ngn = Math.round(base * distMul);
+    const eta_days = ETA_DAYS[name]?.[zoneKey] || 5;
+    const p        = perf_map[name] || { success_count:0, total_shipments:1, avg_days:3, avg_cost_ngn:2000 };
+    const rely     = p.total_shipments > 0 ? p.success_count/p.total_shipments : 0.80;
+
+    const costScore  = 1 - Math.min(cost_ngn / 60000, 1);
+    const speedScore = 1 - Math.min(eta_days / 14, 1);
+    const score      = costScore * 0.40 + rely * 0.35 + speedScore * 0.25;
+
+    quotes.push({
+      id: name, name: COURIER_NAMES[name] || name,
+      icon: { shipbubble:"🚀",gig:"🚛",jumia_express:"🟠",dhl:"🟡",fedex:"🟣",ups:"🟤" }[name] || "📦",
+      description: isIntl ? `International shipping via ${COURIER_NAMES[name]}` : `${COURIER_NAMES[name]} — ${same_zone?"same region":"inter-state"} delivery`,
+      eta_label: eta_days === 1 ? "Next day" : `${eta_days}–${eta_days+1} days`,
+      cost_ngn, is_free: false, badge: null, badge_color: null,
+      type: "courier", courier_id: name, score,
+    });
+  }
+
+  // Sort and badge
+  const dunazoeFirst = quotes.find(q => q.type === "dunazoe_express");
+  const couriers     = quotes.filter(q => q.type !== "dunazoe_express").sort((a,b) => b.score - a.score);
+  const bestCourier  = couriers[0];
+  if (bestCourier) { bestCourier.badge = "AI PICK"; bestCourier.badge_color = "#6D28D9"; }
+
+  const sorted = dunazoeFirst
+    ? [dunazoeFirst, ...couriers]
+    : couriers;
+
+  return res.json({
+    success: true,
+    quotes: sorted,
+    origin_zone: origin_city || origin_state,
+    dest_zone:   dest_city || dest_state,
+    is_international: isIntl,
+    distance_km: distKm ? parseFloat(distKm.toFixed(1)) : null,
+    ai_note: "Live quotes from DUNAZOE Express network — scored by cost, reliability & speed",
+  });
+}));
+
+// ── SELF-DELIVERY ZONES (vendor config) ───────────────────────
+/**
+ * GET /express/zones
+ * Returns all supported Nigeria zones + international regions.
+ * Used by vendor onboard page to set self-delivery coverage.
+ */
+app.get("/express/zones", (req, res) => {
+  const NG_STATES = [
+    "Abia","Adamawa","Akwa Ibom","Anambra","Bauchi","Bayelsa","Benue","Borno",
+    "Cross River","Delta","Ebonyi","Edo","Ekiti","Enugu","FCT","Gombe","Imo",
+    "Jigawa","Kaduna","Kano","Katsina","Kebbi","Kogi","Kwara","Lagos","Nasarawa",
+    "Niger","Ogun","Ondo","Osun","Oyo","Plateau","Rivers","Sokoto","Taraba","Yobe","Zamfara",
+  ];
+  const INTL_REGIONS = [
+    "West Africa","East Africa","United Kingdom","United States","Canada",
+    "Europe","UAE / Middle East","China","Asia","Australia",
+  ];
+  return res.json({
+    success: true,
+    nigeria_states: NG_STATES,
+    international_regions: INTL_REGIONS,
+    self_delivery_preset_zones: {
+      local:    "Same city / town only",
+      regional: "Same state (50km radius)",
+      sw_nigeria: "South-West Nigeria (Lagos, Ogun, Oyo, Osun, Ondo, Ekiti)",
+      south_south: "South-South Nigeria (Rivers, Delta, Edo, Bayelsa, Akwa Ibom, Cross River)",
+      south_east:  "South-East Nigeria (Anambra, Enugu, Imo, Abia, Ebonyi)",
+      nationwide: "All 36 States + FCT",
+      international: "Worldwide",
+    },
+  });
+});
+
 initSchema().catch(console.error);
 app.use(errorHandler);
 app.listen(PORT, () => logger.info(`✅ DUNAZOE Express running on port ${PORT}`));

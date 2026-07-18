@@ -1,23 +1,23 @@
 /**
- * Digital Product File Upload — Cloudinary SDK v2 (raw resource type).
- * Accepts any file type (PDF, ZIP, MP4, etc.) up to 100 MB.
- * Credentials read inside handler for same reason as product-image route.
+ * Digital File Upload — Cloudinary REST API (raw resource type).
+ * Supports PDF, ZIP, MP4, PSD, EPUB, APK and 30+ formats up to 100 MB.
+ * Uses Node.js built-in crypto for SHA-1 signing — no SDK dependency.
  */
 import { NextResponse } from "next/server";
-import { v2 as cloudinary } from "cloudinary";
+import crypto from "crypto";
 
 const MAX_BYTES = 100 * 1024 * 1024; // 100 MB
 
-const ALLOWED_EXT = new Set([
+const ALLOWED_EXTENSIONS = new Set([
   "pdf","zip","rar","7z","tar","gz",
   "mp4","mov","avi","mkv","webm",
-  "mp3","wav","aac","flac",
-  "psd","ai","sketch","fig","xd",
-  "docx","xlsx","pptx","txt","csv",
-  "epub","mobi","azw",
-  "exe","apk","dmg","pkg","msi",
-  "js","ts","py","java","html","css","json",
-  "png","jpg","jpeg","webp","svg","gif",
+  "mp3","wav","flac","aac",
+  "psd","ai","eps","svg","fig",
+  "doc","docx","xls","xlsx","ppt","pptx","odt","ods",
+  "epub","mobi","djvu",
+  "apk","ipa",
+  "py","js","ts","jsx","tsx","json","csv","xml",
+  "ttf","otf","woff","woff2",
 ]);
 
 export async function POST(request) {
@@ -32,8 +32,6 @@ export async function POST(request) {
     );
   }
 
-  cloudinary.config({ cloud_name: CLOUD_NAME, api_key: API_KEY, api_secret: API_SECRET, secure: true });
-
   try {
     const formData = await request.formData();
     const file = formData.get("file");
@@ -45,50 +43,60 @@ export async function POST(request) {
     const bytes = await file.arrayBuffer();
     if (bytes.byteLength > MAX_BYTES) {
       return NextResponse.json(
-        { success: false, error: `File too large (max 100 MB). Your file: ${(bytes.byteLength / 1024 / 1024).toFixed(1)} MB` },
-        { status: 400 }
+        { success: false, error: `File too large. Maximum size is 100 MB.` },
+        { status: 413 }
       );
     }
 
-    // Extension check
-    const ext = (file.name || "").split(".").pop()?.toLowerCase() || "";
-    if (!ALLOWED_EXT.has(ext)) {
+    // Extension whitelist
+    const name      = file.name || "";
+    const ext       = name.split(".").pop()?.toLowerCase() || "";
+    if (!ALLOWED_EXTENSIONS.has(ext)) {
       return NextResponse.json(
-        { success: false, error: `File type .${ext} is not supported.` },
+        { success: false, error: `File type '.${ext}' not supported.` },
         { status: 400 }
       );
     }
 
-    // Upload as raw resource (preserves original file)
-    const base64  = Buffer.from(bytes).toString("base64");
-    const mime    = file.type || "application/octet-stream";
-    const dataUri = `data:${mime};base64,${base64}`;
+    // Sign upload
+    const timestamp     = Math.round(Date.now() / 1000).toString();
+    const folder        = "dunazoe_digital_products";
+    const resource_type = "raw";
+    const paramsToSign  = `folder=${folder}&resource_type=${resource_type}&timestamp=${timestamp}`;
+    const signature     = crypto
+      .createHash("sha1")
+      .update(paramsToSign + API_SECRET)
+      .digest("hex");
 
-    const result = await cloudinary.uploader.upload(dataUri, {
-      folder:          "dunazoe_digital_products",
-      resource_type:   "raw",
-      public_id:       `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`,
-      unique_filename: false,
-      overwrite:       false,
+    const uploadForm = new FormData();
+    uploadForm.append("file",          new Blob([bytes]), name);
+    uploadForm.append("api_key",       API_KEY);
+    uploadForm.append("timestamp",     timestamp);
+    uploadForm.append("signature",     signature);
+    uploadForm.append("folder",        folder);
+    uploadForm.append("resource_type", resource_type);
+
+    const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/raw/upload`;
+    const response  = await fetch(uploadUrl, { method: "POST", body: uploadForm });
+    const result    = await response.json();
+
+    if (!response.ok || result.error) {
+      const msg = result.error?.message || `Cloudinary ${response.status}`;
+      return NextResponse.json({ success: false, error: `Upload failed: ${msg}` }, { status: 502 });
+    }
+
+    console.log(`[DigitalUpload] ✅ ${result.public_id}`);
+    return NextResponse.json({
+      success:   true,
+      url:       result.secure_url,
+      public_id: result.public_id,
+      bytes:     result.bytes,
+      format:    result.format,
+      filename:  name,
     });
 
-    if (result?.secure_url) {
-      console.log(`[DigitalUpload] ✅ OK: ${result.public_id}`);
-      return NextResponse.json({
-        success:   true,
-        url:       result.secure_url,
-        public_id: result.public_id,
-        bytes:     result.bytes,
-        format:    result.format || ext,
-        filename:  file.name,
-      });
-    }
-
-    throw new Error("Cloudinary returned no secure_url");
-
   } catch (err) {
-    const msg = err?.message || "Unknown error";
-    console.error("[DigitalUpload] Fatal:", msg);
-    return NextResponse.json({ success: false, error: `File upload failed: ${msg}` }, { status: 500 });
+    console.error("[DigitalUpload] Fatal:", err?.message);
+    return NextResponse.json({ success: false, error: `Upload failed: ${err?.message}` }, { status: 500 });
   }
 }

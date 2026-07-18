@@ -1,33 +1,28 @@
 /**
- * Product Image Upload — Cloudinary Node.js SDK v2.
- * CRITICAL: credentials read INSIDE the handler, not at module level.
- * Next.js populates process.env before handler runs but AFTER module eval,
- * so top-level const reads always return "". Reading inside the handler fixes this.
- * Uses uploader.upload() with base64 data-URI — no stream piping required.
+ * Product Image Upload — Cloudinary REST API via native fetch + Node crypto.
+ * NO external SDK required. Uses Node.js built-in 'crypto' for SHA-1 signing.
+ * Credentials read inside handler (Next.js App Router env-timing fix).
  */
 import { NextResponse } from "next/server";
-import { v2 as cloudinary } from "cloudinary";
+import crypto from "crypto";
 
 const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
 export async function POST(request) {
-  // ── Read credentials inside handler — env is fully resolved here ──────────
+  // ── Credentials — read INSIDE handler (env is fully resolved here) ─────────
   const CLOUD_NAME = (process.env.CLOUDINARY_CLOUD_NAME || "").trim();
   const API_KEY    = (process.env.CLOUDINARY_API_KEY    || "").trim();
   const API_SECRET = (process.env.CLOUDINARY_API_SECRET || "").trim();
 
   if (!CLOUD_NAME || !API_KEY || !API_SECRET) {
     console.error(
-      `[Upload] Missing creds — CLOUD_NAME:${!!CLOUD_NAME} API_KEY:${!!API_KEY} API_SECRET:${!!API_SECRET}`
+      `[Upload] Missing creds — CLOUD_NAME:${!!CLOUD_NAME} KEY:${!!API_KEY} SECRET:${!!API_SECRET}`
     );
     return NextResponse.json(
       { success: false, error: "Image upload service not configured — contact support." },
       { status: 503 }
     );
   }
-
-  // Configure SDK on every cold-start (idempotent)
-  cloudinary.config({ cloud_name: CLOUD_NAME, api_key: API_KEY, api_secret: API_SECRET, secure: true });
 
   try {
     const formData = await request.formData();
@@ -59,22 +54,37 @@ export async function POST(request) {
       );
     }
 
-    // ── Upload via SDK base64 data-URI (no require('stream') needed) ─────────
-    const base64  = Buffer.from(bytes).toString("base64");
-    const dataUri = `data:${mime};base64,${base64}`;
+    // ── Build signed upload request ──────────────────────────────────────────
+    const timestamp = Math.round(Date.now() / 1000).toString();
+    const folder    = "dunazoe_products";
 
-    const result = await cloudinary.uploader.upload(dataUri, {
-      folder:          "dunazoe_products",
-      resource_type:   "image",
-      transformation:  [
-        { width: 1200, height: 1200, crop: "limit" },
-        { quality: "auto:good" },
-        { fetch_format: "auto" },
-      ],
-      unique_filename: true,
-    });
+    // Params to sign — must be sorted alphabetically, exclude api_key/file/resource_type
+    const paramsToSign = `folder=${folder}&timestamp=${timestamp}`;
+    const signature    = crypto
+      .createHash("sha1")
+      .update(paramsToSign + API_SECRET)
+      .digest("hex");
 
-    if (result?.secure_url) {
+    // ── Build multipart form for Cloudinary REST API ─────────────────────────
+    const uploadForm = new FormData();
+    uploadForm.append("file",      new Blob([bytes], { type: mime }), file.name || "upload");
+    uploadForm.append("api_key",   API_KEY);
+    uploadForm.append("timestamp", timestamp);
+    uploadForm.append("signature", signature);
+    uploadForm.append("folder",    folder);
+    uploadForm.append("eager",     "w_1200,h_1200,c_limit/q_auto:good/f_auto");
+
+    const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
+    const response  = await fetch(uploadUrl, { method: "POST", body: uploadForm });
+    const result    = await response.json();
+
+    if (!response.ok || result.error) {
+      const msg = result.error?.message || `Cloudinary ${response.status}`;
+      console.error("[Upload] Cloudinary error:", msg);
+      return NextResponse.json({ success: false, error: `Upload failed: ${msg}` }, { status: 502 });
+    }
+
+    if (result.secure_url) {
       console.log(`[Upload] ✅ Cloudinary OK: ${result.public_id}`);
       return NextResponse.json({
         success:   true,
