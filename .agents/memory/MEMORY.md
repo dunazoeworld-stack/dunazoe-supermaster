@@ -3,4 +3,5 @@
 - [Ops Cockpit extensions](ops-product-ai-sitetest.md) — Product AI tab + Site Tests tab added to /ops; product pages upgraded with type/size/color/weight/digital/service specs
 - [July 2026 feature activation](july-2026-features.md) — Chat widget, notification bell, product listing overhaul, marketing AI, logistics self-delivery zones, share button, deployment AI download page
 - [Cloudinary upload fix](cloudinary-upload-fix.md) — use native crypto+fetch REST API; SDK import fails in App Router (not in frontend package.json); creds must be read inside handler
+- [Cloudinary signing rule](cloudinary-signing.md) — ALL sent params (except api_key/file/resource_type-in-URL) must be sorted & included in SHA-1 sig; blank Replit Secret = key in env but value ""
 - [Logistics AI](logistics-ai.md) — /api/logistics/quote covers all 36 NG states + international; dunazoe-express /express/quote+/zones added; no courier API keys needed for quoting
