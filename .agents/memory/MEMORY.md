@@ -5,3 +5,5 @@
 - [Cloudinary upload fix](cloudinary-upload-fix.md) — use native crypto+fetch REST API; SDK import fails in App Router (not in frontend package.json); creds must be read inside handler
 - [Cloudinary signing rule](cloudinary-signing.md) — ALL sent params (except api_key/file/resource_type-in-URL) must be sorted & included in SHA-1 sig; blank Replit Secret = key in env but value ""
 - [Logistics AI](logistics-ai.md) — /api/logistics/quote covers all 36 NG states + international; dunazoe-express /express/quote+/zones added; no courier API keys needed for quoting
+- [Products local store](products-local-store.md) — local_data/products.json + localStorage store bridges offline gateway; vendor onboard saves to both
+- [Shared logger winston](shared-logger-winston.md) — shared/logger.js needs winston installed in apps/core/shared/node_modules/, not just in service node_modules
