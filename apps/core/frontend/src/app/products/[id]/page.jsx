@@ -36,7 +36,13 @@ export default function ProductDetailPage({ params }) {
   const [selColor, setSelColor] = useState(null);
   const [imgIdx, setImgIdx]     = useState(0);
 
+  const [currentUser, setCurrentUser] = useState(null);
+
   useEffect(() => {
+    try {
+      const u = JSON.parse(localStorage.getItem("dunazoe_user") || "{}");
+      setCurrentUser(u);
+    } catch (_) {}
     fetch(`${API}/products/${id}`)
       .then(r => r.json())
       .then(d => {
@@ -51,6 +57,19 @@ export default function ProductDetailPage({ params }) {
       .catch(() => setProduct(null))
       .finally(() => setLoading(false));
   }, [id]);
+
+  // Check if logged-in user is the vendor of this product
+  function isProductOwner(product) {
+    if (!currentUser || !product) return false;
+    const VENDOR_ROLES = ["vendor", "direct_vendor", "copytrader_vendor", "hybrid_vendor",
+      "admin", "super_admin", "head_of_store", "cto", "ceo"];
+    const isVendorRole = VENDOR_ROLES.some(r => (currentUser.role || "").toLowerCase().includes(r.split("_")[0]));
+    if (!isVendorRole) return false;
+    // Match by vendor_id or user id
+    if (product.vendor_id && currentUser.vendor_id && String(product.vendor_id) === String(currentUser.vendor_id)) return true;
+    if (product.vendor_id && currentUser.id && String(product.vendor_id) === String(currentUser.id)) return true;
+    return false;
+  }
 
   // Parse JSON metadata stored as string or already an array
   function parseMeta(p, key) {
@@ -264,7 +283,7 @@ export default function ProductDetailPage({ params }) {
 
                 {/* Share + Chat row */}
                 <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                  {/* Share button */}
+                  {/* Share button — visible to all */}
                   <button
                     onClick={() => {
                       const link = product.shareable_link ? `https://${product.shareable_link}` : window.location.href;
@@ -281,7 +300,7 @@ export default function ProductDetailPage({ params }) {
                   >
                     📤 Share
                   </button>
-                  {/* WhatsApp share */}
+                  {/* WhatsApp share — visible to all */}
                   <a
                     href={`https://wa.me/?text=${encodeURIComponent(`Check out '${product.name}' on DUNAZOE: ${product.shareable_link ? `https://${product.shareable_link}` : window.location.href}`)}`}
                     target="_blank" rel="noopener noreferrer"
@@ -289,17 +308,36 @@ export default function ProductDetailPage({ params }) {
                   >
                     📱 WhatsApp
                   </a>
-                  {/* Chat Vendor */}
-                  <button
-                    onClick={() => {
-                      // Opens chat widget pre-filled with vendor
-                      window.__dunazoe_open_chat = { receiver_id: product.vendor_id, name: product.business_name || product.vendor_name || "Vendor" };
-                      document.dispatchEvent(new CustomEvent("dz:open-chat", { detail: window.__dunazoe_open_chat }));
-                    }}
-                    className="btn btn-ghost btn-sm"
-                  >
-                    💬 Chat Vendor
-                  </button>
+                  {/* Product Link button — visible ONLY to the vendor who owns this product */}
+                  {isProductOwner(product) && (
+                    <button
+                      onClick={() => {
+                        const link = product.shareable_link
+                          ? `https://${product.shareable_link}`
+                          : `${window.location.origin}/products/${product.id}`;
+                        navigator.clipboard?.writeText(link)
+                          .then(() => alert("Product link copied! Share it on any platform."))
+                          .catch(() => alert(`Your product link:\n${link}`));
+                      }}
+                      className="btn btn-primary btn-sm"
+                      style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                      title="Copy your product link to share on any platform"
+                    >
+                      🔗 Copy Product Link
+                    </button>
+                  )}
+                  {/* Chat Vendor — visible to non-owners */}
+                  {!isProductOwner(product) && (
+                    <button
+                      onClick={() => {
+                        window.__dunazoe_open_chat = { receiver_id: product.vendor_id, name: product.business_name || product.vendor_name || "Vendor" };
+                        document.dispatchEvent(new CustomEvent("dz:open-chat", { detail: window.__dunazoe_open_chat }));
+                      }}
+                      className="btn btn-ghost btn-sm"
+                    >
+                      💬 Chat Vendor
+                    </button>
+                  )}
                 </div>
 
                 {/* Ajo info */}

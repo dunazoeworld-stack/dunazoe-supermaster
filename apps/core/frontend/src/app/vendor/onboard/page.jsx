@@ -173,7 +173,13 @@ export default function VendorOnboardPage() {
   const fileRef = useRef(null);
 
   // ── vendor step ──────────────────────────────────────────────
-  const [vendor, setVendor] = useState({ business_name: "", state: "", city: "", type: "direct" });
+  const [vendor, setVendor] = useState({
+    business_name: "", state: "", city: "", type: "direct",
+    // Bank account details — required before listing
+    bank_name: "", account_no: "", account_name: "", payout_method: "bank",
+    // Business details
+    description: "", phone: "",
+  });
 
   // ── product fields ───────────────────────────────────────────
   const [product, setProduct] = useState({
@@ -506,36 +512,86 @@ export default function VendorOnboardPage() {
 
         {/* ── STEP 1: Store Setup ───────────────────────────── */}
         {step === 1 && !isVendor && (
-          <div className="card"><div className="card-body">
-            <h3 style={{ fontWeight: 700, marginBottom: "16px" }}>Store Information</h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div className="form-group">
-                <label className="form-label">Business Name</label>
-                <input className="form-input" required value={vendor.business_name} onChange={e => V("business_name", e.target.value)} placeholder="e.g. Temi Stores" />
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            {/* Business info */}
+            <div className="card"><div className="card-body">
+              <h3 style={{ fontWeight: 700, marginBottom: "16px" }}>🏪 Business Information</h3>
+              <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
                 <div className="form-group">
-                  <label className="form-label">State</label>
-                  <input className="form-input" required value={vendor.state} onChange={e => V("state", e.target.value)} placeholder="Lagos" />
+                  <label className="form-label">Business Name *</label>
+                  <input className="form-input" required value={vendor.business_name} onChange={e => V("business_name", e.target.value)} placeholder="e.g. Temi Stores" />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">City</label>
-                  <input className="form-input" required value={vendor.city} onChange={e => V("city", e.target.value)} placeholder="Ikeja" />
+                  <label className="form-label">Business Description</label>
+                  <textarea className="form-input" rows={2} value={vendor.description} onChange={e => V("description", e.target.value)} placeholder="Tell buyers what you sell…" style={{ resize: "vertical" }} />
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                  <div className="form-group">
+                    <label className="form-label">State *</label>
+                    <input className="form-input" required value={vendor.state} onChange={e => V("state", e.target.value)} placeholder="Lagos" />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">City *</label>
+                    <input className="form-input" required value={vendor.city} onChange={e => V("city", e.target.value)} placeholder="Ikeja" />
+                  </div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                  <div className="form-group">
+                    <label className="form-label">Store Type</label>
+                    <select className="form-input" value={vendor.type} onChange={e => V("type", e.target.value)}>
+                      <option value="direct">Direct Sale</option>
+                      <option value="delivery">Delivery Service</option>
+                      <option value="pickup_station">Pickup Station</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Phone Number *</label>
+                    <input className="form-input" required type="tel" value={vendor.phone} onChange={e => V("phone", e.target.value)} placeholder="e.g. 08012345678" />
+                  </div>
                 </div>
               </div>
-              <div className="form-group">
-                <label className="form-label">Store Type</label>
-                <select className="form-input" value={vendor.type} onChange={e => V("type", e.target.value)}>
-                  <option value="direct">Direct Sale</option>
-                  <option value="delivery">Delivery Service</option>
-                  <option value="pickup_station">Pickup Station</option>
-                </select>
+            </div></div>
+
+            {/* Bank account details — REQUIRED before listing products */}
+            <div className="card" style={{ border: "1.5px solid rgba(245,158,11,0.3)" }}><div className="card-body">
+              <h3 style={{ fontWeight: 700, marginBottom: "4px" }}>🏦 Bank Account Details <span style={{ color: "#F59E0B", fontSize: "0.78rem" }}>Required</span></h3>
+              <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: "14px" }}>
+                ⚠️ You must provide your bank details before listing products. Payouts are processed after successful deliveries.
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <div className="form-group">
+                  <label className="form-label">Payout Method *</label>
+                  <select className="form-input" required value={vendor.payout_method} onChange={e => V("payout_method", e.target.value)}>
+                    <option value="bank">Bank Transfer</option>
+                    <option value="opay">OPay</option>
+                    <option value="moniepoint">Moniepoint</option>
+                    <option value="palmpay">PalmPay</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Bank Name *</label>
+                  <input className="form-input" required value={vendor.bank_name} onChange={e => V("bank_name", e.target.value)} placeholder="e.g. Access Bank, Zenith Bank, GTBank" />
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                  <div className="form-group">
+                    <label className="form-label">Account Number *</label>
+                    <input className="form-input" required type="text" pattern="\d{10}" maxLength={10} value={vendor.account_no} onChange={e => V("account_no", e.target.value)} placeholder="0123456789" />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Account Name *</label>
+                    <input className="form-input" required value={vendor.account_name} onChange={e => V("account_name", e.target.value)} placeholder="As on your bank account" />
+                  </div>
+                </div>
               </div>
-            </div>
-            <button type="submit" className="btn btn-primary btn-lg" style={{ marginTop: "20px", width: "100%", justifyContent: "center" }}>
-              Continue →
+              <div className="alert alert-info" style={{ marginTop: "12px" }}>
+                🔒 5% service charge is deducted from your payout per successful delivery — credited to your wallet within 24 hours.
+              </div>
+            </div></div>
+
+            <button type="submit" className="btn btn-primary btn-lg" style={{ width: "100%", justifyContent: "center" }}>
+              Continue to Add Product →
             </button>
-          </div></div>
+          </div>
         )}
 
         {/* ── STEP 2: Product Details ───────────────────────── */}
@@ -617,8 +673,14 @@ export default function VendorOnboardPage() {
                     </select>
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Price (₦) *</label>
+                    <label className="form-label">Your Price (₦) *</label>
                     <input className="form-input" type="number" min="1" required value={product.price} onChange={e => P("price", e.target.value)} placeholder="e.g. 5000" />
+                    {product.price && parseFloat(product.price) > 0 && (
+                      <p style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: "4px" }}>
+                        Customer pays: <strong style={{ color: "var(--dz-blue)" }}>₦{(parseFloat(product.price) * 1.05).toLocaleString("en-NG")}</strong>
+                        <span style={{ color: "var(--text-muted)" }}> (includes 5% service charge)</span>
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="form-group">

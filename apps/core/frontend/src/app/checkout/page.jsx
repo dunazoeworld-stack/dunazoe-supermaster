@@ -132,9 +132,11 @@ export default function CheckoutPage() {
     return () => clearTimeout(quoteDebounce.current);
   }, [form.city, form.state, fetchQuotes]);
 
-  const subtotal    = cart.reduce((s, i) => s + parseFloat(i.price || 0) * (i.qty || 1), 0);
-  const shippingFee = selectedShip?.cost_ngn || 0;
-  const total       = subtotal + shippingFee;
+  const SYSTEM_CHARGE_PCT = 0.05; // 5% system charge on delivery fee
+  const subtotal      = cart.reduce((s, i) => s + parseFloat(i.price || 0) * (i.qty || 1), 0);
+  const shippingFee   = selectedShip?.cost_ngn || 0;
+  const serviceCharge = parseFloat((shippingFee * SYSTEM_CHARGE_PCT).toFixed(2));
+  const total         = subtotal + shippingFee + serviceCharge;
 
   async function handleCheckout(e) {
     e.preventDefault();
@@ -156,7 +158,8 @@ export default function CheckoutPage() {
           payment_method:   payMethod,
           total,
           subtotal,
-          shipping_fee:     shippingFee,
+          shipping_fee:     shippingFee + serviceCharge,
+          service_charge:   serviceCharge,
           shipping_method:  selectedShip?.id || "standard",
           shipping_courier: selectedShip?.courier_id || selectedShip?.type || null,
         }),
@@ -341,6 +344,14 @@ export default function CheckoutPage() {
                 {selectedShip ? formatNGN(shippingFee) : (quotesLoading ? "…" : "TBD")}
               </span>
             </div>
+
+            {/* 5% service charge on delivery */}
+            {shippingFee > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.84rem", marginBottom: "4px", color: "var(--text-secondary)" }}>
+                <span>Service charge (5%)</span>
+                <span>{formatNGN(serviceCharge)}</span>
+              </div>
+            )}
 
             <div className="glow-divider" style={{ margin: "10px 0" }} />
             <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800 }}>

@@ -18,6 +18,11 @@ const nextConfig = {
     "*.repl.co",
     "*.replit.app",
     "*.picard.replit.dev",
+    "*.janeway.replit.dev",
   ],
+  // Silence the workspace-root warning from Turbopack (multiple lockfiles)
+  turbopack: {
+    root: __dirname,
+  },
 };
 module.exports = nextConfig;

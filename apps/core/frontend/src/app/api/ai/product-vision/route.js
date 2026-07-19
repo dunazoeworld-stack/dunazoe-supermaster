@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 // ──────────────────────────────────────────────────────────────────────────────
 // DUNAZOE — Product Vision AI  (server-side)
 // Supports: OpenAI GPT-4o · xAI Grok Vision · Google Gemini 1.5 Flash
-// Auto-detects which key is configured and tries in order.
+// Falls back to self-dependent heuristic analysis when no API key is configured.
 // Returns a fully structured product listing object from a product image.
 // ──────────────────────────────────────────────────────────────────────────────
 
@@ -81,7 +81,6 @@ async function callXAI(imageUrl, apiKey) {
 
 // ── Google Gemini 1.5 Flash Vision ───────────────────────────────────────────
 async function callGemini(imageUrl, apiKey) {
-  // Fetch image bytes and send as base64 inline_data
   const imgRes = await fetch(imageUrl, { signal: AbortSignal.timeout(10_000) });
   if (!imgRes.ok) throw new Error(`Image fetch failed: ${imgRes.status}`);
   const imgBuf = await imgRes.arrayBuffer();
@@ -108,6 +107,92 @@ async function callGemini(imageUrl, apiKey) {
   const m    = text.match(/\{[\s\S]*\}/);
   if (!m) throw new Error("No JSON in Gemini response");
   return { ...JSON.parse(m[0]), source: "gemini_flash" };
+}
+
+// ── Self-Dependent Heuristic Fallback ─────────────────────────────────────────
+// Analyzes image filename/URL patterns and applies rule-based product data
+// estimation. Works entirely without any external API keys.
+function selfDependentAnalysis(imageUrl, product_type = "physical") {
+  const url    = (imageUrl || "").toLowerCase();
+  const fname  = url.split("/").pop().split("?")[0].replace(/[-_]/g, " ");
+
+  // Category detection from filename/URL keywords
+  const CATEGORY_RULES = [
+    { cat: "phones_&_tablets",   words: ["phone","iphone","samsung","xiaomi","tecno","infinix","tablet","ipad","android","smartphone"] },
+    { cat: "fashion",            words: ["shirt","dress","shoe","sneaker","boot","jean","trouser","blouse","jacket","bag","handbag","sandal","cap","hat","cloth","wear","fashion","skirt","gown","nike","adidas","puma"] },
+    { cat: "electronics",        words: ["laptop","computer","tv","television","speaker","earphone","headphone","printer","camera","monitor","keyboard","mouse","usb","charger","powerbank","router","modem"] },
+    { cat: "beauty_&_health",    words: ["cream","lotion","perfume","serum","makeup","lipstick","skincare","hair","shampoo","gel","soap","deodorant","cologne"] },
+    { cat: "food_&_groceries",   words: ["food","rice","beans","palm","oil","tomato","spice","flour","sugar","drink","juice","water","milk","egg"] },
+    { cat: "home_&_living",      words: ["chair","table","sofa","bed","mattress","curtain","rug","lamp","vase","mirror","shelf","fan","cooker","blender","pot","plate","cup"] },
+    { cat: "solar_energy",       words: ["solar","panel","inverter","battery","generator","watt","volt","energy"] },
+    { cat: "baby_&_kids",        words: ["baby","kid","child","diaper","toy","stroller","feeding","pampers"] },
+    { cat: "sports",             words: ["sport","gym","fitness","bicycle","bike","ball","jersey","track","dumbbell","yoga"] },
+    { cat: "books_&_education",  words: ["book","textbook","novel","education","study","notebook","pen","pencil"] },
+    { cat: "agriculture",        words: ["farm","seed","fertilizer","pesticide","crop","livestock","poultry"] },
+  ];
+
+  let category = "home_&_living";
+  for (const rule of CATEGORY_RULES) {
+    if (rule.words.some(w => fname.includes(w) || url.includes(w))) {
+      category = rule.cat;
+      break;
+    }
+  }
+
+  // Weight estimation from category
+  const WEIGHT_MAP = {
+    "phones_&_tablets":   0.2,
+    "fashion":            0.4,
+    "electronics":        1.5,
+    "beauty_&_health":    0.25,
+    "food_&_groceries":   1.0,
+    "home_&_living":      2.0,
+    "solar_energy":       3.5,
+    "baby_&_kids":        0.5,
+    "sports":             1.0,
+    "books_&_education":  0.4,
+    "agriculture":        2.0,
+  };
+
+  const weight_kg = WEIGHT_MAP[category] || 0.5;
+
+  // Generate a basic name from filename words (title-case, remove extensions)
+  const words = fname.replace(/\.[a-z0-9]+$/, "").trim().split(/\s+/).filter(w => w.length > 2);
+  const productName = words.length > 1
+    ? words.map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ").slice(0, 60)
+    : `Quality ${category.replace(/_&_/g, " & ").split("_").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")} Product`;
+
+  // Category-specific tags
+  const TAG_MAP = {
+    "phones_&_tablets":  ["smartphone", "mobile phone", "android", "buy phone Nigeria", "best price"],
+    "fashion":           ["fashion", "clothing", "style", "buy clothes Nigeria", "latest fashion"],
+    "electronics":       ["electronics", "gadget", "technology", "buy online Nigeria", "quality electronics"],
+    "beauty_&_health":   ["beauty", "skincare", "health", "body care", "cosmetics Nigeria"],
+    "food_&_groceries":  ["food", "groceries", "fresh", "organic", "buy food online"],
+    "home_&_living":     ["home decor", "furniture", "household", "interior", "Nigeria"],
+    "solar_energy":      ["solar", "renewable energy", "power backup", "generator alternative", "clean energy"],
+    "baby_&_kids":       ["baby products", "kids", "children", "parenting", "newborn"],
+    "sports":            ["fitness", "sports equipment", "gym", "workout", "exercise"],
+    "books_&_education": ["education", "books", "learning", "school supplies", "study"],
+    "agriculture":       ["farming", "agriculture", "crop", "livestock", "farm supplies"],
+  };
+
+  const catLabel = category.replace(/_&_/g, " & ").split("_").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+
+  return {
+    name:       productName,
+    description: `Premium quality ${catLabel.toLowerCase()} product available on DUNAZOE. Fast delivery across Nigeria with escrow-protected payment. Buy with confidence — 30-day buyer guarantee included.`,
+    category,
+    weight_kg,
+    dimensions: null,
+    material:   null,
+    brand:      null,
+    colors:     [],
+    tags:       TAG_MAP[category] || ["quality product", "buy online Nigeria", "fast delivery"],
+    confidence: 0.45,
+    source:     "self_dependent_heuristic",
+    note:       "Auto-generated without API key. Review and edit fields for best results. Add OPENAI_API_KEY, XAI_API_KEY, or GEMINI_API_KEY in the Deployment AI for smarter analysis.",
+  };
 }
 
 // ── Main handler ─────────────────────────────────────────────────────────────
@@ -144,14 +229,12 @@ export async function POST(req) {
       } catch (e) { errors.push(`Gemini: ${e.message}`); }
     }
 
-    // No key configured — or all failed
+    // 4 — Self-dependent heuristic fallback (always works, no API key needed)
+    const heuristic = selfDependentAnalysis(image_url, product_type);
     return NextResponse.json({
-      success: false,
-      needs_api_key: !errors.length,
-      errors,
-      message: errors.length
-        ? `Vision AI attempted but failed: ${errors.join(" | ")}`
-        : "No AI vision key configured. Add OPENAI_API_KEY, XAI_API_KEY, or GEMINI_API_KEY to enable auto-fill.",
+      success: true,
+      ...heuristic,
+      errors: errors.length ? errors : undefined,
     });
 
   } catch (e) {
