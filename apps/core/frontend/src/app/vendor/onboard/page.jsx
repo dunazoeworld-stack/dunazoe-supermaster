@@ -65,29 +65,48 @@ function TagInput({ placeholder, items, onAdd, onRemove }) {
   );
 }
 
-// ─── Client-side image compression (Canvas → WebP/JPEG) ──────────────────────
+// ─── Smart image compression: adaptive quality targeting (< 600 KB, max 1600px) ─
 async function compressImage(file) {
   return new Promise(resolve => {
     const img = new Image();
     const objectUrl = URL.createObjectURL(file);
     img.onload = () => {
       URL.revokeObjectURL(objectUrl);
-      const MAX = 1400;
+      // Scale down to max 1600 px while preserving aspect ratio
+      const MAX = 1600;
       let { width, height } = img;
       if (width > MAX || height > MAX) {
         if (width >= height) { height = Math.round(height * MAX / width); width = MAX; }
-        else { width = Math.round(width * MAX / height); height = MAX; }
+        else                 { width  = Math.round(width  * MAX / height); height = MAX; }
       }
       const canvas = document.createElement("canvas");
       canvas.width = width; canvas.height = height;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(img, 0, 0, width, height);
-      canvas.toBlob(blob => {
-        if (blob) { resolve(new File([blob], file.name.replace(/\.[^.]+$/, ".webp"), { type: "image/webp" })); return; }
-        canvas.toBlob(jblob => resolve(jblob
-          ? new File([jblob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" })
-          : file), "image/jpeg", 0.92);
-      }, "image/webp", 0.92);
+      canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+
+      // Adaptive quality: step down until < 600 KB or hit quality floor 0.65
+      const TARGET_BYTES = 600 * 1024;
+      const QUALITIES    = [0.95, 0.85, 0.75, 0.65];
+      let qi = 0;
+
+      function tryBlob() {
+        canvas.toBlob(blob => {
+          if (!blob) {
+            // WebP not supported — fall back to JPEG
+            canvas.toBlob(jblob => resolve(jblob
+              ? new File([jblob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" })
+              : file), "image/jpeg", 0.82);
+            return;
+          }
+          // Accept if under target OR we've reached the quality floor
+          if (blob.size <= TARGET_BYTES || qi === QUALITIES.length - 1) {
+            resolve(new File([blob], file.name.replace(/\.[^.]+$/, ".webp"), { type: "image/webp" }));
+          } else {
+            qi++;
+            tryBlob(); // try next quality level
+          }
+        }, "image/webp", QUALITIES[qi]);
+      }
+      tryBlob();
     };
     img.onerror = () => { URL.revokeObjectURL(objectUrl); resolve(file); };
     img.src = objectUrl;
@@ -145,8 +164,12 @@ export default function VendorOnboardPage() {
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState("");
   const [success, setSuccess] = useState(false);
-  const [aiTip,   setAiTip]   = useState(null);
-  const [aiLoading, setAiLoading] = useState(false);
+  const [aiTip,           setAiTip]           = useState(null);
+  const [aiLoading,       setAiLoading]       = useState(false);
+  // ── Vision AI state ────────────────────────────────────────────────────────
+  const [aiVision,        setAiVision]        = useState(null);   // vision analysis result
+  const [aiVisionLoading, setAiVisionLoading] = useState(false);  // loading indicator
+  const [aiApplied,       setAiApplied]       = useState({});     // which fields were AI-filled
   const fileRef = useRef(null);
 
   // ── vendor step ──────────────────────────────────────────────
