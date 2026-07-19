@@ -3,7 +3,7 @@
   "version": "1.0.0-rc1",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 5000",
+    "dev": "NODE_OPTIONS='--max-old-space-size=512' next dev --port 5000",
     "build": "next build",
     "start": "next start --port 5000"
   },
