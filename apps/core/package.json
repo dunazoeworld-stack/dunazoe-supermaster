@@ -4,26 +4,32 @@
   "description": "DUNAZOE OS v3 + Update #93 — 25 Microservices + API Gateway + Banking-Grade",
   "private": true,
   "scripts": {
-    "start":              "bash scripts/start-all.sh",
-    "stop":               "bash scripts/stop-all.sh",
-    "docker:up":          "docker-compose up --build",
-    "docker:down":        "docker-compose down",
-    "docker:reset":       "docker-compose down -v && docker-compose up --build",
-    "schema":             "for s in shared/schema.sql shared/schema-phase3-4.sql shared/schema-phase5-8.sql shared/schema-phase9.sql; do psql $DATABASE_URL -f $s && echo OK: $s; done",
-    "install:all":        "for d in gateway services/*/; do echo Installing $d && (cd $d && npm install --silent 2>/dev/null); done",
-    "test:unit":          "npx jest tests/unit/core.test.js --verbose",
-    "test:integration":   "npx jest tests/integration/api.test.js --verbose --runInBand",
-    "test:security":      "npx jest tests/security/security.test.js --verbose",
-    "test:e2e":           "npx playwright test tests/e2e/dunazoe.spec.js",
-    "test:performance":   "k6 run tests/performance/load.test.js",
-    "test:all":           "npm run test:unit && npm run test:security",
-    "reconcile":          "curl -X POST http://localhost:4024/reconciliation/run -H 'Authorization: Bearer $ADMIN_TOKEN' -d '{}'",
-    "health":             "curl http://localhost:3000/health | python3 -m json.tool",
-    "status":             "curl http://localhost:4025/reliability/status-dashboard -H 'Authorization: Bearer $ADMIN_TOKEN' | python3 -m json.tool",
-    "logs":               "tail -f logs/*.log",
-    "costs":              "curl http://localhost:4025/reliability/costs?days=30 -H 'Authorization: Bearer $ADMIN_TOKEN' | python3 -m json.tool"
+    "start": "bash scripts/start-all.sh",
+    "stop": "bash scripts/stop-all.sh",
+    "docker:up": "docker-compose up --build",
+    "docker:down": "docker-compose down",
+    "docker:reset": "docker-compose down -v && docker-compose up --build",
+    "schema": "for s in shared/schema.sql shared/schema-phase3-4.sql shared/schema-phase5-8.sql shared/schema-phase9.sql; do psql $DATABASE_URL -f $s && echo OK: $s; done",
+    "install:all": "for d in gateway services/*/; do echo Installing $d && (cd $d && npm install --silent 2>/dev/null); done",
+    "test:unit": "npx jest tests/unit/core.test.js --verbose",
+    "test:integration": "npx jest tests/integration/api.test.js --verbose --runInBand",
+    "test:security": "npx jest tests/security/security.test.js --verbose",
+    "test:e2e": "npx playwright test tests/e2e/dunazoe.spec.js",
+    "test:performance": "k6 run tests/performance/load.test.js",
+    "test:all": "npm run test:unit && npm run test:security",
+    "reconcile": "curl -X POST http://localhost:4024/reconciliation/run -H 'Authorization: Bearer $ADMIN_TOKEN' -d '{}'",
+    "health": "curl http://localhost:3000/health | python3 -m json.tool",
+    "status": "curl http://localhost:4025/reliability/status-dashboard -H 'Authorization: Bearer $ADMIN_TOKEN' | python3 -m json.tool",
+    "logs": "tail -f logs/*.log",
+    "costs": "curl http://localhost:4025/reliability/costs?days=30 -H 'Authorization: Bearer $ADMIN_TOKEN' | python3 -m json.tool"
   },
-  "engines": { "node": ">=18.0.0", "npm": ">=9.0.0" },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
   "author": "Temidayo-Niwajuoluwa Folorunso — DUNAZOE.COM",
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "dependencies": {
+    "winston": "^3.19.0"
+  }
 }

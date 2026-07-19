@@ -347,24 +347,49 @@ export default function VendorOnboardPage() {
         self_delivery_zones:    product.self_delivery_zones,
       };
 
+      const payload = {
+        name:         product.name,
+        description:  product.description,
+        category:     product.category,
+        price:        parseFloat(product.price),
+        cost:         product.cost ? parseFloat(product.cost) : undefined,
+        type:         product.product_type,
+        product_type: product.product_type,
+        ajo_enabled:  product.ajo_enabled,
+        ajo_weeks:    product.ajo_weeks ? parseInt(product.ajo_weeks) : null,
+        images:       images.map(i => i.url),
+        ...meta,
+      };
       const pRes = await fetch(`${API}/products`, {
         method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          name:         product.name,
-          description:  product.description,
-          category:     product.category,
-          price:        parseFloat(product.price),
-          cost:         product.cost ? parseFloat(product.cost) : undefined,
-          type:         product.product_type,
-          ajo_enabled:  product.ajo_enabled,
-          ajo_weeks:    product.ajo_weeks ? parseInt(product.ajo_weeks) : null,
-          images:       images.map(i => i.url),
-          ...meta,
-        }),
+        body: JSON.stringify(payload),
       });
       const pData = await pRes.json();
-      if (pData.success || pData.product_id) setSuccess(pData);
-      else setError(pData.error || "Failed to add product.");
+      if (pData.success || pData.product_id) {
+        // ── Save to localStorage store so /products page shows this immediately ──
+        try {
+          const existing = JSON.parse(localStorage.getItem("dunazoe_products_store") || "[]");
+          const localRecord = {
+            id:           pData.product_id || `local_${Date.now()}`,
+            name:         payload.name,
+            description:  payload.description || "",
+            price:        payload.price,
+            category:     payload.category,
+            type:         payload.product_type,
+            product_type: payload.product_type,
+            images:       payload.images,
+            ajo_enabled:  payload.ajo_enabled,
+            sizes:        meta.sizes || [],
+            colors:       meta.colors || [],
+            brand:        meta.brand || null,
+            status:       "published",
+            created_at:   new Date().toISOString(),
+          };
+          const filtered = existing.filter(p => p.id !== localRecord.id);
+          localStorage.setItem("dunazoe_products_store", JSON.stringify([localRecord, ...filtered].slice(0, 200)));
+        } catch (_) {}
+        setSuccess(pData);
+      } else setError(pData.error || "Failed to add product.");
     } catch (_) { setError("Connection error. Please try again."); }
     finally { setLoading(false); }
   }

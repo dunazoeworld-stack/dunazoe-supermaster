@@ -33,8 +33,35 @@ function ProductsContent() {
     if (search) params.set("q", search);
     fetch(`${API}/products?${params}`)
       .then(r => r.json())
-      .then(d => setProducts(d.products || []))
-      .catch(() => setProducts([]))
+      .then(d => {
+        const apiProducts = d.products || [];
+        // Merge with any locally-published products (for offline / just-published items)
+        try {
+          const local = JSON.parse(localStorage.getItem("dunazoe_products_store") || "[]");
+          if (local.length > 0) {
+            const apiIds = new Set(apiProducts.map(p => String(p.id)));
+            const uniqueLocal = local.filter(p => !apiIds.has(String(p.id)));
+            // Apply category / search filter to local items
+            const q = search.toLowerCase().trim();
+            const cat = (category || "").toLowerCase().trim();
+            const filtered = uniqueLocal.filter(p => {
+              if (cat && !(p.category || "").toLowerCase().includes(cat)) return false;
+              if (q && !(p.name || "").toLowerCase().includes(q) && !(p.description || "").toLowerCase().includes(q)) return false;
+              return true;
+            });
+            return [...apiProducts, ...filtered];
+          }
+        } catch (_) {}
+        return apiProducts;
+      })
+      .then(merged => setProducts(merged))
+      .catch(() => {
+        // Fully offline — read from localStorage only
+        try {
+          const local = JSON.parse(localStorage.getItem("dunazoe_products_store") || "[]");
+          setProducts(local);
+        } catch { setProducts([]); }
+      })
       .finally(() => setLoading(false));
   }, [category, search]);
 

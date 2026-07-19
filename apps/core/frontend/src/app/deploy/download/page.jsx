@@ -459,25 +459,33 @@ export default function DeployDownloadPage() {
         </div>
       )}
 
-      {/* ── QUICK NAV ─────────────────────────────────────────────────────── */}
-      <h2 style={{ fontSize: "1rem", fontWeight: 800, marginBottom: "12px" }}>🗂️ Control Panel Pages</h2>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "10px", marginBottom: "32px" }}>
+      {/* ── QUICK NAV — ALL deploy sub-pages ─────────────────────────────── */}
+      <h2 style={{ fontSize: "1rem", fontWeight: 800, marginBottom: "12px" }}>🗂️ Control Panel — All Pages</h2>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))", gap: "10px", marginBottom: "32px" }}>
         {[
-          { href: "/deploy/status",    icon: "📊", label: "Status" },
-          { href: "/deploy/monitor",   icon: "⏱",  label: "Monitor" },
-          { href: "/deploy/audit",     icon: "🔍", label: "Audit" },
-          { href: "/deploy/github",    icon: "🐙", label: "GitHub" },
-          { href: "/deploy/self",      icon: "🔧", label: "Self-Manage" },
-          { href: "/deploy/scaling",   icon: "📈", label: "Scaling" },
-          { href: "/deploy/releases",  icon: "🏷",  label: "Releases" },
-          { href: "/deploy/assistant", icon: "🤖", label: "AI Studio" },
-          { href: "/ops",              icon: "⚙️", label: "Ops Cockpit" },
-          { href: "/admin",            icon: "👑", label: "Admin" },
-        ].map(({ href, icon, label }) => (
+          { href: "/deploy",             icon: "🚀", label: "Deploy",      desc: "Main" },
+          { href: "/deploy/status",      icon: "💚", label: "Status",      desc: "34 services" },
+          { href: "/deploy/monitor",     icon: "📡", label: "Monitor",     desc: "Health" },
+          { href: "/deploy/audit",       icon: "🔍", label: "Audit",       desc: "5-gate" },
+          { href: "/deploy/github",      icon: "🐙", label: "GitHub",      desc: "Sync" },
+          { href: "/deploy/self",        icon: "🔧", label: "Self",        desc: "Backups" },
+          { href: "/deploy/scaling",     icon: "📈", label: "Scaling",     desc: "Infra" },
+          { href: "/deploy/releases",    icon: "🏷",  label: "Releases",    desc: "History" },
+          { href: "/deploy/assistant",   icon: "🤖", label: "AI Studio",   desc: "CodeAI" },
+          { href: "/deploy/apis",        icon: "🔌", label: "APIs",        desc: "Credentials" },
+          { href: "/deploy/features",    icon: "⚙️", label: "Features",    desc: "Flags" },
+          { href: "/deploy/portability", icon: "📦", label: "Portability", desc: "Self-host" },
+          { href: "/deploy/studio",      icon: "🏗️", label: "Studio",      desc: "Changesets" },
+          { href: "/deploy/checklist",   icon: "✅", label: "Checklist",   desc: "Pre-deploy" },
+          { href: "/deploy/health",      icon: "❤️", label: "Health",      desc: "Diagnostics" },
+          { href: "/ops",                icon: "🎛️", label: "Ops Cockpit", desc: "STAE" },
+          { href: "/admin",              icon: "👑", label: "Admin",       desc: "Superuser" },
+        ].map(({ href, icon, label, desc }) => (
           <Link key={href} href={href} className="card" style={{ textDecoration: "none" }}>
-            <div className="card-body" style={{ textAlign: "center", padding: "14px" }}>
-              <span style={{ fontSize: "1.3rem", display: "block", marginBottom: "4px" }}>{icon}</span>
-              <p style={{ fontWeight: 600, fontSize: "0.78rem" }}>{label}</p>
+            <div className="card-body" style={{ textAlign: "center", padding: "12px 6px" }}>
+              <span style={{ fontSize: "1.3rem", display: "block", marginBottom: "3px" }}>{icon}</span>
+              <p style={{ fontWeight: 700, fontSize: "0.74rem", marginBottom: "1px" }}>{label}</p>
+              <p style={{ fontSize: "0.62rem", color: "var(--text-muted)" }}>{desc}</p>
             </div>
           </Link>
         ))}

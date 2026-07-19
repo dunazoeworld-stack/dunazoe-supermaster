@@ -1,0 +1,33 @@
+[
+  {
+    "id": "local_1784439330075_yj1x8",
+    "name": "DUNAZOE Test Sneakers",
+    "description": "Premium quality sneakers for everyday wear",
+    "price": 15000,
+    "category": "fashion",
+    "type": "physical",
+    "product_type": "physical",
+    "images": [
+      "https://res.cloudinary.com/dtx17sg1m/image/upload/v1784390518/dunazoe_products/hv6wifv80zq"
+    ],
+    "ajo_enabled": false,
+    "ajo_weeks": null,
+    "sizes": [
+      "38",
+      "39",
+      "40",
+      "41",
+      "42"
+    ],
+    "colors": [
+      "Black",
+      "White",
+      "Navy"
+    ],
+    "brand": "DZ Sport",
+    "stock_quantity": null,
+    "status": "published",
+    "created_at": "2026-07-19T05:35:30.075Z",
+    "vendor_id": "local"
+  }
+]
