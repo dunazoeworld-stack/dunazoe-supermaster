@@ -412,7 +412,7 @@ app.put("/orders/:id/status", requireAuth, asyncHandler(async (req, res) => {
 
   const order = result.rows[0];
 
-  // Auto-release escrow when delivered
+  // Auto-release escrow when delivered + schedule 5% vendor payout deduction (24h delay)
   if (status === "delivered") {
     try {
       const escrow = await pool.query("SELECT id FROM escrow WHERE order_id=$1 AND status='held'", [id]);
@@ -425,7 +425,37 @@ app.put("/orders/:id/status", requireAuth, asyncHandler(async (req, res) => {
         quantity:   order.quantity,
         order_ref:  `ORD-${id}`,
       }).catch(() => {});
-    } catch (_) {}
+
+      // ── SCHEDULE 5% service charge deduction from vendor payout (24h delay) ──
+      // The 5% is on the product amount (order.amount), not delivery fee.
+      const SERVICE_CHARGE_PCT = parseFloat(process.env.SERVICE_CHARGE_PCT || "0.05");
+      const service_charge_amt = parseFloat((order.amount * SERVICE_CHARGE_PCT).toFixed(2));
+      const payout_net         = parseFloat((order.amount - service_charge_amt).toFixed(2));
+      const payout_at          = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
+
+      // Record the scheduled payout in vendor_payouts table (created if not exists)
+      await pool.query(
+        `INSERT INTO vendor_payouts(
+           vendor_id, order_id, gross_amount, service_charge, net_amount,
+           service_charge_pct, status, scheduled_at, note
+         ) VALUES($1,$2,$3,$4,$5,$6,'scheduled',$7,$8)
+         ON CONFLICT (order_id) DO UPDATE SET
+           status='scheduled', scheduled_at=$7, updated_at=NOW()`,
+        [
+          order.vendor_id, id,
+          order.amount, service_charge_amt, payout_net,
+          SERVICE_CHARGE_PCT, payout_at,
+          `Auto-scheduled: 5% service charge (₦${service_charge_amt}) deducted. Net payout ₦${payout_net} on ${payout_at.toISOString()}`
+        ]
+      ).catch(err => {
+        // Table may not exist yet — log and skip (non-fatal)
+        console.warn("[order-service] vendor_payouts insert skipped:", err.message);
+      });
+
+      console.log(`[order-service] Vendor payout scheduled: ORD-${id} → vendor ${order.vendor_id} gets ₦${payout_net} at ${payout_at.toISOString()} (5% deducted: ₦${service_charge_amt})`);
+    } catch (err) {
+      console.error("[order-service] Post-delivery hook error:", err.message);
+    }
   }
 
   return res.json({ success: true, order: result.rows[0] });

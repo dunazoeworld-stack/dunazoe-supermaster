@@ -88,6 +88,11 @@ export default function CheckoutPage() {
   }, []);
 
   // ── Fetch shipping quotes whenever city/state changes ───────────────────────
+  // ── fetchQuotes: stable ref — never depends on selectedShip to avoid
+  //    re-render loops. Uses a ref to read selectedShip without re-subscribing.
+  const selectedShipRef = useRef(selectedShip);
+  useEffect(() => { selectedShipRef.current = selectedShip; }, [selectedShip]);
+
   const fetchQuotes = useCallback(async (city, state) => {
     if (!city || !state) { setQuotes([]); return; }
     const key = `${city}|${state}`;
@@ -97,22 +102,26 @@ export default function CheckoutPage() {
     setQuotesLoading(true);
     setQuotesError("");
     try {
+      const ctrl  = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 8000);
       const res = await fetch("/api/logistics/quote", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: ctrl.signal,
         body: JSON.stringify({
-          origin_city: "lagos", origin_state: "lagos", // default origin (vendor HQ)
+          origin_city: "lagos", origin_state: "lagos",
           dest_city: city, dest_state: state,
           dest_country: "nigeria",
           order_amount: cart.reduce((s, i) => s + parseFloat(i.price||0)*(i.qty||1), 0),
         }),
       });
+      clearTimeout(timer);
       const data = await res.json();
       if (data.success && data.quotes?.length) {
         setQuotes(data.quotes);
         setAiNote(data.ai_note || "");
-        // Auto-select best option
-        if (!selectedShip) setSelectedShip(data.quotes[0]);
+        // Auto-select best option only if nothing is selected yet
+        if (!selectedShipRef.current) setSelectedShip(data.quotes[0]);
       } else {
         setQuotesError("Could not load shipping options. Standard rates apply.");
       }
@@ -121,7 +130,7 @@ export default function CheckoutPage() {
     } finally {
       setQuotesLoading(false);
     }
-  }, [cart, selectedShip]);
+  }, [cart]); // removed selectedShip from deps — fixes re-render loop
 
   // Debounce city/state changes by 600ms
   useEffect(() => {
@@ -132,10 +141,10 @@ export default function CheckoutPage() {
     return () => clearTimeout(quoteDebounce.current);
   }, [form.city, form.state, fetchQuotes]);
 
-  const SYSTEM_CHARGE_PCT = 0.05; // 5% system charge on delivery fee
+  const SYSTEM_CHARGE_PCT = 0.05; // 5% system charge on product subtotal
   const subtotal      = cart.reduce((s, i) => s + parseFloat(i.price || 0) * (i.qty || 1), 0);
   const shippingFee   = selectedShip?.cost_ngn || 0;
-  const serviceCharge = parseFloat((shippingFee * SYSTEM_CHARGE_PCT).toFixed(2));
+  const serviceCharge = parseFloat((subtotal * SYSTEM_CHARGE_PCT).toFixed(2)); // 5% of product value
   const total         = subtotal + shippingFee + serviceCharge;
 
   async function handleCheckout(e) {
@@ -345,10 +354,10 @@ export default function CheckoutPage() {
               </span>
             </div>
 
-            {/* 5% service charge on delivery */}
-            {shippingFee > 0 && (
+            {/* 5% service charge on product subtotal */}
+            {subtotal > 0 && (
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.84rem", marginBottom: "4px", color: "var(--text-secondary)" }}>
-                <span>Service charge (5%)</span>
+                <span>Service charge <span style={{ fontSize: "0.75rem", opacity: 0.75 }}>(5% of items)</span></span>
                 <span>{formatNGN(serviceCharge)}</span>
               </div>
             )}
