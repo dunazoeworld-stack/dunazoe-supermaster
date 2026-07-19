@@ -7,3 +7,5 @@
 - [Logistics AI](logistics-ai.md) — /api/logistics/quote covers all 36 NG states + international; dunazoe-express /express/quote+/zones added; no courier API keys needed for quoting
 - [Products local store](products-local-store.md) — local_data/products.json + localStorage store bridges offline gateway; vendor onboard saves to both
 - [Shared logger winston](shared-logger-winston.md) — shared/logger.js needs winston installed in apps/core/shared/node_modules/, not just in service node_modules
+- [Service charge & vendor payout rule](service-charge-payout.md) — 5% on product subtotal (NOT delivery fee); vendor gets gross-5% credited 24h after delivery
+- [Next.js 16 performance on Replit](nextjs-replit-perf.md) — OOM fix: 512MB heap cap + distDir→/tmp + onDemandEntries; --no-turbo flag is invalid in Next.js 16

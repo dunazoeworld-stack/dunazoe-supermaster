@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Store Turbopack/webpack dev cache on /tmp (local SSD, not network drive)
+  // This eliminates the "slow filesystem" warning and speeds up hot-reload.
+  distDir: process.env.NODE_ENV === "development" ? "/tmp/dunazoe-next-dev" : ".next",
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "res.cloudinary.com" },
