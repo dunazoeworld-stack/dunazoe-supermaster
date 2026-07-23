@@ -9,3 +9,4 @@
 - [Shared logger winston](shared-logger-winston.md) — shared/logger.js needs winston installed in apps/core/shared/node_modules/, not just in service node_modules
 - [Service charge & vendor payout rule](service-charge-payout.md) — 5% on product subtotal (NOT delivery fee); vendor gets gross-5% credited 24h after delivery
 - [Next.js 16 performance on Replit](nextjs-replit-perf.md) — OOM fix: 512MB heap cap + distDir→/tmp + onDemandEntries; --no-turbo flag is invalid in Next.js 16
+- [Auth routes & missing pages audit](auth-routes-audit-july2026.md) — wallet col is balance_ngn; profile/loans pages + 9 API routes were missing; notifications read-all routing bug fixed
