@@ -10,3 +10,4 @@
 - [Service charge & vendor payout rule](service-charge-payout.md) — 5% on product subtotal (NOT delivery fee); vendor gets gross-5% credited 24h after delivery
 - [Next.js 16 performance on Replit](nextjs-replit-perf.md) — OOM fix: 512MB heap cap + distDir→/tmp + onDemandEntries; --no-turbo flag is invalid in Next.js 16
 - [Auth routes & missing pages audit](auth-routes-audit-july2026.md) — wallet col is balance_ngn; profile/loans pages + 9 API routes were missing; notifications read-all routing bug fixed
+- [Auth SSL fix](auth-ssl-fix.md) — conditional ssl in Pool; Replit built-in Postgres has no SSL; params is Promise in Next.js 16
