@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import Link from "next/link";
 import PageShell from "../../../components/PageShell";
 
@@ -27,7 +27,7 @@ function SpecRow({ icon, label, value }) {
 const TYPE_ICONS = { physical: "📦", digital: "💾", service: "🛠️" };
 
 export default function ProductDetailPage({ params }) {
-  const { id } = params;
+  const { id } = use(params);
   const [product, setProduct]   = useState(null);
   const [loading, setLoading]   = useState(true);
   const [qty, setQty]           = useState(1);

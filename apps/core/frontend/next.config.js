@@ -9,13 +9,27 @@ const nextConfig = {
       { protocol: "https", hostname: "*.supabase.co" },
     ],
   },
-  // Allow Replit's proxied preview origins so the browser console stays clean
+  // Allow Replit's proxied preview origins — must list every sub-domain level
+  // because Next.js wildcard only matches ONE level deep (*.foo.com won't match
+  // bar.baz.foo.com).  Add every *.X.replit.dev shard pattern we've seen.
   allowedDevOrigins: [
+    // top-level replit domains
     "*.replit.dev",
     "*.repl.co",
     "*.replit.app",
+    // riker shard (current workspace)
+    "*.riker.replit.dev",
+    // other known shards
     "*.picard.replit.dev",
     "*.janeway.replit.dev",
+    "*.kirk.replit.dev",
+    "*.spock.replit.dev",
+    "*.worf.replit.dev",
+    "*.data.replit.dev",
+    "*.troi.replit.dev",
+    "*.laforge.replit.dev",
+    // localhost variants
+    "localhost",
     "127.0.0.1",
   ],
   // Webpack-mode build: cache compiled pages to disk so cold-start is fast

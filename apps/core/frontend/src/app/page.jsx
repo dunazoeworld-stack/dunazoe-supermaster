@@ -103,12 +103,12 @@ export default function HomePage() {
             <h2 style={{marginBottom:"12px",background:"linear-gradient(135deg,#00A3FF,#0066FF)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>Get the DUNAZOE App</h2>
             <p style={{color:"#8A9AB5",lineHeight:1.7,marginBottom:"36px"}}>Shop, sell, save and ship — all from your phone. Install once, works offline.</p>
             <div style={{display:"flex",gap:"16px",justifyContent:"center",flexWrap:"wrap",marginBottom:"28px"}}>
-              <a href="/dunazoe.apk" download style={{display:"flex",alignItems:"center",gap:"10px",padding:"14px 28px",borderRadius:"14px",background:"linear-gradient(135deg,#00A3FF,#0066FF)",color:"#fff",textDecoration:"none",fontWeight:700,fontSize:"0.95rem",boxShadow:"0 0 24px rgba(0,163,255,0.35)"}}>
+              <button onClick={()=>alert("🚀 Android APK coming soon! Use the web app for now — it works offline too.")} style={{display:"flex",alignItems:"center",gap:"10px",padding:"14px 28px",borderRadius:"14px",background:"linear-gradient(135deg,#00A3FF,#0066FF)",color:"#fff",border:"none",cursor:"pointer",fontWeight:700,fontSize:"0.95rem",boxShadow:"0 0 24px rgba(0,163,255,0.35)"}}>
                 <span style={{fontSize:"1.3rem"}}>🤖</span> Download Android APK
-              </a>
-              <a href="/dunazoe.ipa" download style={{display:"flex",alignItems:"center",gap:"10px",padding:"14px 28px",borderRadius:"14px",border:"2px solid rgba(0,163,255,0.3)",color:"#00A3FF",textDecoration:"none",fontWeight:700,fontSize:"0.95rem",background:"rgba(0,163,255,0.06)"}}>
+              </button>
+              <button onClick={()=>alert("🍎 iOS / TestFlight coming soon! Use Safari → Add to Home Screen to install as a web app.")} style={{display:"flex",alignItems:"center",gap:"10px",padding:"14px 28px",borderRadius:"14px",border:"2px solid rgba(0,163,255,0.3)",color:"#00A3FF",cursor:"pointer",fontWeight:700,fontSize:"0.95rem",background:"rgba(0,163,255,0.06)"}}>
                 <span style={{fontSize:"1.3rem"}}>🍎</span> iOS / TestFlight
-              </a>
+              </button>
             </div>
             <div style={{padding:"18px 24px",background:"rgba(0,163,255,0.06)",border:"1px solid rgba(0,163,255,0.15)",borderRadius:"14px",color:"#8A9AB5",fontSize:"0.84rem",lineHeight:1.8}}>
               <strong style={{color:"#fff"}}>Install as Web App (any phone):</strong><br/>
