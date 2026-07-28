@@ -1,8 +1,7 @@
 /**
  * Products API — tries the gateway first (localhost:3000).
- * When the gateway is offline, falls back to a local JSON file store at
- * apps/core/frontend/local_data/products.json so that vendor-published
- * products remain visible even without running microservices.
+ * Falls back to local JSON store when gateway is offline.
+ * Supports search by product ID (PRD-XXXXX or raw number) and vendor ID (VND-XXXXX).
  */
 import { NextResponse } from "next/server";
 import fs   from "fs";
@@ -10,6 +9,8 @@ import path from "path";
 
 const GATEWAY   = process.env.GATEWAY_URL || "http://localhost:3000";
 const STORE_PATH = path.join(process.cwd(), "local_data", "products.json");
+
+const SERVICE_CHARGE_PCT = 0.05; // 5% service charge added to product price
 
 // ── Local store helpers ─────────────────────────────────────────────────────
 function readStore() {
@@ -27,17 +28,38 @@ function writeStore(arr) {
   } catch (e) { console.error("[ProductsStore] write failed:", e.message); }
 }
 
-// ── GET — list / search products ────────────────────────────────────────────
+// Parse ID from formats like PRD-00001, VND-00001 or raw numbers
+function parseId(str) {
+  if (!str) return null;
+  const clean = str.toString().replace(/^(PRD|VND|ORD|PAY)-?0*/i, "").trim();
+  const num = parseInt(clean, 10);
+  return isNaN(num) ? null : num;
+}
+
+// ── GET — list / search products (supports ID search) ────────────────────────
 export async function GET(request) {
   const { search } = new URL(request.url);
   const params     = new URLSearchParams(search);
   const token      = request.headers.get("Authorization") || "";
+  const q          = (params.get("q") || "").trim();
+
+  // ── ID-based search: resolve before calling gateway ──────────────────────
+  // If q looks like PRD-XXXXX or a number, pass raw id param to gateway
+  let idSearch = null;
+  if (/^(PRD-?\d+|\d{3,})$/i.test(q)) {
+    idSearch = parseId(q);
+    if (idSearch) params.set("product_id", idSearch);
+  }
+  if (/^VND-?\d+$/i.test(q)) {
+    const vid = parseId(q);
+    if (vid) params.set("vendor_id", vid);
+  }
 
   // 1. Try live gateway
   try {
     const ctrl  = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 6000);
-    const res   = await fetch(`${GATEWAY}/products${search}`, {
+    const res   = await fetch(`${GATEWAY}/products?${params.toString()}`, {
       headers: { Authorization: token },
       signal:  ctrl.signal,
     });
@@ -65,11 +87,18 @@ export async function GET(request) {
   }
 }
 
-// ── POST — create product ────────────────────────────────────────────────────
+// ── POST — create product (auto-applies service charge to price) ─────────────
 export async function POST(request) {
   const token = request.headers.get("Authorization") || "";
   let body = {};
   try { body = await request.json(); } catch (_) {}
+
+  // Auto-apply 5% service charge to price during listing — round to whole number
+  if (body.price) {
+    const basePrice = parseFloat(body.price);
+    const withCharge = Math.round(basePrice * (1 + SERVICE_CHARGE_PCT));
+    body = { ...body, price: withCharge, base_price: basePrice, service_charge_pct: SERVICE_CHARGE_PCT };
+  }
 
   // 1. Try live gateway
   try {
@@ -83,19 +112,19 @@ export async function POST(request) {
     });
     clearTimeout(timer);
     const d = await res.json();
-    // Also save to local store as backup (so it shows even if gateway clears)
+    // Also save to local store as backup
     if (d.success || d.product_id) {
       saveToLocal(body, d.product_id || d.id || `gw_${Date.now()}`);
     }
     return NextResponse.json(d, { status: res.status });
   } catch (_) {
-    // Gateway offline — save to local store and return queued response
+    // Gateway offline — save to local store
     const localId = `local_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     saveToLocal(body, localId);
     return NextResponse.json({
       success:         true,
       product_id:      localId,
-      queued:          false,        // NOT queued — it IS saved to local store
+      queued:          false,
       status:          "published",
       ai_badge:        body.name ? `✨ ${body.name.slice(0, 20)}` : "📦 New Product",
       demand_score:    0.7,
@@ -109,13 +138,13 @@ export async function POST(request) {
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function saveToLocal(body, id) {
   const store   = readStore();
-  // Avoid duplicates: overwrite if same id
   const without = store.filter(p => p.id !== id);
   const record  = {
     id,
     name:          body.name         || "Unnamed Product",
     description:   body.description  || "",
     price:         parseFloat(body.price) || 0,
+    base_price:    body.base_price ? parseFloat(body.base_price) : null,
     category:      body.category      || "general",
     type:          body.type          || body.product_type || "physical",
     product_type:  body.type          || body.product_type || "physical",
@@ -128,19 +157,42 @@ function saveToLocal(body, id) {
     stock_quantity:body.stock_quantity || null,
     status:        "published",
     created_at:    new Date().toISOString(),
-    vendor_id:     "local",
+    vendor_id:     body.vendor_id     || "local",
   };
   writeStore([record, ...without]);
 }
 
 function filterProducts(products, params) {
   let list = [...products];
-  const q    = (params.get("q") || "").toLowerCase().trim();
-  const cat  = (params.get("category") || "").toLowerCase().trim();
+  const q      = (params.get("q") || "").toLowerCase().trim();
+  const cat    = (params.get("category") || "").toLowerCase().trim();
   const vendor = (params.get("vendor") || "").toLowerCase().trim();
-  if (q)    list = list.filter(p => (p.name || "").toLowerCase().includes(q) || (p.description || "").toLowerCase().includes(q));
-  if (cat)  list = list.filter(p => (p.category || "").toLowerCase().includes(cat));
-  if (vendor === "me") list = list; // all local products are "mine" when offline
+  const prodId = params.get("product_id");
+  const vendId = params.get("vendor_id");
+
+  // ID-based filtering (highest priority)
+  if (prodId) {
+    list = list.filter(p => String(p.id) === String(prodId));
+  } else if (vendId) {
+    list = list.filter(p => String(p.vendor_id) === String(vendId));
+  } else {
+    if (q) {
+      list = list.filter(p => {
+        const name = (p.name || "").toLowerCase();
+        const desc = (p.description || "").toLowerCase();
+        const pid  = String(p.id || "");
+        const vid  = String(p.vendor_id || "");
+        // Also match on PRD-XXXXX format
+        const prdFormat = `prd-${pid.padStart(5, "0")}`;
+        const vndFormat = `vnd-${vid.padStart(5, "0")}`;
+        return name.includes(q) || desc.includes(q) || pid === q || vid === q
+          || prdFormat.includes(q.toLowerCase()) || vndFormat.includes(q.toLowerCase());
+      });
+    }
+    if (cat)  list = list.filter(p => (p.category || "").toLowerCase().includes(cat));
+    if (vendor === "me") list = list;
+  }
+
   const limit = parseInt(params.get("limit") || "24", 10);
   return list.slice(0, limit);
 }

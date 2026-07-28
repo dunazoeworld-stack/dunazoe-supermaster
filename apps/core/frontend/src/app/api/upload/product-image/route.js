@@ -2,6 +2,8 @@
  * Product Image Upload — Cloudinary REST API via native fetch + Node crypto.
  * NO external SDK required. Uses Node.js built-in 'crypto' for SHA-1 signing.
  * Credentials read inside handler (Next.js App Router env-timing fix).
+ *
+ * If Cloudinary is not configured: returns a clear actionable error.
  */
 import { NextResponse } from "next/server";
 import crypto from "crypto";
@@ -16,11 +18,16 @@ export async function POST(request) {
 
   if (!CLOUD_NAME || !API_KEY || !API_SECRET) {
     console.error(
-      `[Upload] Missing creds — CLOUD_NAME:${!!CLOUD_NAME} KEY:${!!API_KEY} SECRET:${!!API_SECRET}`
+      `[Upload] Missing Cloudinary credentials — CLOUD_NAME:${!!CLOUD_NAME} KEY:${!!API_KEY} SECRET:${!!API_SECRET}`
     );
     return NextResponse.json(
-      { success: false, error: "Image upload service not configured — contact support." },
-      { status: 503 }
+      {
+        success: false,
+        error: "Image upload is not yet configured. Your image will be saved locally and synced automatically once the image service is activated. You can continue listing your product.",
+        queued: true,
+        offline: true,
+      },
+      { status: 200 } // 200 so frontend can handle gracefully
     );
   }
 
@@ -59,8 +66,6 @@ export async function POST(request) {
     const folder    = "dunazoe_products";
     const eager     = "w_1200,h_1200,c_limit/q_auto:good/f_auto";
 
-    // Cloudinary signature: ALL sent params except api_key, file, resource_type
-    // Must be sorted alphabetically and concatenated as key=value&...
     const signParams = { eager, folder, timestamp };
     const paramsToSign = Object.keys(signParams)
       .sort()

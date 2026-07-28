@@ -96,12 +96,14 @@ sleep 1
 echo ""
 echo "── TIER 2: Platform Services ───────────────────────"
 start_service "escrow-service"        4007 2
+start_service "cart-service"          4008 2
 start_service "wallet-service"        4009 2
+start_service "thrift-service"        4010 2
 start_service "notification-service"  4017 2
 start_service "logistics-service"     4018 2
 start_service "search-service"        4022 2
-start_service "dunazoe-express"       4032 2
 start_service "self-delivery-service" 4028 2
+start_service "dunazoe-express"       4032 2
 
 sleep 1
 
@@ -110,16 +112,27 @@ FREE_MEM_MB=$(awk '/MemAvailable/ {printf "%.0f", $2/1024}' /proc/meminfo 2>/dev
 if [ "$FREE_MEM_MB" -gt 400 ] 2>/dev/null; then
   echo ""
   echo "── TIER 3: Enhanced Services (${FREE_MEM_MB}MB free) ──────"
-  start_service "trust-service"          4011 3
-  start_service "ai-service"             4014 3
-  start_service "realtime-service"       4021 3
-  start_service "deployment-ai-service"  4027 3
-  start_service "commission-service"     4013 3
-  start_service "security-ai-service"    4026 3
+  start_service "trust-service"           4011 3
+  start_service "review-service"          4012 3
+  start_service "loan-service"            4013 3
+  start_service "ai-service"              4014 3
+  start_service "chat-service"            4016 3
+  start_service "realtime-service"        4021 3
+  start_service "kyc-service"             4023 3
+  start_service "analytics-service"       4024 3
+  start_service "marketing-service"       4025 3
+  start_service "social-media-service"    4026 3
+  start_service "deployment-ai-service"   4027 3
+  start_service "inventory-service"       4029 3
+  start_service "fraud-service"           4030 3
+  start_service "payments-ai-service"     4031 3
+  start_service "activation-engine"       4033 3
+  start_service "ops-service"             4034 3
+  start_service "stae-service"            4035 3
 else
   echo ""
   echo "── TIER 3: Skipped (${FREE_MEM_MB}MB free — below 400MB threshold)"
-  echo "   Run: node apps/core/services/deployment-ai-service/index.js manually if needed"
+  echo "   To start Tier 3 manually: PORT=4XXX node apps/core/services/<name>/index.js"
 fi
 
 echo ""

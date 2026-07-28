@@ -53,7 +53,7 @@ const ESCROW_URL     = process.env.ESCROW_SERVICE_URL     || "http://localhost:4
 const WALLET_URL     = process.env.WALLET_SERVICE_URL     || "http://localhost:4009";
 const ORDER_URL      = process.env.ORDER_SERVICE_URL      || "http://localhost:4006";
 
-const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY   || "";
+const PAYSTACK_SECRET = process.env.PAYSTACK_LSK || process.env.PAYSTACK_SECRET_KEY || "";
 const STRIPE_SECRET   = process.env.STRIPE_SECRET_KEY     || "";
 const PAYSTACK_BASE   = "https://api.paystack.co";
 

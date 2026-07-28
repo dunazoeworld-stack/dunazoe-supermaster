@@ -5,7 +5,6 @@ import PageShell from "../../../components/PageShell";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "/api";
 
-// ─── helpers ───────────────────────────────────────────────────────────────
 function Badge({ label, color = "var(--dz-blue)", bg = "rgba(0,163,255,0.1)" }) {
   return (
     <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: "20px", fontSize: "0.75rem", fontWeight: 700, color, background: bg, border: `1px solid ${color}33` }}>
@@ -35,7 +34,7 @@ export default function ProductDetailPage({ params }) {
   const [selSize, setSelSize]   = useState(null);
   const [selColor, setSelColor] = useState(null);
   const [imgIdx, setImgIdx]     = useState(0);
-
+  const [shareCopied, setShareCopied] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
@@ -48,7 +47,6 @@ export default function ProductDetailPage({ params }) {
       .then(d => {
         const p = d.product || d;
         setProduct(p);
-        // Pre-select first size / color if available
         const sizes  = parseMeta(p, "sizes");
         const colors = parseMeta(p, "colors");
         if (sizes.length)  setSelSize(sizes[0]);
@@ -58,20 +56,17 @@ export default function ProductDetailPage({ params }) {
       .finally(() => setLoading(false));
   }, [id]);
 
-  // Check if logged-in user is the vendor of this product
   function isProductOwner(product) {
     if (!currentUser || !product) return false;
     const VENDOR_ROLES = ["vendor", "direct_vendor", "copytrader_vendor", "hybrid_vendor",
       "admin", "super_admin", "head_of_store", "cto", "ceo"];
     const isVendorRole = VENDOR_ROLES.some(r => (currentUser.role || "").toLowerCase().includes(r.split("_")[0]));
     if (!isVendorRole) return false;
-    // Match by vendor_id or user id
     if (product.vendor_id && currentUser.vendor_id && String(product.vendor_id) === String(currentUser.vendor_id)) return true;
     if (product.vendor_id && currentUser.id && String(product.vendor_id) === String(currentUser.id)) return true;
     return false;
   }
 
-  // Parse JSON metadata stored as string or already an array
   function parseMeta(p, key) {
     if (!p) return [];
     const raw = p[key] || p.metadata?.[key] || p.details?.[key];
@@ -113,7 +108,31 @@ export default function ProductDetailPage({ params }) {
     } catch (_) {}
   }
 
-  // ── render ──────────────────────────────────────────────────────────────
+  function getShareLink(p) {
+    return p.shareable_link ? `https://${p.shareable_link}` : `${typeof window !== "undefined" ? window.location.origin : "https://dunazoe.com"}/products/${p.id}`;
+  }
+
+  function handleShare(p) {
+    const link = getShareLink(p);
+    const text = `Check out '${p.name}' on DUNAZOE: ${link}`;
+    if (navigator.share) {
+      navigator.share({ title: p.name, text, url: link }).catch(() => {});
+    } else {
+      navigator.clipboard?.writeText(link).then(() => {
+        setShareCopied(true);
+        setTimeout(() => setShareCopied(false), 2000);
+      }).catch(() => alert(link));
+    }
+  }
+
+  function handleCopyLink(p) {
+    const link = getShareLink(p);
+    navigator.clipboard?.writeText(link).then(() => {
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    }).catch(() => alert(`Your product link:\n${link}`));
+  }
+
   return (
     <PageShell title={product?.name || "Product"} icon="🛒" authRequired={false}
       breadcrumb={[{ href: "/products", label: "Products" }, { label: product?.name?.slice(0, 28) || `#${id}` }]}>
@@ -140,11 +159,14 @@ export default function ProductDetailPage({ params }) {
         const tags    = parseMeta(product, "tags");
         const type    = inferType(product);
         const mainImg = images[imgIdx] || null;
+        const productId = `PRD-${String(product.id || id).padStart(5, "0")}`;
+        const vendorIdDisplay = product.vendor_id ? `VND-${String(product.vendor_id).padStart(5, "0")}` : null;
+        const isOwner = isProductOwner(product);
 
         return (
           <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
 
-            {/* ── TOP GRID ──────────────────────────────────────────── */}
+            {/* ── TOP GRID ── */}
             <div style={{ display: "grid", gridTemplateColumns: "clamp(280px,45%,520px) 1fr", gap: "40px", alignItems: "start" }}>
 
               {/* Image gallery */}
@@ -156,7 +178,6 @@ export default function ProductDetailPage({ params }) {
                   border: "1px solid var(--border)", position: "relative",
                 }}>
                   {!mainImg && <span style={{ fontSize: "4rem", opacity: 0.18 }}>{TYPE_ICONS[type]}</span>}
-                  {/* Type badge */}
                   <div style={{ position: "absolute", top: "12px", left: "12px" }}>
                     <Badge label={`${TYPE_ICONS[type]} ${type.charAt(0).toUpperCase() + type.slice(1)}`} />
                   </div>
@@ -166,12 +187,12 @@ export default function ProductDetailPage({ params }) {
                     </div>
                   )}
                 </div>
-                {/* Thumbnail strip */}
                 {images.length > 1 && (
                   <div style={{ display: "flex", gap: "8px", overflowX: "auto" }}>
                     {images.map((src, i) => (
                       <button key={i} onClick={() => setImgIdx(i)} style={{
-                        width: "64px", height: "64px", flexShrink: 0, borderRadius: "10px", border: `2px solid ${imgIdx === i ? "var(--dz-blue)" : "var(--border)"}`,
+                        width: "64px", height: "64px", flexShrink: 0, borderRadius: "10px",
+                        border: `2px solid ${imgIdx === i ? "var(--dz-blue)" : "var(--border)"}`,
                         background: `url(${src}) center/cover no-repeat`, cursor: "pointer",
                       }} />
                     ))}
@@ -181,6 +202,21 @@ export default function ProductDetailPage({ params }) {
 
               {/* Info panel */}
               <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+
+                {/* Product & Vendor ID badges */}
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                  <span style={{ fontFamily: "monospace", fontWeight: 700, fontSize: "0.78rem", color: "var(--dz-blue)", background: "rgba(0,163,255,0.08)", padding: "3px 10px", borderRadius: "6px", border: "1px solid rgba(0,163,255,0.2)" }}>
+                    {productId}
+                  </span>
+                  {vendorIdDisplay && (
+                    <span style={{ fontFamily: "monospace", fontWeight: 700, fontSize: "0.78rem", color: "#9b5de5", background: "rgba(155,93,229,0.08)", padding: "3px 10px", borderRadius: "6px", border: "1px solid rgba(155,93,229,0.2)" }}>
+                      {vendorIdDisplay}
+                    </span>
+                  )}
+                  <span style={{ fontFamily: "monospace", fontSize: "0.68rem", color: "var(--text-muted)", padding: "3px 0", alignSelf: "center" }}>
+                    ID: {product.id} · VID: {product.vendor_id}
+                  </span>
+                </div>
 
                 {/* Badges row */}
                 <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
@@ -214,7 +250,7 @@ export default function ProductDetailPage({ params }) {
                   )}
                 </div>
 
-                {/* ── SIZE SELECTOR (physical only) ── */}
+                {/* SIZE SELECTOR */}
                 {type === "physical" && sizes.length > 0 && (
                   <div>
                     <p style={{ fontSize: "0.82rem", fontWeight: 700, marginBottom: "8px", color: "var(--text-secondary)" }}>
@@ -227,15 +263,13 @@ export default function ProductDetailPage({ params }) {
                           border: `2px solid ${selSize === s ? "var(--dz-blue)" : "var(--border)"}`,
                           background: selSize === s ? "rgba(0,163,255,0.1)" : "var(--surface)",
                           color: selSize === s ? "var(--dz-blue)" : "var(--text)",
-                        }}>
-                          {s}
-                        </button>
+                        }}>{s}</button>
                       ))}
                     </div>
                   </div>
                 )}
 
-                {/* ── COLOR SELECTOR (physical only) ── */}
+                {/* COLOR SELECTOR */}
                 {type === "physical" && colors.length > 0 && (
                   <div>
                     <p style={{ fontSize: "0.82rem", fontWeight: 700, marginBottom: "8px", color: "var(--text-secondary)" }}>
@@ -263,7 +297,7 @@ export default function ProductDetailPage({ params }) {
                   </div>
                 )}
 
-                {/* ── QTY (not for services) ── */}
+                {/* QTY */}
                 {type !== "service" && (
                   <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                     <p style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-secondary)" }}>QTY</p>
@@ -281,53 +315,32 @@ export default function ProductDetailPage({ params }) {
                   <Link href="/cart" className="btn btn-outline btn-lg">View Cart</Link>
                 </div>
 
-                {/* Share + Chat row */}
+                {/* Share row — Share and Copy Link visible to EVERYONE, Copy Product Link for vendors/owners */}
                 <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                  {/* Share button — visible to all */}
                   <button
-                    onClick={() => {
-                      const link = product.shareable_link ? `https://${product.shareable_link}` : window.location.href;
-                      const text = `Check out '${product.name}' on DUNAZOE: ${link}`;
-                      if (navigator.share) {
-                        navigator.share({ title: product.name, text, url: link }).catch(() => {});
-                      } else {
-                        navigator.clipboard.writeText(link);
-                        alert("Link copied to clipboard!");
-                      }
-                    }}
+                    onClick={() => handleShare(product)}
                     className="btn btn-ghost btn-sm"
                     style={{ display: "flex", alignItems: "center", gap: "6px" }}
                   >
                     📤 Share
                   </button>
-                  {/* WhatsApp share — visible to all */}
                   <a
-                    href={`https://wa.me/?text=${encodeURIComponent(`Check out '${product.name}' on DUNAZOE: ${product.shareable_link ? `https://${product.shareable_link}` : window.location.href}`)}`}
+                    href={`https://wa.me/?text=${encodeURIComponent(`Check out '${product.name}' on DUNAZOE: ${getShareLink(product)}`)}`}
                     target="_blank" rel="noopener noreferrer"
                     className="btn btn-ghost btn-sm"
                   >
                     📱 WhatsApp
                   </a>
-                  {/* Product Link button — visible ONLY to the vendor who owns this product */}
-                  {isProductOwner(product) && (
-                    <button
-                      onClick={() => {
-                        const link = product.shareable_link
-                          ? `https://${product.shareable_link}`
-                          : `${window.location.origin}/products/${product.id}`;
-                        navigator.clipboard?.writeText(link)
-                          .then(() => alert("Product link copied! Share it on any platform."))
-                          .catch(() => alert(`Your product link:\n${link}`));
-                      }}
-                      className="btn btn-primary btn-sm"
-                      style={{ display: "flex", alignItems: "center", gap: "6px" }}
-                      title="Copy your product link to share on any platform"
-                    >
-                      🔗 Copy Product Link
-                    </button>
-                  )}
-                  {/* Chat Vendor — visible to non-owners */}
-                  {!isProductOwner(product) && (
+                  {/* Copy Link — visible to all users */}
+                  <button
+                    onClick={() => handleCopyLink(product)}
+                    className="btn btn-outline btn-sm"
+                    style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                  >
+                    {shareCopied ? "✅ Copied!" : "🔗 Copy Link"}
+                  </button>
+                  {/* Chat Vendor — visible to non-owners only */}
+                  {!isOwner && (
                     <button
                       onClick={() => {
                         window.__dunazoe_open_chat = { receiver_id: product.vendor_id, name: product.business_name || product.vendor_name || "Vendor" };
@@ -355,10 +368,8 @@ export default function ProductDetailPage({ params }) {
               </div>
             </div>
 
-            {/* ── SPECS + DESCRIPTION GRID ──────────────────────────── */}
+            {/* ── SPECS + DESCRIPTION GRID ── */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", alignItems: "start" }}>
-
-              {/* Description */}
               <div className="card">
                 <div className="card-body">
                   <p style={{ fontWeight: 800, marginBottom: "12px" }}>📄 Description</p>
@@ -368,14 +379,11 @@ export default function ProductDetailPage({ params }) {
                 </div>
               </div>
 
-              {/* Specifications — adapts by product type */}
               <div className="card">
                 <div className="card-body">
                   <p style={{ fontWeight: 800, marginBottom: "12px" }}>
                     {type === "digital" ? "💾 Digital Info" : type === "service" ? "🛠️ Service Details" : "📐 Specifications"}
                   </p>
-
-                  {/* ── PHYSICAL specs ── */}
                   {type === "physical" && (<>
                     <SpecRow icon="⚖️"  label="Weight"       value={product.weight ? `${product.weight} kg` : null} />
                     <SpecRow icon="📏"  label="Dimensions"   value={product.dimensions || product.size_guide} />
@@ -387,8 +395,6 @@ export default function ProductDetailPage({ params }) {
                     <SpecRow icon="⏱️"  label="Dispatch"     value={product.dispatch_time || "1-3 business days"} />
                     <SpecRow icon="🔁"  label="Returns"      value={product.return_policy || "30-day return policy"} />
                   </>)}
-
-                  {/* ── DIGITAL specs ── */}
                   {type === "digital" && (<>
                     <SpecRow icon="📥"  label="Format"       value={product.file_format || product.format} />
                     <SpecRow icon="💿"  label="File size"    value={product.file_size} />
@@ -401,8 +407,6 @@ export default function ProductDetailPage({ params }) {
                       ⚡ Instant delivery · Download link sent to your email after payment
                     </div>
                   </>)}
-
-                  {/* ── SERVICE specs ── */}
                   {type === "service" && (<>
                     <SpecRow icon="⏳"  label="Duration"     value={product.service_duration || product.duration} />
                     <SpecRow icon="🔄"  label="Turnaround"   value={product.turnaround_time} />
@@ -417,7 +421,7 @@ export default function ProductDetailPage({ params }) {
               </div>
             </div>
 
-            {/* ── VENDOR CARD ─────────────────────────────────────── */}
+            {/* ── VENDOR CARD ── */}
             {(product.business_name || product.vendor_name) && (
               <div className="card">
                 <div className="card-body" style={{ display: "flex", gap: "16px", alignItems: "center", flexWrap: "wrap" }}>
@@ -427,6 +431,9 @@ export default function ProductDetailPage({ params }) {
                   <div style={{ flex: 1 }}>
                     <p style={{ fontWeight: 800, marginBottom: "2px" }}>{product.business_name || product.vendor_name}</p>
                     <p style={{ fontSize: "0.78rem", color: "var(--text-secondary)" }}>Verified DUNAZOE Vendor · {product.location || "Nigeria"}</p>
+                    {vendorIdDisplay && (
+                      <p style={{ fontFamily: "monospace", fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "2px" }}>{vendorIdDisplay} · ID: {product.vendor_id}</p>
+                    )}
                   </div>
                   <Link href={`/vendors?id=${product.vendor_id || ""}`} className="btn btn-ghost btn-sm">View Store →</Link>
                 </div>

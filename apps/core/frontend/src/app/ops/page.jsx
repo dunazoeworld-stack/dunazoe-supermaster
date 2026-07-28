@@ -4,6 +4,116 @@ import Link from "next/link";
 import Navbar from "../../components/Navbar";
 import NetworkBanner from "../../components/NetworkBanner";
 
+// ── Accounts Control Centre tab ──────────────────────────────────────────────
+function AccountsTab({ accounts, setAccounts, accLoading, setAccLoading, accMsg, setAccMsg, accFilter, setAccFilter, accSearch, setAccSearch }) {
+  function loadAccounts() {
+    setAccLoading(true); setAccMsg(null);
+    const token = localStorage.getItem("dunazoe_token");
+    fetch("/api/ops/accounts?" + new URLSearchParams({ role: accFilter === "all" ? "" : accFilter, q: accSearch }), {
+      headers: { Authorization: `Bearer ${token}` },
+    }).then(r => r.json()).then(d => {
+      if (d.accounts || d.success) setAccounts(d.accounts || d.data || []);
+      else setAccMsg({ type: "error", text: d.error || "Failed to load accounts." });
+    }).catch(() => setAccMsg({ type: "error", text: "Could not reach accounts endpoint." }))
+    .finally(() => setAccLoading(false));
+  }
+
+  async function toggleAccount(userId, currentStatus) {
+    const token = localStorage.getItem("dunazoe_token");
+    const action = currentStatus === "active" ? "deactivate" : "activate";
+    try {
+      const res = await fetch(`/api/ops/accounts/${userId}/${action}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      });
+      const d = await res.json();
+      if (d.success) {
+        setAccMsg({ type: "success", text: `✅ Account ${action}d successfully.` });
+        setAccounts(prev => (prev || []).map(a =>
+          (a.id === userId || a.user_id === userId)
+            ? { ...a, status: action === "activate" ? "active" : "suspended" }
+            : a
+        ));
+      } else {
+        setAccMsg({ type: "error", text: d.error || `Failed to ${action} account.` });
+      }
+    } catch (_) { setAccMsg({ type: "error", text: `Network error during ${action}.` }); }
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+      <div className="card"><div className="card-body">
+        <p style={{ fontWeight: 700, marginBottom: "14px" }}>👥 Account Control Centre</p>
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "14px" }}>
+          {["all", "user", "vendor", "admin"].map(r => (
+            <button key={r} onClick={() => setAccFilter(r)} className={`btn btn-sm ${accFilter === r ? "btn-primary" : "btn-ghost"}`} style={{ textTransform: "capitalize" }}>
+              {r === "all" ? "All Roles" : r.charAt(0).toUpperCase() + r.slice(1) + "s"}
+            </button>
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <input className="form-input" placeholder="Search by email or name…" value={accSearch}
+            onChange={e => setAccSearch(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && loadAccounts()}
+            style={{ flex: 1 }} />
+          <button onClick={loadAccounts} disabled={accLoading} className="btn btn-primary">
+            {accLoading ? "…" : "Search"}
+          </button>
+        </div>
+      </div></div>
+
+      {accMsg && <div className={`alert ${accMsg.type === "success" ? "alert-success" : "alert-error"}`}>{accMsg.text}</div>}
+
+      {!accounts && !accLoading && (
+        <div className="empty-state">
+          <span className="empty-icon">👥</span>
+          <p className="empty-title">Search for accounts</p>
+          <p className="empty-body">Filter by role and search to find user, vendor, or admin accounts for activation or deactivation.</p>
+          <button onClick={loadAccounts} className="btn btn-primary">Load All Accounts</button>
+        </div>
+      )}
+      {accLoading && <div style={{ textAlign: "center", padding: "40px" }}><div className="dz-spinner" /></div>}
+      {accounts && accounts.length === 0 && (
+        <div className="empty-state"><span className="empty-icon">🔍</span><p className="empty-title">No accounts found</p><p className="empty-body">Try a different filter or search term.</p></div>
+      )}
+      {accounts && accounts.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          {accounts.map(account => {
+            const uid     = account.id || account.user_id;
+            const status  = account.status || "active";
+            const isActive = status === "active";
+            return (
+              <div key={uid} className="card">
+                <div className="card-body" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", flexWrap: "wrap", padding: "14px 18px" }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px", flexWrap: "wrap" }}>
+                      <p style={{ fontWeight: 700, fontSize: "0.88rem" }}>{account.name || account.full_name || account.email}</p>
+                      <span className={`badge ${account.role === "admin" || account.role === "superuser" ? "badge-danger" : account.role === "vendor" ? "badge-info" : "badge-muted"}`} style={{ fontSize: "0.68rem" }}>
+                        {account.role || "user"}
+                      </span>
+                      <span className={`badge ${isActive ? "badge-success" : "badge-danger"}`} style={{ fontSize: "0.68rem" }}>
+                        {isActive ? "Active" : "Suspended"}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: "0.76rem", color: "var(--text-secondary)", fontFamily: "monospace" }}>{account.email}</p>
+                    {account.created_at && <p style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>Joined {new Date(account.created_at).toLocaleDateString("en-NG")}</p>}
+                  </div>
+                  <button
+                    onClick={() => toggleAccount(uid, status)}
+                    className="btn btn-sm btn-ghost"
+                    style={{ flexShrink: 0, color: isActive ? "var(--danger)" : "var(--success)", borderColor: isActive ? "rgba(239,68,68,0.3)" : "rgba(16,185,129,0.3)" }}>
+                    {isActive ? "Deactivate" : "Activate"}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const DEPLOYED_URL = "https://dunazoe-supermaster-1--dunazoeworld.replit.app";
 
 export default function OpsPage() {
@@ -36,6 +146,13 @@ export default function OpsPage() {
   const [actLoading, setActLoading]   = useState(false);
   const [actMsg, setActMsg]           = useState(null);
   const [actToggles, setActToggles]   = useState({}); // feature name → boolean (toggling)
+
+  // Accounts Control Centre state
+  const [accounts,    setAccounts]    = useState(null);
+  const [accLoading,  setAccLoading]  = useState(false);
+  const [accMsg,      setAccMsg]      = useState(null);
+  const [accFilter,   setAccFilter]   = useState("all");
+  const [accSearch,   setAccSearch]   = useState("");
 
   useEffect(() => {
     try { const u = JSON.parse(localStorage.getItem("dunazoe_user") || "{}"); setUser(u); } catch (_) {}
@@ -192,9 +309,9 @@ export default function OpsPage() {
     navigator.clipboard?.writeText(text).catch(() => {});
   }
 
-  const TABS = ["overview", "secrets", "webhooks", "stae", "productai", "sitetest", "deploy", "distribution", "activation"];
-  const TAB_ICONS  = { overview: "📊", secrets: "🔐", webhooks: "🔗", stae: "⚡", productai: "🤖", sitetest: "🧪", deploy: "🚀", distribution: "📱", activation: "🎛️" };
-  const TAB_LABELS = { overview: "Overview", secrets: "Secrets", webhooks: "Webhooks", stae: "STAE", productai: "Product AI", sitetest: "Site Tests", deploy: "Deploy", distribution: "Distribution", activation: "Activation" };
+  const TABS = ["overview", "secrets", "webhooks", "stae", "productai", "sitetest", "deploy", "distribution", "activation", "services", "accounts"];
+  const TAB_ICONS  = { overview: "📊", secrets: "🔐", webhooks: "🔗", stae: "⚡", productai: "🤖", sitetest: "🧪", deploy: "🚀", distribution: "📱", activation: "🎛️", services: "🖥️", accounts: "👥" };
+  const TAB_LABELS = { overview: "Overview", secrets: "Secrets", webhooks: "Webhooks", stae: "STAE", productai: "Product AI", sitetest: "Site Tests", deploy: "Deploy", distribution: "Distribution", activation: "Activation", services: "Services", accounts: "Accounts" };
 
   if (loading) return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "16px" }}>
@@ -841,6 +958,149 @@ export default function OpsPage() {
               </div>
             )}
           </div>
+        )}
+
+        {/* ── SERVICES ─────────────────────────────────────────────────────── */}
+        {tab === "services" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div className="card"><div className="card-body">
+              <p style={{ fontWeight: 700, marginBottom: "4px" }}>🖥️ DUNAZOE 34-Service Map</p>
+              <p style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                Running in Replit single-container. Use the start-services.sh script to start/stop services. Each service occupies a dedicated port.
+              </p>
+            </div></div>
+            {[
+              // TIER 1 — Critical
+              { name: "auth-service",        port: 4001, tier: 1, desc: "JWT auth, login, signup, OAuth" },
+              { name: "user-service",        port: 4002, tier: 1, desc: "User profiles, account management" },
+              { name: "vendor-service",      port: 4003, tier: 1, desc: "Vendor onboarding, store management" },
+              { name: "product-service",     port: 4004, tier: 1, desc: "Product catalog, listings, search" },
+              { name: "order-service",       port: 4006, tier: 1, desc: "Order lifecycle, checkout, status" },
+              { name: "payment-service",     port: 4015, tier: 1, desc: "Paystack & Stripe gateway" },
+              { name: "upload-service",      port: 4020, tier: 1, desc: "Cloudinary file & image uploads" },
+              // TIER 2 — Important
+              { name: "escrow-service",      port: 4007, tier: 2, desc: "Buyer/seller fund protection" },
+              { name: "cart-service",        port: 4008, tier: 2, desc: "Shopping cart management" },
+              { name: "wallet-service",      port: 4009, tier: 2, desc: "NGN/USD digital wallet" },
+              { name: "thrift-service",      port: 4010, tier: 2, desc: "Ajo group savings engine" },
+              { name: "notification-service",port: 4017, tier: 2, desc: "WhatsApp, SMS, in-app alerts" },
+              { name: "logistics-service",   port: 4018, tier: 2, desc: "Delivery agent assignment" },
+              { name: "search-service",      port: 4022, tier: 2, desc: "Full-text product search" },
+              { name: "dunazoe-express",     port: 4032, tier: 2, desc: "AI courier aggregator" },
+              { name: "self-delivery-service",port: 4028,tier: 2, desc: "Vendor self-delivery zones" },
+              // TIER 3 — Enhanced
+              { name: "trust-service",       port: 4011, tier: 3, desc: "Platform trust scoring" },
+              { name: "review-service",      port: 4012, tier: 3, desc: "Product ratings & reviews" },
+              { name: "loan-service",        port: 4013, tier: 3, desc: "BNPL & micro-lending" },
+              { name: "ai-service",          port: 4014, tier: 3, desc: "General AI assistant" },
+              { name: "chat-service",        port: 4016, tier: 3, desc: "Buyer-vendor messaging" },
+              { name: "realtime-service",    port: 4021, tier: 3, desc: "WebSocket / Socket.io" },
+              { name: "kyc-service",         port: 4023, tier: 3, desc: "Identity verification" },
+              { name: "analytics-service",   port: 4024, tier: 3, desc: "Platform analytics & reporting" },
+              { name: "marketing-service",   port: 4025, tier: 3, desc: "Marketing AI for vendors" },
+              { name: "social-media-service",port: 4026, tier: 3, desc: "Social media share & scheduling" },
+              { name: "deployment-ai-service",port: 4027,tier: 3, desc: "CI/CD control plane" },
+              { name: "inventory-service",   port: 4029, tier: 3, desc: "Stock & inventory management" },
+              { name: "fraud-service",       port: 4030, tier: 3, desc: "Fraud detection & prevention" },
+              { name: "payments-ai-service", port: 4031, tier: 3, desc: "Payment intelligence & scoring" },
+              { name: "activation-engine",   port: 4033, tier: 3, desc: "Feature flag activation engine" },
+              { name: "ops-service",         port: 4034, tier: 3, desc: "Operator dashboard backend" },
+              { name: "stae-service",        port: 4035, tier: 3, desc: "Smart Traffic & Auto-scaling Engine" },
+              { name: "gateway",             port: 3000, tier: 1, desc: "API gateway & request router" },
+            ].reduce((groups, svc) => {
+              if (!groups[svc.tier]) groups[svc.tier] = [];
+              groups[svc.tier].push(svc);
+              return groups;
+            }, {}) && [1,2,3].map(tier => {
+              const svcs = [
+                { name: "gateway",             port: 3000, tier: 1, desc: "API gateway & request router" },
+                { name: "auth-service",        port: 4001, tier: 1, desc: "JWT auth, login, signup, OAuth" },
+                { name: "user-service",        port: 4002, tier: 1, desc: "User profiles, account management" },
+                { name: "vendor-service",      port: 4003, tier: 1, desc: "Vendor onboarding, store management" },
+                { name: "product-service",     port: 4004, tier: 1, desc: "Product catalog, listings, search" },
+                { name: "order-service",       port: 4006, tier: 1, desc: "Order lifecycle, checkout, status" },
+                { name: "payment-service",     port: 4015, tier: 1, desc: "Paystack & Stripe gateway" },
+                { name: "upload-service",      port: 4020, tier: 1, desc: "Cloudinary file & image uploads" },
+                { name: "escrow-service",      port: 4007, tier: 2, desc: "Buyer/seller fund protection" },
+                { name: "cart-service",        port: 4008, tier: 2, desc: "Shopping cart management" },
+                { name: "wallet-service",      port: 4009, tier: 2, desc: "NGN/USD digital wallet" },
+                { name: "thrift-service",      port: 4010, tier: 2, desc: "Ajo group savings engine" },
+                { name: "notification-service",port: 4017, tier: 2, desc: "WhatsApp, SMS, in-app alerts" },
+                { name: "logistics-service",   port: 4018, tier: 2, desc: "Delivery agent assignment" },
+                { name: "search-service",      port: 4022, tier: 2, desc: "Full-text product search" },
+                { name: "dunazoe-express",     port: 4032, tier: 2, desc: "AI courier aggregator" },
+                { name: "self-delivery-service",port: 4028,tier: 2, desc: "Vendor self-delivery zones" },
+                { name: "trust-service",       port: 4011, tier: 3, desc: "Platform trust scoring" },
+                { name: "review-service",      port: 4012, tier: 3, desc: "Product ratings & reviews" },
+                { name: "loan-service",        port: 4013, tier: 3, desc: "BNPL & micro-lending" },
+                { name: "ai-service",          port: 4014, tier: 3, desc: "General AI assistant" },
+                { name: "chat-service",        port: 4016, tier: 3, desc: "Buyer-vendor messaging" },
+                { name: "realtime-service",    port: 4021, tier: 3, desc: "WebSocket / Socket.io" },
+                { name: "kyc-service",         port: 4023, tier: 3, desc: "Identity verification" },
+                { name: "analytics-service",   port: 4024, tier: 3, desc: "Platform analytics & reporting" },
+                { name: "marketing-service",   port: 4025, tier: 3, desc: "Marketing AI for vendors" },
+                { name: "social-media-service",port: 4026, tier: 3, desc: "Social media share & scheduling" },
+                { name: "deployment-ai-service",port: 4027,tier: 3, desc: "CI/CD control plane" },
+                { name: "inventory-service",   port: 4029, tier: 3, desc: "Stock & inventory management" },
+                { name: "fraud-service",       port: 4030, tier: 3, desc: "Fraud detection & prevention" },
+                { name: "payments-ai-service", port: 4031, tier: 3, desc: "Payment intelligence & scoring" },
+                { name: "activation-engine",   port: 4033, tier: 3, desc: "Feature flag activation engine" },
+                { name: "ops-service",         port: 4034, tier: 3, desc: "Operator dashboard backend" },
+                { name: "stae-service",        port: 4035, tier: 3, desc: "Smart Traffic & Auto-scaling Engine" },
+              ].filter(s => s.tier === tier);
+
+              const tierLabel  = tier === 1 ? "Tier 1 — Critical" : tier === 2 ? "Tier 2 — Important" : "Tier 3 — Enhanced";
+              const tierColor  = tier === 1 ? "rgba(239,68,68,0.1)"  : tier === 2 ? "rgba(245,158,11,0.1)" : "rgba(0,163,255,0.08)";
+              const tierBorder = tier === 1 ? "rgba(239,68,68,0.25)" : tier === 2 ? "rgba(245,158,11,0.25)" : "rgba(0,163,255,0.2)";
+
+              return (
+                <div key={tier} className="card" style={{ border: `1.5px solid ${tierBorder}` }}>
+                  <div className="card-body">
+                    <p style={{ fontWeight: 700, fontSize: "0.88rem", marginBottom: "12px", padding: "4px 10px", background: tierColor, borderRadius: "8px", display: "inline-block" }}>
+                      {tierLabel} ({svcs.length} services)
+                    </p>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                      {svcs.map(svc => {
+                        const gwStatus = data?.services?.find(s => s.name === svc.name);
+                        const healthy = gwStatus?.healthy;
+                        return (
+                          <div key={svc.name} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px", padding: "10px 12px", background: "var(--surface)", borderRadius: "10px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, minWidth: 0 }}>
+                              <span style={{ width: "9px", height: "9px", borderRadius: "50%", background: healthy === true ? "var(--success)" : healthy === false ? "var(--danger)" : "var(--border)", flexShrink: 0 }} />
+                              <div>
+                                <p style={{ fontWeight: 700, fontSize: "0.82rem", fontFamily: "monospace" }}>{svc.name}</p>
+                                <p style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{svc.desc}</p>
+                              </div>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+                              <span style={{ fontSize: "0.72rem", fontFamily: "monospace", color: "var(--text-secondary)", background: "var(--surface-alt, var(--border))", padding: "2px 8px", borderRadius: "6px" }}>:{svc.port}</span>
+                              <span className={`badge ${healthy === true ? "badge-success" : healthy === false ? "badge-danger" : "badge-muted"}`} style={{ fontSize: "0.68rem" }}>
+                                {healthy === true ? "✓ Up" : healthy === false ? "✗ Down" : "Unknown"}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            <div className="alert alert-info" style={{ fontSize: "0.82rem" }}>
+              💡 Run <code style={{ fontFamily: "monospace", background: "rgba(0,163,255,0.1)", padding: "1px 6px", borderRadius: "4px" }}>bash start-services.sh</code> from the project root to start Tier 1 + Tier 2 services. Service health is checked every 60 s from the gateway.
+            </div>
+          </div>
+        )}
+
+        {/* ── ACCOUNTS ─────────────────────────────────────────────────────── */}
+        {tab === "accounts" && (
+          <AccountsTab
+            accounts={accounts} setAccounts={setAccounts}
+            accLoading={accLoading} setAccLoading={setAccLoading}
+            accMsg={accMsg} setAccMsg={setAccMsg}
+            accFilter={accFilter} setAccFilter={setAccFilter}
+            accSearch={accSearch} setAccSearch={setAccSearch}
+          />
         )}
 
         {/* ── DISTRIBUTION ──────────────────────────────────────────────────── */}

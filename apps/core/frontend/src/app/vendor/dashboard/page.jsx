@@ -14,6 +14,7 @@ export default function VendorDashboardPage() {
   const [user,     setUser]     = useState(null);
   const [isSuperuser, setIsSuperuser] = useState(false);
   const [verification, setVerification] = useState(null);
+  const [copiedId, setCopiedId] = useState(null);
 
   useEffect(() => {
     let u = {};
@@ -53,16 +54,15 @@ export default function VendorDashboardPage() {
     { href: "/vendor/onboard",   icon: "➕", label: "Add Product" },
     { href: "/wallet",           icon: "💳", label: "Payout" },
     { href: "/orders?vendor=me", icon: "📦", label: "Orders" },
+    { href: "/track",            icon: "📍", label: "Track" },
     { href: "/disputes",         icon: "⚖️", label: "Disputes" },
-    { href: "/vendor/marketing", icon: "📣", label: "Marketing" },
-    { href: "/track",            icon: "🚚", label: "Track" },
+    { href: "/vendor/marketing", icon: "📣", label: "Marketing AI" },
   ];
 
   const quickWithDeploy = isSuperuser
     ? [...QUICK, { href: "/deploy/download", icon: "🚀", label: "Deploy" }]
     : QUICK;
 
-  // Milestone tiers based on total orders
   const totalOrders = parseInt(stats?.total_orders || 0);
   const MILESTONES = [
     { label: "Bronze",   target: 10,  icon: "🥉", reward: "₦500 bonus" },
@@ -76,6 +76,29 @@ export default function VendorDashboardPage() {
     ? Math.min(100, Math.round(((totalOrders - prevTarget) / (currentMilestone.target - prevTarget)) * 100))
     : 100;
 
+  function copyLink(p) {
+    const link = p.shareable_link ? `https://${p.shareable_link}` : `${window.location.origin}/products/${p.id}`;
+    navigator.clipboard?.writeText(link).then(() => {
+      setCopiedId(p.id);
+      setTimeout(() => setCopiedId(null), 2000);
+    }).catch(() => alert(link));
+  }
+
+  function shareProduct(p) {
+    const link = p.shareable_link ? `https://${p.shareable_link}` : `${window.location.origin}/products/${p.id}`;
+    const text = `Check out '${p.name}' on DUNAZOE: ${link}`;
+    if (navigator.share) {
+      navigator.share({ title: p.name, text, url: link }).catch(() => {});
+    } else {
+      navigator.clipboard?.writeText(link).then(() => alert("Link copied!")).catch(() => alert(link));
+    }
+  }
+
+  const STATUS_BADGE = {
+    pending: "info", reserved: "warning", processing: "warning",
+    paid: "success", shipped: "info", delivered: "success", cancelled: "danger",
+  };
+
   return (
     <PageShell title="Vendor Dashboard" icon="🏪" authRequired={true}
       subtitle={`Welcome back${user?.name ? `, ${user.name.split(" ")[0]}` : ""}. Manage your DUNAZOE store.`}
@@ -83,17 +106,17 @@ export default function VendorDashboardPage() {
 
       {/* Vendor ID Badge */}
       {vendorId && (
-        <div style={{ marginBottom: "16px", display: "flex", alignItems: "center", gap: "10px" }}>
+        <div style={{ marginBottom: "16px", display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
           <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>Vendor ID:</span>
           <span style={{ fontFamily: "monospace", fontWeight: 700, fontSize: "0.85rem", color: "var(--dz-blue)", background: "rgba(0,163,255,0.08)", padding: "3px 10px", borderRadius: "6px", border: "1px solid rgba(0,163,255,0.2)" }}>
             {vendorId}
           </span>
+          <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>Raw ID: {user?.vendor_id || user?.id}</span>
         </div>
       )}
 
-      {/* ── Verification Status ─────────────────────────────────────── */}
+      {/* Verification Status */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "20px" }} className="verification-grid">
-        {/* KYC Verification */}
         <div className="card" style={{ borderLeft: `3px solid ${verification?.kyc_verified ? "var(--success)" : "var(--warning)"}` }}>
           <div className="card-body" style={{ padding: "14px 16px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -115,23 +138,15 @@ export default function VendorDashboardPage() {
           </div>
         </div>
 
-        {/* Delivery Vendor Requests */}
         <div className="card" style={{ borderLeft: "3px solid var(--dz-blue)" }}>
           <div className="card-body" style={{ padding: "14px 16px" }}>
             <p style={{ fontWeight: 700, fontSize: "0.88rem", marginBottom: "2px" }}>🛵 Delivery Network</p>
             <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginBottom: "8px" }}>
-              {verification?.delivery_vendor_approved
-                ? "Approved delivery vendor"
-                : "Join the delivery network"}
+              {verification?.delivery_vendor_approved ? "Approved delivery vendor" : "Join the delivery network"}
             </p>
             <span className={`badge ${verification?.delivery_vendor_approved ? "badge-success" : "badge-info"}`}>
               {verification?.delivery_vendor_approved ? "✓ Approved" : verification?.delivery_vendor_requested ? "Under review" : "Not applied"}
             </span>
-            {!verification?.delivery_vendor_approved && (
-              <Link href="/vendor/onboard" className="btn btn-ghost btn-sm" style={{ marginTop: "8px", display: "block", textAlign: "center" }}>
-                Apply →
-              </Link>
-            )}
           </div>
         </div>
       </div>
@@ -156,7 +171,7 @@ export default function VendorDashboardPage() {
         ))}
       </div>
 
-      {/* ── Milestone Bonus Progress ──────────────────────────────────── */}
+      {/* Milestone Bonus Progress */}
       <div className="card" style={{ marginBottom: "24px", background: "linear-gradient(135deg,rgba(155,93,229,0.08),rgba(0,163,255,0.04))", border: "1px solid rgba(155,93,229,0.15)" }}>
         <div className="card-body">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
@@ -191,34 +206,51 @@ export default function VendorDashboardPage() {
         ))}
       </div>
 
+      {/* My Products */}
       <h2 style={{ fontSize: "1.05rem", fontWeight: 700, marginBottom: "14px" }}>My Products</h2>
       {loading ? (
         <div className="grid-auto">{[1,2,3].map(i => <div key={i} className="skeleton" style={{ height: "120px", borderRadius: "14px" }} />)}</div>
       ) : products.length > 0 ? (
         <div className="grid-auto" style={{ marginBottom: "32px" }}>
-          {products.map(p => (
-            <div key={p.id} className="card">
-              <div className="card-body">
-                <p style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontFamily: "monospace", marginBottom: "2px" }}>
-                  PRD-{String(p.id).padStart(5, "0")}
-                </p>
-                <p style={{ fontWeight: 600, fontSize: "0.9rem", marginBottom: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</p>
-                <p className="text-gradient" style={{ fontWeight: 800 }}>₦{parseFloat(p.price || 0).toLocaleString("en-NG")}</p>
-                <span className={`badge badge-${p.status === "published" ? "success" : "muted"}`} style={{ marginTop: "6px", display: "inline-block" }}>{p.status || "published"}</span>
-                {/* Product link for sharing */}
-                <button
-                  onClick={() => {
-                    const link = p.shareable_link ? `https://${p.shareable_link}` : `${window.location.origin}/products/${p.id}`;
-                    navigator.clipboard?.writeText(link).then(() => alert("Product link copied!")).catch(() => alert(link));
-                  }}
-                  className="btn btn-ghost btn-sm"
-                  style={{ marginTop: "8px", width: "100%", fontSize: "0.75rem" }}
-                >
-                  🔗 Copy Product Link
-                </button>
+          {products.map(p => {
+            const productId = `PRD-${String(p.id).padStart(5, "0")}`;
+            return (
+              <div key={p.id} className="card">
+                <div className="card-body">
+                  {/* Product IDs */}
+                  <p style={{ fontSize: "0.68rem", color: "var(--dz-blue)", fontFamily: "monospace", marginBottom: "2px", fontWeight: 700 }}>
+                    {productId}
+                  </p>
+                  <p style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontFamily: "monospace", marginBottom: "4px" }}>
+                    ID: {p.id} · VND: {user?.vendor_id || user?.id}
+                  </p>
+                  <p style={{ fontWeight: 600, fontSize: "0.9rem", marginBottom: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</p>
+                  <p className="text-gradient" style={{ fontWeight: 800 }}>₦{parseFloat(p.price || 0).toLocaleString("en-NG")}</p>
+                  <span className={`badge badge-${p.status === "published" ? "success" : "muted"}`} style={{ marginTop: "6px", display: "inline-block" }}>{p.status || "published"}</span>
+                  {/* Share & copy buttons */}
+                  <div style={{ display: "flex", gap: "6px", marginTop: "8px" }}>
+                    <button
+                      onClick={() => shareProduct(p)}
+                      className="btn btn-ghost btn-sm"
+                      style={{ flex: 1, fontSize: "0.72rem", padding: "5px" }}
+                    >
+                      📤 Share
+                    </button>
+                    <button
+                      onClick={() => copyLink(p)}
+                      className="btn btn-outline btn-sm"
+                      style={{ flex: 1, fontSize: "0.72rem", padding: "5px" }}
+                    >
+                      {copiedId === p.id ? "✅ Copied!" : "🔗 Copy"}
+                    </button>
+                  </div>
+                  <Link href={`/products/${p.id}`} className="btn btn-ghost btn-sm" style={{ marginTop: "4px", width: "100%", textAlign: "center", fontSize: "0.72rem" }}>
+                    View Listing →
+                  </Link>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <div className="card" style={{ textAlign: "center", padding: "40px 24px", marginBottom: "32px" }}>
@@ -229,24 +261,31 @@ export default function VendorDashboardPage() {
         </div>
       )}
 
+      {/* Recent Orders */}
       {orders.length > 0 && (
         <>
           <h2 style={{ fontSize: "1.05rem", fontWeight: 700, marginBottom: "14px" }}>Recent Orders</h2>
           <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "32px" }}>
-            {orders.slice(0, 5).map(o => (
-              <Link key={o.id} href={`/orders/${o.id}`} className="card" style={{ textDecoration: "none", display: "block" }}>
-                <div className="card-body" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px" }}>
-                  <div>
-                    <p style={{ fontWeight: 600, fontSize: "0.88rem" }}>ORD-{String(o.id).padStart(5, "0")}</p>
-                    <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>{o.created_at ? new Date(o.created_at).toLocaleDateString("en-NG") : "—"}</p>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <span className={`badge badge-${o.status === "delivered" ? "success" : o.status === "cancelled" ? "danger" : "info"}`}>{o.status || "pending"}</span>
-                    <p style={{ fontSize: "0.88rem", fontWeight: 700, marginTop: "4px" }}>₦{parseFloat(o.total || 0).toLocaleString("en-NG")}</p>
+            {orders.slice(0, 5).map(o => {
+              const orderId = `ORD-${String(o.id).padStart(5, "0")}`;
+              return (
+                <div key={o.id} className="card">
+                  <div className="card-body" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", flexWrap: "wrap", gap: "8px" }}>
+                    <div>
+                      <p style={{ fontWeight: 600, fontSize: "0.88rem", fontFamily: "monospace" }}>{orderId}</p>
+                      <p style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>ID: {o.id}</p>
+                      <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>{o.created_at ? new Date(o.created_at).toLocaleDateString("en-NG") : "—"}</p>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                      <span className={`badge badge-${STATUS_BADGE[o.status] || "info"}`}>{o.status || "pending"}</span>
+                      <p style={{ fontSize: "0.88rem", fontWeight: 700 }}>₦{parseFloat(o.total || 0).toLocaleString("en-NG")}</p>
+                      <Link href={`/track?order=${o.id}`} className="btn btn-ghost btn-sm" style={{ fontSize: "0.72rem" }}>📍 Track</Link>
+                      <Link href={`/orders/${o.id}`} className="btn btn-outline btn-sm" style={{ fontSize: "0.72rem" }}>View →</Link>
+                    </div>
                   </div>
                 </div>
-              </Link>
-            ))}
+              );
+            })}
           </div>
         </>
       )}

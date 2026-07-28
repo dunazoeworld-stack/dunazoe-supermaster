@@ -119,7 +119,7 @@ export default function Navbar() {
               { href: "/cart",             label: "🛒 Cart" },
               { href: "/wallet",           label: "💳 Wallet" },
               { href: "/orders",           label: "📦 Orders" },
-              { href: "/vendor/marketing", label: "📣 Marketing AI" },
+              ...(user?.role === "vendor" || user?.role === "admin" || user?.role === "superuser" ? [{ href: "/vendor/marketing", label: "📣 Marketing AI" }] : []),
             ].map(({ href, label }) => (
               <Link key={href} href={href} style={{
                 padding: "12px 14px", borderRadius: "10px", fontSize: "0.95rem", fontWeight: 600,

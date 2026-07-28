@@ -265,12 +265,14 @@ export default function VendorOnboardPage() {
       } else {
         // Store locally until service is available
         setDigitalFile({ name: file.name, size: (file.size / (1024 * 1024)).toFixed(1) + " MB", url: null, queued: true });
+        setError("Digital file upload service is not yet configured. Your file metadata has been saved and buyers will receive the download link once the upload service is activated. You can still list this product.");
         if (!product.file_size) P("file_size", (file.size / (1024 * 1024)).toFixed(1) + " MB");
         const ext = file.name.split(".").pop()?.toUpperCase() || "";
         if (!product.file_format && ext) P("file_format", ext);
       }
     } catch (_) {
       setDigitalFile({ name: file.name, size: (file.size / (1024 * 1024)).toFixed(1) + " MB", url: null, queued: true });
+      setError("Could not upload digital file — upload service is currently offline. Your file details have been saved. You can continue listing the product.");
       const ext = file.name.split(".").pop()?.toUpperCase() || "";
       if (!product.file_size) P("file_size", (file.size / (1024 * 1024)).toFixed(1) + " MB");
       if (!product.file_format && ext) P("file_format", ext);

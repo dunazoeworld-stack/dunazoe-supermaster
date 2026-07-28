@@ -7,7 +7,7 @@
 import { NextResponse } from "next/server";
 import fs   from "fs";
 import path from "path";
-import { Pool } from "pg";
+import pool from "../../../../lib/db.js";
 
 const GATEWAY    = process.env.GATEWAY_URL || "http://localhost:3000";
 const STORE_PATH = path.join(process.cwd(), "local_data", "products.json");
@@ -20,12 +20,6 @@ function readStore() {
   } catch { return []; }
 }
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL?.includes("sslmode=require")
-    ? { rejectUnauthorized: false }
-    : false,
-});
 
 export async function GET(request, { params }) {
   const { id } = await params;

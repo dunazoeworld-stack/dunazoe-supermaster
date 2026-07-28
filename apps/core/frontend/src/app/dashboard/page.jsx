@@ -24,13 +24,19 @@ export default function DashboardPage() {
   }, []);
 
   const quickLinks = [
-    { href: "/products",      icon: "🛒", label: "Shop",       desc: "Browse" },
-    { href: "/wallet",        icon: "💳", label: "Wallet",     desc: "Funds" },
-    { href: "/wallet/deposit",icon: "⬆️", label: "Deposit",    desc: "Add funds" },
-    { href: "/thrift",        icon: "⬡",  label: "Ajo",        desc: "Savings" },
-    { href: "/orders",        icon: "📦", label: "Orders",     desc: "Track" },
-    { href: "/disputes",      icon: "⚖️", label: "Disputes",   desc: "Issues" },
+    { href: "/products",       icon: "🛒", label: "Shop",      desc: "Browse" },
+    { href: "/wallet",         icon: "💳", label: "Wallet",    desc: "Funds" },
+    { href: "/wallet/deposit", icon: "⬆️", label: "Deposit",   desc: "Add funds" },
+    { href: "/thrift",         icon: "⬡",  label: "Ajo",       desc: "Savings" },
+    { href: "/orders",         icon: "📦", label: "Orders",    desc: "My orders" },
+    { href: "/track",          icon: "📍", label: "Track",     desc: "Track order" },
+    { href: "/disputes",       icon: "⚖️", label: "Disputes",  desc: "Issues" },
   ];
+
+  const STATUS_BADGE = {
+    pending: "info", reserved: "warning", processing: "warning",
+    paid: "success", shipped: "info", delivered: "success", cancelled: "danger",
+  };
 
   return (
     <PageShell
@@ -39,9 +45,9 @@ export default function DashboardPage() {
       authRequired={true}
       subtitle="Your DUNAZOE dashboard — manage your marketplace activity"
     >
-      {/* Wallet balance + quick links — ALL icons visible in one view */}
+      {/* Wallet balance + quick links */}
       <div style={{ marginBottom: "40px" }}>
-        {/* Wallet card — full width */}
+        {/* Wallet card */}
         <div className="card" style={{
           marginBottom: "14px",
           background: "linear-gradient(135deg, rgba(0,163,255,0.12), rgba(0,102,255,0.06))",
@@ -66,12 +72,8 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Quick-link icons — flex-wrap: all 6 visible without horizontal scroll */}
-        <div style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "10px",
-        }}>
+        {/* Quick-link icons */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
           {quickLinks.map(({ href, icon, label, desc }) => (
             <Link key={href} href={href} className="card"
               style={{ textDecoration: "none", flex: "1 1 90px", minWidth: "80px", maxWidth: "130px" }}>
@@ -88,38 +90,43 @@ export default function DashboardPage() {
       <h2 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "16px" }}>Recent Orders</h2>
       {loading ? (
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          {[1,2,3].map(i => <div key={i} className="skeleton" style={{ height: "60px", borderRadius: "12px" }} />)}
+          {[1,2,3].map(i => <div key={i} className="skeleton" style={{ height: "70px", borderRadius: "12px" }} />)}
         </div>
       ) : orders.length > 0 ? (
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          {orders.map(o => (
-            <Link key={o.id} href={`/orders/${o.id}`} className="card" style={{ textDecoration: "none", display: "block" }}>
-              <div className="card-body" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 18px" }}>
-                <div>
-                  <p style={{ fontWeight: 600, fontSize: "0.88rem" }}>Order #{o.id}</p>
-                  <p style={{ fontSize: "0.78rem", color: "var(--text-secondary)" }}>
-                    {o.created_at ? new Date(o.created_at).toLocaleDateString("en-NG") : "—"}
-                  </p>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <span className={`badge badge-${o.status === "delivered" ? "success" : o.status === "cancelled" ? "danger" : "info"}`}>
-                    {o.status || "pending"}
-                  </span>
-                  <p style={{ fontSize: "0.88rem", fontWeight: 700, marginTop: "4px" }}>
-                    ₦{parseFloat(o.total || 0).toLocaleString("en-NG")}
-                  </p>
+          {orders.map(o => {
+            const orderId = `ORD-${String(o.id).padStart(5, "0")}`;
+            const canPay = ["pending","reserved"].includes(o.status);
+            return (
+              <div key={o.id} className="card">
+                <div className="card-body" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 18px", flexWrap: "wrap", gap: "10px" }}>
+                  <div>
+                    <p style={{ fontWeight: 600, fontSize: "0.88rem", fontFamily: "monospace" }}>{orderId}</p>
+                    <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
+                      {o.created_at ? new Date(o.created_at).toLocaleDateString("en-NG") : "—"}
+                    </p>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                    <span className={`badge badge-${STATUS_BADGE[o.status] || "muted"}`}>{o.status || "pending"}</span>
+                    <span style={{ fontWeight: 800, background: "var(--dz-gradient)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", fontSize: "0.9rem" }}>
+                      ₦{parseFloat(o.total || 0).toLocaleString("en-NG")}
+                    </span>
+                    {canPay && <Link href={`/orders/${o.id}`} className="btn btn-primary btn-sm" style={{ fontSize: "0.75rem", padding: "4px 10px" }}>💳 Pay</Link>}
+                    <Link href={`/track?order=${o.id}`} className="btn btn-ghost btn-sm" style={{ fontSize: "0.75rem", padding: "4px 10px" }}>📍 Track</Link>
+                    <Link href={`/orders/${o.id}`} style={{ color: "var(--dz-blue)", fontSize: "0.82rem", fontWeight: 600, textDecoration: "none" }}>View →</Link>
+                  </div>
                 </div>
               </div>
-            </Link>
-          ))}
-          <Link href="/orders" className="btn btn-ghost" style={{ alignSelf: "flex-start" }}>View all orders →</Link>
+            );
+          })}
+          <Link href="/orders" className="btn btn-ghost btn-sm" style={{ textAlign: "center" }}>View all orders →</Link>
         </div>
       ) : (
-        <div className="empty-state">
+        <div className="empty-state" style={{ padding: "32px" }}>
           <span className="empty-icon">📦</span>
           <p className="empty-title">No orders yet</p>
           <p className="empty-body">Start shopping to see your orders here.</p>
-          <Link href="/products" className="btn btn-primary">🛒 Start Shopping</Link>
+          <Link href="/products" className="btn btn-primary">Shop Now</Link>
         </div>
       )}
     </PageShell>

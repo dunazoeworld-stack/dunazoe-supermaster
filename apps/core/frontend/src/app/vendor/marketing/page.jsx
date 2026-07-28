@@ -1,9 +1,9 @@
 "use client";
 /**
- * DUNAZOE Marketing AI — Vendor-only page
- * Generate product descriptions, social captions, WhatsApp posts,
- * ad copy, and SEO keywords using the AI service.
- * Access restricted to vendor and admin roles only.
+ * DUNAZOE Marketing AI — Vendor & Admin ONLY page
+ * COMPLETELY HIDDEN from customer accounts (null render, no redirect, no lock screen).
+ * Access: vendor, direct_vendor, hybrid_vendor, delivery_vendor, copytrader_vendor,
+ *         admin, super_admin, head_of_store, head_of_vendors, head_of_marketing, cto, ceo
  */
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -22,6 +22,19 @@ const FORMATS = [
 
 const TONES = ["Friendly","Professional","Urgent","Luxury","Playful","Bold"];
 
+// Roles that can access Marketing AI — excludes plain "user" role
+const ALLOWED_ROLES = [
+  "vendor","direct_vendor","copytrader_vendor","delivery_vendor","hybrid_vendor",
+  "admin","super_admin","head_of_store","head_of_vendors","head_of_marketing","cto","ceo",
+  "superuser","operator",
+];
+
+function hasMarketingAccess(role) {
+  if (!role) return false;
+  const r = role.toLowerCase();
+  return ALLOWED_ROLES.some(a => r === a || r.includes(a));
+}
+
 export default function MarketingAIPage() {
   const [products, setProducts]   = useState([]);
   const [product,  setProduct]    = useState(null);
@@ -32,7 +45,7 @@ export default function MarketingAIPage() {
   const [loading,  setLoading]    = useState(false);
   const [error,    setError]      = useState("");
   const [copied,   setCopied]     = useState(false);
-  const [role,     setRole]       = useState(null); // null = loading
+  const [role,     setRole]       = useState(undefined); // undefined = loading
 
   useEffect(() => {
     try {
@@ -48,23 +61,20 @@ export default function MarketingAIPage() {
       .catch(() => {});
   }, []);
 
-  // ── Access control: vendors and admins only ──────────────────────────────────
-  const VENDOR_ROLES = ["vendor", "direct_vendor", "copytrader_vendor", "delivery_vendor", "hybrid_vendor",
-    "admin", "super_admin", "head_of_store", "head_of_vendors", "head_of_marketing", "cto", "ceo"];
-
-  const hasAccess = role !== null && (VENDOR_ROLES.some(r => role?.toLowerCase().includes(r.split("_")[0])) || role === "vendor");
-
-  if (role !== null && !hasAccess) {
+  // ── Loading state ──────────────────────────────────────────────────────────
+  if (role === undefined) {
     return (
       <PageShell title="Marketing AI" icon="📣" authRequired={true}>
-        <div className="empty-state">
-          <span className="empty-icon">🔒</span>
-          <p className="empty-title">Vendors only</p>
-          <p className="empty-body">Marketing AI is available to registered vendors. Become a vendor to access AI-powered marketing tools.</p>
-          <Link href="/vendor/onboard" className="btn btn-primary">Become a Vendor →</Link>
+        <div style={{ display: "flex", justifyContent: "center", padding: "60px" }}>
+          <span className="dz-spinner" />
         </div>
       </PageShell>
     );
+  }
+
+  // ── HARD ACCESS BLOCK — customers see NOTHING (return null, no UI at all) ──
+  if (!hasMarketingAccess(role)) {
+    return null; // Completely invisible to customer accounts
   }
 
   async function generate() {
@@ -98,16 +108,6 @@ export default function MarketingAIPage() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
-  }
-
-  if (role === null) {
-    return (
-      <PageShell title="Marketing AI" icon="📣" authRequired={true}>
-        <div style={{ display: "flex", justifyContent: "center", padding: "60px" }}>
-          <span className="dz-spinner" />
-        </div>
-      </PageShell>
-    );
   }
 
   return (

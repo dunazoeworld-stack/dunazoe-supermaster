@@ -1,11 +1,7 @@
 import { NextResponse } from "next/server";
-import { Pool } from "pg";
 import jwt from "jsonwebtoken";
+import pool from "../../../../lib/db.js";
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL?.includes("sslmode=require") ? { rejectUnauthorized: false } : false,
-});
 
 const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET;
 
