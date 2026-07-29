@@ -11,3 +11,4 @@
 - [Next.js 16 performance on Replit](nextjs-replit-perf.md) — OOM fix: 512MB heap cap + distDir→/tmp + onDemandEntries; --no-turbo flag is invalid in Next.js 16
 - [Auth routes & missing pages audit](auth-routes-audit-july2026.md) — wallet col is balance_ngn; profile/loans pages + 9 API routes were missing; notifications read-all routing bug fixed
 - [Auth SSL fix](auth-ssl-fix.md) — conditional ssl in Pool; Replit built-in Postgres has no SSL; params is Promise in Next.js 16
+- [July 2026 major feature batch](july-2026-major-batch.md) — KYC /kyc page, delivery /deliver page, wallet deposit Paystack callback, image upload local fallback, order not-found fix, Stripe in features, auto light/dark theme
