@@ -16,11 +16,47 @@ export default function OrderDetailPage({ params }) {
 
   useEffect(() => {
     try { const u = JSON.parse(localStorage.getItem("dunazoe_user") || "{}"); setUser(u); } catch (_) {}
+
+    // If the ID looks like a local/fake order (starts with "ORD-" and has no numeric DB id),
+    // try to find it in localStorage first, then fall back to showing a pending-payment state.
+    const isLocalOrder = id && (String(id).startsWith("ORD-") || isNaN(parseInt(id)));
+    if (isLocalOrder) {
+      // Check if order is in local history
+      try {
+        const localOrders = JSON.parse(localStorage.getItem("dunazoe_pending_orders") || "[]");
+        const found = localOrders.find(o => String(o.order_id) === String(id) || String(o.id) === String(id));
+        if (found) {
+          setOrder({ ...found, status: found.status || "pending", id: found.order_id || found.id });
+          setLoading(false);
+          return;
+        }
+      } catch (_) {}
+      // Show friendly pending state
+      setOrder({
+        id,
+        status: "pending",
+        amount: 0,
+        delivery_address: "",
+        created_at: new Date().toISOString(),
+        _is_local: true,
+      });
+      setLoading(false);
+      return;
+    }
+
     const token = localStorage.getItem("dunazoe_token");
     fetch(`${API}/orders/${id}`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
-      .then(d => { if (d.order || d.success) setOrder(d.order || d); else setError("Order not found."); })
-      .catch(() => setError("Failed to load order."))
+      .then(d => {
+        if (d.order || d.success) {
+          setOrder(d.order || d);
+        } else if (d.offline) {
+          setError("Order service is temporarily offline. Please check your orders list shortly.");
+        } else {
+          setError("Order not found. It may still be processing.");
+        }
+      })
+      .catch(() => setError("Failed to load order. Please check your internet connection."))
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -74,6 +110,15 @@ export default function OrderDetailPage({ params }) {
           </div>
         ) : order ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+
+            {/* Local/pending order notice */}
+            {order._is_local && (
+              <div className="alert alert-warning">
+                ⏳ Your order is being processed. If payment was completed, it will appear here shortly.
+                Check your <Link href="/orders" style={{ color: "var(--dz-blue)", fontWeight: 700 }}>orders list</Link> for updates,
+                or check your email for a payment confirmation.
+              </div>
+            )}
 
             {/* Order header */}
             <div className="card">

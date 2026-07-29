@@ -222,3 +222,58 @@ body {
 /* ── SAFE AREA ── */
 .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 16px); }
 .safe-top { padding-top: env(safe-area-inset-top, 0px); }
+
+/* ════════════════════════════════════════════════════════════════
+   AUTO DARK / LIGHT THEME — Day = Light, Night = Dark
+   The app is dark-first. This media query applies a clean light
+   theme automatically during daytime / when system is in light mode.
+   ════════════════════════════════════════════════════════════════ */
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg:             #F0F4FA;
+    --bg-2:           #E8EEF8;
+    --bg-3:           #DDEAF8;
+    --surface:        rgba(255,255,255,0.80);
+    --surface-hover:  rgba(255,255,255,0.95);
+    --elevated:       rgba(255,255,255,0.90);
+    --elevated-hover: rgba(255,255,255,1);
+    --text:           #0A1628;
+    --text-secondary: #2A4060;
+    --text-muted:     #7090B0;
+    --border:         rgba(0,80,180,0.14);
+    --border-strong:  rgba(0,80,180,0.30);
+    --glow-sm:        0 2px 12px rgba(0,102,255,0.10);
+    --glow-md:        0 4px 24px rgba(0,102,255,0.18);
+    --glow-lg:        0 8px 48px rgba(0,102,255,0.24);
+    --success:        #00904E;
+    --warning:        #C07800;
+    --danger:         #C8002E;
+    --info:           #0066FF;
+    --dz-blue:        #0055CC;
+    --dz-blue-deep:   #003DA0;
+    --dz-gradient:    linear-gradient(135deg, #0066FF 0%, #003DA0 100%);
+    --dz-gradient-soft: linear-gradient(135deg, rgba(0,102,255,0.10) 0%, rgba(0,61,160,0.05) 100%);
+  }
+
+  body {
+    background: var(--bg);
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(0,102,255,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 80%, rgba(0,80,200,0.04) 0%, transparent 50%);
+  }
+
+  .card { box-shadow: 0 1px 4px rgba(0,40,120,0.08); }
+  .form-input { background: rgba(255,255,255,0.92); color: var(--text); }
+  .form-input:focus { box-shadow: 0 0 0 3px rgba(0,102,255,0.10); }
+  .badge-success { background: rgba(0,144,78,0.12);  color: var(--success); border-color: rgba(0,144,78,0.25); }
+  .badge-warning { background: rgba(192,120,0,0.12); color: var(--warning); border-color: rgba(192,120,0,0.25); }
+  .badge-danger  { background: rgba(200,0,46,0.10);  color: var(--danger);  border-color: rgba(200,0,46,0.20); }
+  .badge-info    { background: rgba(0,102,255,0.10);  color: var(--info);    border-color: rgba(0,102,255,0.20); }
+  .alert-error   { background: rgba(200,0,46,0.07);   border-color: rgba(200,0,46,0.20);  color: #A0002A; }
+  .alert-success { background: rgba(0,144,78,0.08);   border-color: rgba(0,144,78,0.20);  color: #006438; }
+  .alert-warning { background: rgba(192,120,0,0.08);  border-color: rgba(192,120,0,0.20); color: #8C5800; }
+  .alert-info    { background: rgba(0,102,255,0.07);   border-color: rgba(0,102,255,0.18); color: #0044BB; }
+  ::-webkit-scrollbar-track { background: var(--bg-2); }
+  ::-webkit-scrollbar-thumb { background: rgba(0,100,200,0.22); }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(0,100,200,0.38); }
+}

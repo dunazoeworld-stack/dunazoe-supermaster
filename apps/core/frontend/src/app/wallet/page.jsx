@@ -1,16 +1,21 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import PageShell from "../../components/PageShell";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "/api";
 
 export default function WalletPage() {
-  const [data,      setData]      = useState(null);
-  const [txns,      setTxns]      = useState([]);
-  const [loading,   setLoading]   = useState(true);
-  const [offline,   setOffline]   = useState(false);
-  const [user,      setUser]      = useState(null);
+  const searchParams = useSearchParams();
+
+  const [data,         setData]         = useState(null);
+  const [txns,         setTxns]         = useState([]);
+  const [loading,      setLoading]      = useState(true);
+  const [offline,      setOffline]      = useState(false);
+  const [user,         setUser]         = useState(null);
+  const [depositMsg,   setDepositMsg]   = useState({ type: "", text: "" });
+  const [depositVfying,setDepositVfying]= useState(false);
 
   // Withdrawal state
   const [showWithdraw, setShowWithdraw] = useState(false);
@@ -22,21 +27,65 @@ export default function WalletPage() {
 
   // Bank verification state
   const [bankDetails,  setBankDetails] = useState(null);  // registered bank account
-  const [bankLoading,  setBankLoading] = useState(false);
+
+  function refreshBalance(token) {
+    return Promise.allSettled([
+      fetch(`${API}/wallet/balance`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+      fetch(`${API}/wallet/transactions?limit=20`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+    ]).then(([bal, tx]) => {
+      if (bal.status === "fulfilled" && bal.value?.success) setData(bal.value);
+      if (tx.status === "fulfilled" && tx.value?.transactions) setTxns(tx.value.transactions);
+    });
+  }
 
   useEffect(() => {
     setOffline(!navigator.onLine);
     try { const u = JSON.parse(localStorage.getItem("dunazoe_user") || "{}"); setUser(u); } catch (_) {}
     const token = localStorage.getItem("dunazoe_token");
+
+    // ── Auto-verify deposit when Paystack redirects back ─────────────────────
+    const depositRef = searchParams.get("deposit_ref")
+      || searchParams.get("reference")
+      || searchParams.get("trxref");
+    if (depositRef) {
+      setDepositVfying(true);
+      setDepositMsg({ type: "info", text: "⏳ Verifying your payment with Paystack…" });
+      fetch(`${API}/wallet/verify?ref=${encodeURIComponent(depositRef)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then(r => r.json())
+        .then(d => {
+          if (d.success) {
+            setDepositMsg({ type: "success", text: `✅ ${d.message || "Deposit successful!"}` });
+            // Remove the ?deposit_ref from URL cleanly
+            window.history.replaceState({}, "", "/wallet");
+          } else {
+            setDepositMsg({ type: "error", text: `⚠️ ${d.error || "Payment could not be verified. If charged, contact support."}` });
+          }
+        })
+        .catch(() => setDepositMsg({ type: "error", text: "⚠️ Could not verify payment. If you were charged, contact support with ref: " + depositRef }))
+        .finally(() => {
+          setDepositVfying(false);
+          // Refresh balance after verification attempt
+          refreshBalance(token);
+        });
+    }
+
     Promise.allSettled([
       fetch(`${API}/wallet/balance`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
       fetch(`${API}/wallet/transactions?limit=20`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
       fetch(`${API}/vendor/verification`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => null),
-    ]).then(([bal, tx, verif]) => {
+      fetch(`${API}/kyc/bank-accounts`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => null),
+    ]).then(([bal, tx, verif, bankAccts]) => {
       if (bal.status === "fulfilled" && bal.value?.success) setData(bal.value);
       if (tx.status === "fulfilled" && tx.value?.transactions) setTxns(tx.value.transactions);
-      // Extract bank details from vendor verification
-      if (verif.status === "fulfilled" && verif.value) {
+      // Try KYC bank accounts first, fall back to vendor verification
+      if (bankAccts.status === "fulfilled" && bankAccts.value?.accounts?.length > 0) {
+        const primary = bankAccts.value.accounts.find(a => a.is_primary) || bankAccts.value.accounts[0];
+        if (primary) {
+          setBankDetails({ bank_name: primary.bank_name, account_no: primary.account_number, account_name: primary.account_name });
+        }
+      } else if (verif.status === "fulfilled" && verif.value) {
         const v = verif.value;
         if (v.bank_name || v.account_no || v.account_name) {
           setBankDetails({
@@ -104,6 +153,19 @@ export default function WalletPage() {
     <PageShell title="My Wallet" icon="💳" authRequired={true}
       subtitle="Manage your DUNAZOE digital wallet" actions={actions}>
       {offline && <div className="alert alert-error" style={{ marginBottom: "20px" }}>📡 Offline — wallet actions require a live connection.</div>}
+
+      {/* Deposit verification callback banner */}
+      {depositMsg.text && (
+        <div className={`alert alert-${depositMsg.type === "success" ? "success" : depositMsg.type === "error" ? "error" : "info"}`}
+          style={{ marginBottom: "20px", display: "flex", alignItems: "center", gap: "10px" }}>
+          {depositVfying && <div className="dz-spinner" style={{ width: "16px", height: "16px", flexShrink: 0 }} />}
+          <span>{depositMsg.text}</span>
+          {!depositVfying && (
+            <button onClick={() => setDepositMsg({ type: "", text: "" })}
+              style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", fontSize: "1rem", opacity: 0.6 }}>✕</button>
+          )}
+        </div>
+      )}
 
       {/* Success banner */}
       {wdSuccess && <div className="alert alert-success" style={{ marginBottom: "16px" }}>✅ {wdSuccess}</div>}

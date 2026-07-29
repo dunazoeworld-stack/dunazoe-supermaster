@@ -282,7 +282,7 @@ export default function VendorOnboardPage() {
     }
   }
 
-  // ── Image upload — compress + retry + offline detection ──────────────────────
+  // ── Image upload — compress + retry + local-data-URI fallback ────────────────
   async function handleImageUpload(e) {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
@@ -302,12 +302,32 @@ export default function VendorOnboardPage() {
         setUploadProgress(`Compressing image ${idx + 1} of ${files.length}…`);
         const compressed = await compressImage(raw);
 
-        // Step 2: upload with retry
+        // Step 2: try cloud upload
         setUploadProgress(`Uploading image ${idx + 1} of ${files.length}…`);
-        const d = await uploadWithRetry(compressed, token, API);
-        const img = { url: d.url, public_id: d.public_id };
-        setImages(prev => [...prev, img]);
-        newImages.push(img);
+        try {
+          const d = await uploadWithRetry(compressed, token, API);
+          const img = { url: d.url, public_id: d.public_id, local: false };
+          setImages(prev => [...prev, img]);
+          newImages.push(img);
+        } catch (uploadErr) {
+          // Cloud upload failed — save as local data URI so listing still works
+          const dataUrl = await new Promise(resolve => {
+            const reader = new FileReader();
+            reader.onload = ev => resolve(ev.target.result);
+            reader.readAsDataURL(compressed);
+          });
+          const img = { url: dataUrl, public_id: null, local: true };
+          setImages(prev => [...prev, img]);
+          newImages.push(img);
+          // Only surface error if it's NOT the "not configured" message
+          const msg = uploadErr.message || "";
+          if (!msg.includes("not yet configured") && !msg.includes("service is activated") && !msg.includes("storage not configured")) {
+            setError(`Image ${idx + 1}: ${msg}`);
+          }
+          // Silently saved locally — show info note instead
+          setUploadProgress("💾 Saved locally — will sync when image service is active.");
+          await new Promise(res => setTimeout(res, 1200));
+        }
       } catch (err) {
         setError(`Image ${idx + 1}: ${err.message || "Upload failed — check connection."}`);
       }
@@ -317,8 +337,8 @@ export default function VendorOnboardPage() {
 
     // Auto-run AI analysis after successful image upload
     if (newImages.length > 0) {
-      const allUrls = [...images, ...newImages].map(i => i.url).filter(Boolean);
-      runAI(allUrls);
+      const allUrls = [...images, ...newImages].map(i => i.url).filter(u => u && !u.startsWith("data:"));
+      if (allUrls.length > 0) runAI(allUrls);
     }
   }
 

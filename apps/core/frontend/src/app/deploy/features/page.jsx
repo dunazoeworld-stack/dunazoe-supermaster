@@ -12,21 +12,23 @@ const S = {
 };
 
 const DEFAULT_FEATURES = [
-  { id:"wallet", name:"Wallet", icon:"💰", desc:"Digital wallet, deposits, withdrawals", area:"Payments", status:"active" },
-  { id:"thrift", name:"Thrift / Savings", icon:"🏦", desc:"Group savings (disabled: loan ledger bug)", area:"Fintech", status:"maintenance" },
-  { id:"notifications", name:"Notifications", icon:"🔔", desc:"WhatsApp, SMS, email alerts", area:"Core", status:"active" },
-  { id:"ai", name:"AI Assistant", icon:"🤖", desc:"AI-powered shopping & support", area:"AI", status:"active" },
-  { id:"payments", name:"Payments (Paystack)", icon:"💳", desc:"Checkout, Paystack integration", area:"Payments", status:"active" },
-  { id:"logistics", name:"Logistics", icon:"🚚", desc:"Delivery tracking, dispatch", area:"Delivery", status:"active" },
-  { id:"chat", name:"Live Chat", icon:"💬", desc:"Vendor-buyer chat", area:"Social", status:"beta" },
-  { id:"admin", name:"Admin Override", icon:"🛡️", desc:"Super-admin controls", area:"Admin", status:"active" },
-  { id:"loans", name:"Loans", icon:"💸", desc:"Disabled: CBN compliance review needed", area:"Fintech", status:"hidden" },
-  { id:"search", name:"Search Engine", icon:"🔍", desc:"Product search & filters", area:"Core", status:"active" },
-  { id:"kyc", name:"KYC / Verification", icon:"📋", desc:"Identity verification", area:"Compliance", status:"active" },
-  { id:"social", name:"Social Media", icon:"📱", desc:"Vendor social posts", area:"Social", status:"beta" },
-  { id:"escrow", name:"Escrow", icon:"🔒", desc:"Buyer protection escrow", area:"Payments", status:"active" },
-  { id:"fraud", name:"Fraud Detection", icon:"🛡️", desc:"AI fraud analysis", area:"Security", status:"active" },
-  { id:"shareholder", name:"Shareholder System", icon:"📊", desc:"No spec yet — disabled", area:"Fintech", status:"hidden" },
+  { id:"wallet",        name:"Wallet",               icon:"💰", desc:"Digital wallet, deposits, withdrawals", area:"Payments",    status:"active" },
+  { id:"payments",      name:"Payments (Paystack)",  icon:"💳", desc:"Checkout, Paystack NGN integration",    area:"Payments",    status:"active" },
+  { id:"stripe",        name:"Stripe (USD/Intl)",    icon:"🌍", desc:"International card payments via Stripe",area:"Payments",    status:"active" },
+  { id:"escrow",        name:"Escrow",               icon:"🔒", desc:"Buyer protection escrow hold/release",  area:"Payments",    status:"active" },
+  { id:"notifications", name:"Notifications",        icon:"🔔", desc:"WhatsApp, SMS, in-app alerts",          area:"Core",        status:"active" },
+  { id:"ai",            name:"AI Assistant",         icon:"🤖", desc:"AI-powered shopping & support",         area:"AI",          status:"active" },
+  { id:"logistics",     name:"Logistics",            icon:"🚚", desc:"Delivery tracking, dispatch",           area:"Delivery",    status:"active" },
+  { id:"dunazoe_express",name:"DUNAZOE Express",     icon:"⚡", desc:"Own delivery network, vendor agents",   area:"Delivery",    status:"active" },
+  { id:"kyc",           name:"KYC / Verification",   icon:"📋", desc:"Identity & bank account verification",  area:"Compliance",  status:"active" },
+  { id:"fraud",         name:"Fraud Detection",      icon:"🛡️", desc:"AI fraud analysis & blocking",          area:"Security",    status:"active" },
+  { id:"search",        name:"Search Engine",        icon:"🔍", desc:"Product search & filters",              area:"Core",        status:"active" },
+  { id:"chat",          name:"Live Chat",            icon:"💬", desc:"Vendor-buyer real-time chat",           area:"Social",      status:"beta" },
+  { id:"social",        name:"Social Media",         icon:"📱", desc:"Vendor social posts & sharing",         area:"Social",      status:"beta" },
+  { id:"thrift",        name:"Thrift / Ajo Savings", icon:"🏦", desc:"Group savings (loan ledger fix pending)",area:"Fintech",    status:"maintenance" },
+  { id:"loans",         name:"Loans",                icon:"💸", desc:"Disabled: CBN compliance review needed",area:"Fintech",     status:"hidden" },
+  { id:"shareholder",   name:"Shareholder System",   icon:"📊", desc:"Coming Q2 2027",                        area:"Fintech",     status:"hidden" },
+  { id:"admin",         name:"Admin Override",       icon:"🛡️", desc:"Super-admin controls & kill-switches",  area:"Admin",       status:"active" },
 ];
 
 const STATUS_CONFIG = {

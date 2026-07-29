@@ -49,50 +49,70 @@ export async function POST(request) {
         { status: 503 }
       );
     }
+
+    // Try gateway first (in case payment-service handles Stripe)
     try {
-      // Try gateway first
       const ctrl  = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 8000);
+      const timer = setTimeout(() => ctrl.abort(), 6000);
       const res = await fetch(`${GATEWAY}/payments/initialize`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ order_id, currency: "USD" }),
+        body: JSON.stringify({ order_id, currency: "USD", email, amount }),
         signal: ctrl.signal,
       });
       clearTimeout(timer);
       const d = await res.json();
-      if (d.payment_url) return NextResponse.json(d);
+      if (d.payment_url) return NextResponse.json({ ...d, provider: "stripe" });
     } catch (_) {}
 
-    // Direct Stripe session
+    // Direct Stripe Checkout Session via REST API (no npm SDK required)
     try {
-      const stripe = (await import("stripe")).default(STRIPE_SECRET);
       const amountCents = Math.round(parseFloat(amount) * 100);
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://dunazoe.com";
-      const session = await stripe.checkout.sessions.create({
-        payment_method_types: ["card"],
-        line_items: [{
-          price_data: {
-            currency: "usd",
-            unit_amount: amountCents,
-            product_data: { name: `DUNAZOE Order${order_id ? ` #${order_id}` : ""}` },
-          },
-          quantity: 1,
-        }],
-        mode: "payment",
-        success_url: `${appUrl}/payment/verify?ref=STRIPE-${session?.id || Date.now()}&order=${order_id}`,
-        cancel_url:  `${appUrl}/cart`,
-        customer_email: email,
-        metadata: { order_id: String(order_id || ""), platform: "DUNAZOE" },
+      const appUrl      = process.env.NEXT_PUBLIC_APP_URL || "https://dunazoe.com";
+      const successRef  = `STRIPE-${order_id || Date.now()}`;
+
+      const body = new URLSearchParams();
+      body.append("payment_method_types[]",                           "card");
+      body.append("line_items[0][price_data][currency]",              "usd");
+      body.append("line_items[0][price_data][unit_amount]",           String(amountCents));
+      body.append("line_items[0][price_data][product_data][name]",    `DUNAZOE Order${order_id ? ` #${order_id}` : ""}`);
+      body.append("line_items[0][quantity]",                          "1");
+      body.append("mode",                                             "payment");
+      body.append("success_url",                                      `${appUrl}/payment/verify?ref=${successRef}&order=${order_id}`);
+      body.append("cancel_url",                                       `${appUrl}/cart`);
+      if (email) body.append("customer_email",                        email);
+      if (order_id) body.append("metadata[order_id]",                 String(order_id));
+      body.append("metadata[platform]",                               "DUNAZOE");
+      body.append("metadata[currency]",                               "USD");
+
+      const stripeRes = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+        method:  "POST",
+        headers: {
+          Authorization:  `Basic ${Buffer.from(STRIPE_SECRET + ":").toString("base64")}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: body.toString(),
       });
+
+      const session = await stripeRes.json();
+
+      if (!stripeRes.ok || session.error) {
+        const msg = session.error?.message || `Stripe error ${stripeRes.status}`;
+        console.error("[Payments/Stripe] API error:", msg);
+        return NextResponse.json({ success: false, error: msg }, { status: 502 });
+      }
+
+      console.log(`[Payments/Stripe] ✅ Session ${session.id} for ${email} — $${parseFloat(amount).toFixed(2)}`);
       return NextResponse.json({
-        success: true,
-        provider: "stripe",
+        success:     true,
+        provider:    "stripe",
         payment_url: session.url,
-        session_id: session.id,
-        currency: "USD",
+        session_id:  session.id,
+        currency:    "USD",
+        amount_usd:  parseFloat(amount),
       });
     } catch (err) {
+      console.error("[Payments/Stripe] Fatal:", err.message);
       return NextResponse.json({ success: false, error: err.message }, { status: 502 });
     }
   }

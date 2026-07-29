@@ -458,6 +458,38 @@ app.put("/orders/:id/status", requireAuth, asyncHandler(async (req, res) => {
     }
   }
 
+  // ── Notification triggers for order status changes ──────────────────────
+  const NOTIF_URL = process.env.NOTIFICATION_SERVICE_URL || "http://localhost:4017";
+  const notifMap = {
+    paid:       { buyer: "🎉 Payment confirmed!",          vendor: "💰 New paid order arrived" },
+    processing: { buyer: "🔧 Your order is being prepared", vendor: "📦 Please prepare order for dispatch" },
+    shipped:    { buyer: "🚚 Your order is on its way!",    vendor: "✅ Order shipped" },
+    nearby:     { buyer: "📍 Your delivery is nearby!",     vendor: null },
+    delivered:  { buyer: "🎉 Your order has been delivered!", vendor: "💳 Payout scheduled within 24 hours" },
+    cancelled:  { buyer: "❌ Your order was cancelled",     vendor: "❌ Order cancelled" },
+  };
+  const msgs = notifMap[status];
+  if (msgs) {
+    const notifBase = { order_id: id, channels: ["in_app"] };
+    const sendNotif = async (user_id, message) => {
+      if (!user_id) return;
+      try {
+        await axios.post(`${NOTIF_URL}/notifications/send`, {
+          ...notifBase, user_id, message,
+          title: `Order #${id} Update`,
+        }, { timeout: 3000 });
+      } catch (_) {}
+    };
+    // Non-blocking notification fire
+    sendNotif(order.customer_id, msgs.buyer).catch(() => {});
+    if (msgs.vendor && order.vendor_id) {
+      // Get vendor's user_id
+      pool.query("SELECT user_id FROM vendors WHERE id=$1", [order.vendor_id])
+        .then(vr => { if (vr.rows[0]) sendNotif(vr.rows[0].user_id, msgs.vendor); })
+        .catch(() => {});
+    }
+  }
+
   return res.json({ success: true, order: result.rows[0] });
 }));
 

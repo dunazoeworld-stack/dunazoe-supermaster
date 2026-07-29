@@ -27,9 +27,27 @@ export async function POST(req) {
         [`pwd_reset_${token}`, user.id, "password_reset", expires]
       ).catch(() => {});
 
-      // In production you'd send an email here. For now log to server console.
-      const resetLink = `${process.env.NEXT_PUBLIC_APP_URL || ""}/reset-password?token=${token}`;
+      const appUrl    = process.env.NEXT_PUBLIC_APP_URL || process.env.REPLIT_DEV_DOMAIN
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+        : "https://dunazoe.com";
+      const resetLink = `${appUrl}/reset-password?token=${token}`;
       console.log(`[forgot-password] Reset link for ${email}: ${resetLink}`);
+
+      // ── Fire notification (non-blocking) ─────────────────────────────────
+      const GATEWAY = process.env.GATEWAY_URL || "http://localhost:3000";
+      fetch(`${GATEWAY}/notifications/send`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({
+          user_id:  user.id,
+          channels: ["in_app", "email"],
+          title:    "🔐 Password Reset Request",
+          message:  `Hi ${user.name || "there"}, we received a request to reset your DUNAZOE password. Click the link to reset: ${resetLink} (expires in 1 hour). If you didn't request this, ignore this message.`,
+          email:    email,
+          email_subject: "Reset your DUNAZOE password",
+          email_html: `<p>Hi ${user.name || "there"},</p><p>We received a password reset request for your DUNAZOE account.</p><p><a href="${resetLink}" style="background:#0066FF;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;">Reset Password</a></p><p>This link expires in 1 hour. If you didn't request this, ignore this email.</p>`,
+        }),
+      }).catch(err => console.warn("[forgot-password] Notification dispatch failed:", err.message));
     }
 
     // Always return success (anti-enumeration)

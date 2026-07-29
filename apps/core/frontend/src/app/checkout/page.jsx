@@ -174,10 +174,46 @@ export default function CheckoutPage() {
         }),
       });
       const data = await res.json();
-      if (data.payment_url) { window.location.href = data.payment_url; return; }
+      if (data.payment_url) {
+        // Save a pending order stub so the order detail page can show something on return
+        if (data.order_id) {
+          try {
+            const pending = JSON.parse(localStorage.getItem("dunazoe_pending_orders") || "[]");
+            pending.unshift({
+              order_id:         data.order_id,
+              id:               data.order_id,
+              status:           "pending_payment",
+              amount:           total,
+              delivery_address: form.address,
+              created_at:       new Date().toISOString(),
+            });
+            localStorage.setItem("dunazoe_pending_orders", JSON.stringify(pending.slice(0, 20)));
+          } catch (_) {}
+        }
+        window.location.href = data.payment_url;
+        return;
+      }
       if (data.success) {
         localStorage.setItem("dunazoe_cart", "[]");
-        window.location.href = `/orders/${data.order_id}`;
+        // Determine redirect — if order_id looks like a real DB ID use it, else go to orders list
+        const orderId = data.order_id;
+        if (orderId && !isNaN(parseInt(orderId))) {
+          window.location.href = `/orders/${orderId}`;
+        } else if (orderId) {
+          // Save locally and navigate
+          try {
+            const pending = JSON.parse(localStorage.getItem("dunazoe_pending_orders") || "[]");
+            pending.unshift({
+              order_id: orderId, id: orderId, status: "pending",
+              amount: total, delivery_address: form.address,
+              created_at: new Date().toISOString(),
+            });
+            localStorage.setItem("dunazoe_pending_orders", JSON.stringify(pending.slice(0, 20)));
+          } catch (_) {}
+          window.location.href = `/orders/${orderId}`;
+        } else {
+          window.location.href = "/orders";
+        }
       } else {
         setError(data.error || "Checkout failed. Please try again.");
       }

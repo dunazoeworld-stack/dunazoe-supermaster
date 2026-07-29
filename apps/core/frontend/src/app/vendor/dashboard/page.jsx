@@ -115,7 +115,28 @@ export default function VendorDashboardPage() {
         </div>
       )}
 
-      {/* Verification Status */}
+      {/* ── Vendor Verification Status Banner ────────────────────────────────── */}
+      {verification && (
+        <>
+          {/* Store status alert */}
+          {verification.status === "pending" && (
+            <div className="alert alert-warning" style={{ marginBottom: "16px" }}>
+              ⏳ <strong>Store verification pending</strong> — your vendor account is under review.
+              This typically takes 24–48 hours. You can still list products.{" "}
+              <Link href="/kyc" style={{ color: "var(--warning)", fontWeight: 700 }}>Complete KYC →</Link>
+            </div>
+          )}
+          {verification.status === "rejected" && (
+            <div className="alert alert-error" style={{ marginBottom: "16px" }}>
+              ❌ <strong>Vendor application rejected.</strong>{" "}
+              {verification.rejection_reason && <span>Reason: {verification.rejection_reason}. </span>}
+              <Link href="/kyc" style={{ color: "var(--danger)", fontWeight: 700 }}>Re-apply with full KYC →</Link>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Verification Status Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "20px" }} className="verification-grid">
         <div className="card" style={{ borderLeft: `3px solid ${verification?.kyc_verified ? "var(--success)" : "var(--warning)"}` }}>
           <div className="card-body" style={{ padding: "14px 16px" }}>
@@ -123,30 +144,33 @@ export default function VendorDashboardPage() {
               <div>
                 <p style={{ fontWeight: 700, fontSize: "0.88rem", marginBottom: "2px" }}>🪪 KYC Verification</p>
                 <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
-                  {verification?.kyc_verified ? "Identity verified" : "Verification pending"}
+                  {verification?.kyc_verified
+                    ? `Level ${verification?.kyc_level || 1} verified`
+                    : "Identity not yet verified"}
                 </p>
               </div>
-              <span className={`badge ${verification?.kyc_verified ? "badge-success" : "badge-muted"}`}>
+              <span className={`badge ${verification?.kyc_verified ? "badge-success" : "badge-warning"}`}>
                 {verification?.kyc_verified ? "✓ Verified" : "Pending"}
               </span>
             </div>
-            {!verification?.kyc_verified && (
-              <Link href="/trust" className="btn btn-outline btn-sm" style={{ marginTop: "10px", width: "100%", textAlign: "center", display: "block" }}>
-                Complete Verification →
-              </Link>
-            )}
+            <Link href="/kyc" className="btn btn-outline btn-sm" style={{ marginTop: "10px", width: "100%", textAlign: "center", display: "block" }}>
+              {verification?.kyc_verified ? "Manage KYC →" : "Complete KYC →"}
+            </Link>
           </div>
         </div>
 
-        <div className="card" style={{ borderLeft: "3px solid var(--dz-blue)" }}>
+        <div className="card" style={{ borderLeft: `3px solid ${verification?.can_deliver ? "var(--success)" : "var(--dz-blue)"}` }}>
           <div className="card-body" style={{ padding: "14px 16px" }}>
-            <p style={{ fontWeight: 700, fontSize: "0.88rem", marginBottom: "2px" }}>🛵 Delivery Network</p>
+            <p style={{ fontWeight: 700, fontSize: "0.88rem", marginBottom: "2px" }}>⚡ Delivery Agent</p>
             <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginBottom: "8px" }}>
-              {verification?.delivery_vendor_approved ? "Approved delivery vendor" : "Join the delivery network"}
+              {verification?.can_deliver ? "Active DUNAZOE Express agent" : "Earn by delivering orders"}
             </p>
-            <span className={`badge ${verification?.delivery_vendor_approved ? "badge-success" : "badge-info"}`}>
-              {verification?.delivery_vendor_approved ? "✓ Approved" : verification?.delivery_vendor_requested ? "Under review" : "Not applied"}
+            <span className={`badge ${verification?.can_deliver ? "badge-success" : "badge-info"}`} style={{ marginBottom: "8px" }}>
+              {verification?.can_deliver ? "✓ Active Agent" : "Not registered"}
             </span>
+            <Link href="/deliver" className="btn btn-outline btn-sm" style={{ marginTop: "6px", width: "100%", textAlign: "center", display: "block" }}>
+              {verification?.can_deliver ? "Delivery Hub →" : "Register as Agent →"}
+            </Link>
           </div>
         </div>
       </div>

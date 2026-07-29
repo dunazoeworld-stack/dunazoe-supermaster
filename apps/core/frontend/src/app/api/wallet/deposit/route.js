@@ -15,26 +15,14 @@ export async function POST(req) {
 
   const { amount, provider = "paystack", currency = "NGN" } = body;
 
-  // ── Try gateway first ────────────────────────────────────────────────────
+  // ── Try gateway first — note: wallet service uses /wallets/* ────────────
   try {
     const ctrl  = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 8000);
-    const res = await fetch(`${GATEWAY}/wallet/deposit`, {
-      method:  "POST",
-      headers: { "Content-Type": "application/json", Authorization: token },
-      body:    JSON.stringify(body),
-      signal:  ctrl.signal,
-    });
+    const timer = setTimeout(() => ctrl.abort(), 6000);
+    // Gateway proxies /wallets → wallet-service; wallet-service doesn't initiate
+    // Paystack — it just credits balance. Skip gateway for deposit initiation.
     clearTimeout(timer);
-    const d = await res.json();
-    if (d.payment_url || d.success) {
-      return NextResponse.json(d, { status: res.status });
-    }
-    // Gateway returned an error — fall through to direct Paystack
-    console.warn("[wallet/deposit] Gateway error, falling back to direct Paystack:", d.error);
-  } catch (err) {
-    console.warn("[wallet/deposit] Gateway unreachable, falling back to direct Paystack:", err.message);
-  }
+  } catch (_) {}
 
   // ── Direct Paystack fallback (NGN) ───────────────────────────────────────
   if (provider !== "stripe" && currency === "NGN") {

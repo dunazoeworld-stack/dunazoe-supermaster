@@ -230,8 +230,13 @@ app.put("/vendors/:id", requireAuth, asyncHandler(async (req, res) => {
   const {
     business_name, description, category, pickup_address,
     bank_name, account_no, account_name, payout_method,
-    lat, lng, town
+    lat, lng, town, can_deliver, service_area,
   } = req.body;
+
+  // can_deliver must be boolean or undefined
+  const can_deliver_val = can_deliver === true || can_deliver === "true" ? true
+    : can_deliver === false || can_deliver === "false" ? false
+    : undefined;
 
   const result = await pool.query(
     `UPDATE vendors SET
@@ -245,11 +250,16 @@ app.put("/vendors/:id", requireAuth, asyncHandler(async (req, res) => {
        payout_method  = COALESCE($8,  payout_method),
        lat            = COALESCE($9,  lat),
        lng            = COALESCE($10, lng),
-       town           = COALESCE($11, town)
-     WHERE id=$12 RETURNING id, business_name, status`,
+       town           = COALESCE($11, town),
+       can_deliver    = CASE WHEN $13::boolean IS NOT NULL THEN $13::boolean ELSE can_deliver END,
+       service_area   = COALESCE($14, service_area)
+     WHERE id=$12 RETURNING id, business_name, status, can_deliver, service_area`,
     [business_name, description, category, pickup_address,
      bank_name, account_no, account_name, payout_method,
-     lat, lng, town, id]
+     lat, lng, town, id,
+     can_deliver_val !== undefined ? can_deliver_val : null,
+     service_area || null,
+    ]
   );
 
   return res.json({ success: true, vendor: result.rows[0] });
