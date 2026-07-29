@@ -90,6 +90,10 @@ localPort = 4018
 externalPort = 6800
 
 [[ports]]
+localPort = 4030
+externalPort = 8080
+
+[[ports]]
 localPort = 5000
 externalPort = 80
 
@@ -105,6 +109,11 @@ CLOUDINARY_API_KEY = "634966339231127"
 NEXT_PUBLIC_API_URL = "/api"
 NEXT_PUBLIC_CLOUDINARY_API_KEY = "634966339231127"
 NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = "dtx17sg1m"
+BUILD_ID = "july2026-batch2"
+BUILD_VERSION = "2.1.0"
+GATEWAY_URL = "http://localhost:3000"
+NEXT_PUBLIC_APP_URL = "https://dunazoeworld-stack.dunazoeworld.replit.app"
+NODE_ENV = "development"
 
 [deployment]
 deploymentTarget = "autoscale"

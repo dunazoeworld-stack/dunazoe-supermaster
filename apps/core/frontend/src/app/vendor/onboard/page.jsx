@@ -679,8 +679,10 @@ export default function VendorOnboardPage() {
                     <input className="form-input" type="number" min="1" required value={product.price} onChange={e => P("price", e.target.value)} placeholder="e.g. 5000" />
                     {product.price && parseFloat(product.price) > 0 && (
                       <p style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: "4px" }}>
-                        Customer pays: <strong style={{ color: "var(--dz-blue)" }}>₦{(parseFloat(product.price) * 1.05).toLocaleString("en-NG")}</strong>
-                        <span style={{ color: "var(--text-muted)" }}> (includes 5% service charge)</span>
+                        Buyer pays: <strong style={{ color: "var(--dz-blue)" }}>₦{parseFloat(product.price).toLocaleString("en-NG")}</strong>
+                        <span style={{ color: "var(--text-muted)" }}> · You receive: </span>
+                        <strong style={{ color: "var(--success)" }}>₦{Math.round(parseFloat(product.price) * 0.95).toLocaleString("en-NG")}</strong>
+                        <span style={{ color: "var(--text-muted)" }}> (after 5% platform fee)</span>
                       </p>
                     )}
                   </div>

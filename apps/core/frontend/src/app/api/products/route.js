@@ -93,11 +93,12 @@ export async function POST(request) {
   let body = {};
   try { body = await request.json(); } catch (_) {}
 
-  // Auto-apply 5% service charge to price during listing — round to whole number
+  // Store the vendor's price as-is. The 5% platform service charge is deducted
+  // from the vendor's PAYOUT (not added to the buyer's price at listing time).
+  // Checkout transparently shows the 5% line item on the order summary.
   if (body.price) {
     const basePrice = parseFloat(body.price);
-    const withCharge = Math.round(basePrice * (1 + SERVICE_CHARGE_PCT));
-    body = { ...body, price: withCharge, base_price: basePrice, service_charge_pct: SERVICE_CHARGE_PCT };
+    body = { ...body, price: Math.round(basePrice), base_price: basePrice };
   }
 
   // 1. Try live gateway
