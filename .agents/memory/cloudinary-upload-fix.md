@@ -1,33 +1,23 @@
 ---
-name: Cloudinary Upload Fix
-description: Why Cloudinary upload kept failing and the definitive fix using native crypto+fetch
+name: Cloudinary upload fix
+description: How the product image upload route is configured and what credential issues to watch for
 ---
 
-## Rule
-Never use the Cloudinary Node.js SDK in Next.js App Router API routes.
-Use Node.js built-in `crypto` + native `fetch` to call the Cloudinary REST API directly.
+## Setup
+Upload route: `apps/core/frontend/src/app/api/upload/product-image/route.js`
+Reads `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` inside the handler at request time (not at module load) — required for Next.js App Router.
+Uses native `crypto` + `fetch` REST API to Cloudinary's upload endpoint. SDK imports fail because the Cloudinary SDK is not in the frontend package.json.
 
-## Why
-Two compounding problems:
-1. The `cloudinary` package was not in `apps/core/frontend/package.json` — only in the root — and the SDK import silently failed in certain Next.js compilation paths.
-2. Top-level `const` reads of `process.env` in Next.js App Router modules execute at module eval time (before runtime env injection), so credentials always appeared empty.
+## Silent fallback
+If any credential is missing/blank the route returns `{ success: false, reason: "missing_credentials" }`.
+The vendor onboard page catches this and falls back to a local data-URI (stored in localStorage/local_data/products.json).
+This fallback can mask broken cloud credentials — always verify the returned URL starts with `res.cloudinary.com`.
 
-Moving `process.env` reads inside the handler body fixes problem 2, but problem 1 (missing SDK) must also be addressed. Using native `crypto` + `fetch` eliminates the package dependency entirely.
+## Blank secret trap
+Replit Secrets can be saved with an empty string value — the key appears in `process.env` but `.trim()` returns `""`.
+This happened with `CLOUDINARY_API_SECRET` in July 2026. Re-entering the secret via `requestSecrets` fixed it.
+All three creds must be non-empty for cloud upload to work.
 
-## How to apply
-In any Next.js App Router route that needs Cloudinary:
-```js
-import crypto from "crypto";
-// Inside the POST handler:
-const timestamp = Math.round(Date.now() / 1000).toString();
-const paramsToSign = `folder=${folder}&timestamp=${timestamp}`;
-const signature = crypto.createHash("sha1").update(paramsToSign + API_SECRET).digest("hex");
-// Then POST multipart form to: https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload
-```
-- Params to sign must be sorted alphabetically, excluding api_key/file/resource_type.
-- For raw files: POST to `/raw/upload`, set `resource_type=raw` in form AND include in sign params.
+**Why:** Next.js App Router caches module-level imports; reading creds inside the handler ensures they pick up the latest Replit Secret values after a restart.
 
-## Env vars (confirmed present as of July 2026)
-- `CLOUDINARY_CLOUD_NAME` = `dtx17sg1m` — shared env var
-- `CLOUDINARY_API_KEY` = `634966339231127` — shared env var
-- `CLOUDINARY_API_SECRET` — Replit Secret (not a shared env var)
+**How to apply:** Any time Cloudinary upload fails silently, check all three creds are non-empty strings, not just that the keys exist in env.
