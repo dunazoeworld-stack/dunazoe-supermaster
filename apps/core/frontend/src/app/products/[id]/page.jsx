@@ -213,9 +213,6 @@ export default function ProductDetailPage({ params }) {
                       {vendorIdDisplay}
                     </span>
                   )}
-                  <span style={{ fontFamily: "monospace", fontSize: "0.68rem", color: "var(--text-muted)", padding: "3px 0", alignSelf: "center" }}>
-                    ID: {product.id} · VID: {product.vendor_id}
-                  </span>
                 </div>
 
                 {/* Badges row */}
@@ -432,7 +429,7 @@ export default function ProductDetailPage({ params }) {
                     <p style={{ fontWeight: 800, marginBottom: "2px" }}>{product.business_name || product.vendor_name}</p>
                     <p style={{ fontSize: "0.78rem", color: "var(--text-secondary)" }}>Verified DUNAZOE Vendor · {product.location || "Nigeria"}</p>
                     {vendorIdDisplay && (
-                      <p style={{ fontFamily: "monospace", fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "2px" }}>{vendorIdDisplay} · ID: {product.vendor_id}</p>
+                      <p style={{ fontFamily: "monospace", fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "2px" }}>{vendorIdDisplay}</p>
                     )}
                   </div>
                   <Link href={`/vendors?id=${product.vendor_id || ""}`} className="btn btn-ghost btn-sm">View Store →</Link>

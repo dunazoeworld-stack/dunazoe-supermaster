@@ -178,8 +178,10 @@ export default function VendorOnboardPage() {
     // Bank account details — required before listing
     bank_name: "", account_no: "", account_name: "", payout_method: "bank",
     // Business details
-    description: "", phone: "",
+    description: "", phone: "", logo_url: "",
   });
+  const [logoUploading, setLogoUploading] = useState(false);
+  const logoFileRef = useRef(null);
 
   // ── product fields ───────────────────────────────────────────
   const [product, setProduct] = useState({
@@ -240,6 +242,41 @@ export default function VendorOnboardPage() {
       if (d.success) setAiTip(d);
     } catch (_) {}
     finally { setAiLoading(false); }
+  }
+
+  // ── Business logo upload ─────────────────────────────────────
+  async function handleLogoUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLogoUploading(true);
+    try {
+      const token = localStorage.getItem("dunazoe_token");
+      const compressed = await compressImage(file);
+      const fd = new FormData();
+      fd.append("image", compressed);
+      const r = await fetch(`${API}/upload/product-image`, {
+        method: "POST", headers: { Authorization: `Bearer ${token}` }, body: fd,
+      });
+      const d = await r.json();
+      if (d.success && d.url) {
+        V("logo_url", d.url);
+      } else if (d.queued || d.offline) {
+        // Fallback: store as data URI
+        const dataUrl = await new Promise(resolve => {
+          const reader = new FileReader();
+          reader.onload = ev => resolve(ev.target.result);
+          reader.readAsDataURL(compressed);
+        });
+        V("logo_url", dataUrl);
+      } else {
+        setError(d.error || "Logo upload failed. Please try again.");
+      }
+    } catch (_) {
+      setError("Could not upload logo — please try again.");
+    } finally {
+      setLogoUploading(false);
+      if (logoFileRef.current) logoFileRef.current.value = "";
+    }
   }
 
   // ── Digital file upload ───────────────────────────────────────
@@ -547,6 +584,33 @@ export default function VendorOnboardPage() {
                   <label className="form-label">Business Description</label>
                   <textarea className="form-input" rows={2} value={vendor.description} onChange={e => V("description", e.target.value)} placeholder="Tell buyers what you sell…" style={{ resize: "vertical" }} />
                 </div>
+                {/* Business Logo */}
+                <div className="form-group">
+                  <label className="form-label">Business Logo <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>(optional)</span></label>
+                  <div style={{ display: "flex", gap: "14px", alignItems: "center" }}>
+                    <div style={{
+                      width: "64px", height: "64px", borderRadius: "12px", flexShrink: 0,
+                      background: vendor.logo_url ? `url(${vendor.logo_url}) center/cover no-repeat` : "var(--surface)",
+                      border: "1.5px dashed var(--border-strong)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                      {!vendor.logo_url && <span style={{ fontSize: "1.6rem", opacity: 0.4 }}>🏪</span>}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <button type="button" onClick={() => logoFileRef.current?.click()} disabled={logoUploading}
+                        className="btn btn-outline btn-sm" style={{ marginBottom: "4px" }}>
+                        {logoUploading ? "Uploading…" : "📷 Upload Logo"}
+                      </button>
+                      <p style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>PNG, JPG or WebP. Shown on your store page.</p>
+                      {vendor.logo_url && (
+                        <button type="button" onClick={() => V("logo_url", "")} style={{ background: "none", border: "none", color: "var(--danger)", fontSize: "0.72rem", cursor: "pointer", marginTop: "2px" }}>
+                          ✕ Remove
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <input ref={logoFileRef} type="file" accept=".jpg,.jpeg,.png,.webp" hidden onChange={handleLogoUpload} />
+                </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                   <div className="form-group">
                     <label className="form-label">State *</label>
@@ -561,9 +625,8 @@ export default function VendorOnboardPage() {
                   <div className="form-group">
                     <label className="form-label">Store Type</label>
                     <select className="form-input" value={vendor.type} onChange={e => V("type", e.target.value)}>
-                      <option value="direct">Direct Sale</option>
-                      <option value="delivery">Delivery Service</option>
-                      <option value="pickup_station">Pickup Station</option>
+                      <option value="direct">Direct Vendor — Sells products directly to customers</option>
+                      <option value="delivery">Delivery Vendor — Provides delivery services for DUNAZOE orders</option>
                     </select>
                   </div>
                   <div className="form-group">

@@ -238,37 +238,50 @@ export default function VendorDashboardPage() {
         <div className="grid-auto" style={{ marginBottom: "32px" }}>
           {products.map(p => {
             const productId = `PRD-${String(p.id).padStart(5, "0")}`;
+            // Parse first image
+            let imgSrc = null;
+            if (p.images) {
+              if (typeof p.images === "string") {
+                try { const a = JSON.parse(p.images); imgSrc = Array.isArray(a) ? a[0] : p.images; } catch { imgSrc = p.images; }
+              } else if (Array.isArray(p.images)) { imgSrc = p.images[0]; }
+            }
             return (
-              <div key={p.id} className="card">
-                <div className="card-body">
-                  {/* Product IDs */}
-                  <p style={{ fontSize: "0.68rem", color: "var(--dz-blue)", fontFamily: "monospace", marginBottom: "2px", fontWeight: 700 }}>
-                    {productId}
+              <div key={p.id} className="card" style={{ overflow: "hidden", display: "flex", flexDirection: "column" }}>
+                {/* Product image */}
+                <div style={{
+                  width: "100%", height: "140px", flexShrink: 0,
+                  background: imgSrc ? `url(${imgSrc}) center/cover no-repeat` : "var(--bg-3)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  position: "relative",
+                }}>
+                  {!imgSrc && <span style={{ fontSize: "2.2rem", opacity: 0.2 }}>📦</span>}
+                  <span style={{
+                    position: "absolute", top: "8px", left: "8px",
+                    fontFamily: "monospace", fontWeight: 700, fontSize: "0.68rem",
+                    color: "var(--dz-blue)", background: "rgba(0,0,0,0.6)",
+                    padding: "2px 8px", borderRadius: "6px", backdropFilter: "blur(4px)",
+                  }}>{productId}</span>
+                  <span className={`badge badge-${p.status === "published" ? "success" : "muted"}`}
+                    style={{ position: "absolute", top: "8px", right: "8px", fontSize: "0.62rem" }}>
+                    {p.status || "published"}
+                  </span>
+                </div>
+                <div className="card-body" style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: "6px", flex: 1 }}>
+                  <p style={{ fontWeight: 600, fontSize: "0.9rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</p>
+                  <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {p.category || "—"}
                   </p>
-                  <p style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontFamily: "monospace", marginBottom: "4px" }}>
-                    ID: {p.id} · VND: {user?.vendor_id || user?.id}
-                  </p>
-                  <p style={{ fontWeight: 600, fontSize: "0.9rem", marginBottom: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</p>
-                  <p className="text-gradient" style={{ fontWeight: 800 }}>₦{parseFloat(p.price || 0).toLocaleString("en-NG")}</p>
-                  <span className={`badge badge-${p.status === "published" ? "success" : "muted"}`} style={{ marginTop: "6px", display: "inline-block" }}>{p.status || "published"}</span>
+                  <p className="text-gradient" style={{ fontWeight: 800, fontSize: "1rem" }}>₦{parseFloat(p.price || 0).toLocaleString("en-NG")}</p>
                   {/* Share & copy buttons */}
-                  <div style={{ display: "flex", gap: "6px", marginTop: "8px" }}>
-                    <button
-                      onClick={() => shareProduct(p)}
-                      className="btn btn-ghost btn-sm"
-                      style={{ flex: 1, fontSize: "0.72rem", padding: "5px" }}
-                    >
+                  <div style={{ display: "flex", gap: "6px", marginTop: "4px" }}>
+                    <button onClick={() => shareProduct(p)} className="btn btn-ghost btn-sm" style={{ flex: 1, fontSize: "0.72rem", padding: "5px" }}>
                       📤 Share
                     </button>
-                    <button
-                      onClick={() => copyLink(p)}
-                      className="btn btn-outline btn-sm"
-                      style={{ flex: 1, fontSize: "0.72rem", padding: "5px" }}
-                    >
+                    <button onClick={() => copyLink(p)} className="btn btn-outline btn-sm" style={{ flex: 1, fontSize: "0.72rem", padding: "5px" }}>
                       {copiedId === p.id ? "✅ Copied!" : "🔗 Copy"}
                     </button>
                   </div>
-                  <Link href={`/products/${p.id}`} className="btn btn-ghost btn-sm" style={{ marginTop: "4px", width: "100%", textAlign: "center", fontSize: "0.72rem" }}>
+                  <Link href={`/products/${p.id}`} className="btn btn-ghost btn-sm" style={{ width: "100%", textAlign: "center", fontSize: "0.72rem" }}>
                     View Listing →
                   </Link>
                 </div>
@@ -297,7 +310,6 @@ export default function VendorDashboardPage() {
                   <div className="card-body" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", flexWrap: "wrap", gap: "8px" }}>
                     <div>
                       <p style={{ fontWeight: 600, fontSize: "0.88rem", fontFamily: "monospace" }}>{orderId}</p>
-                      <p style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>ID: {o.id}</p>
                       <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>{o.created_at ? new Date(o.created_at).toLocaleDateString("en-NG") : "—"}</p>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
