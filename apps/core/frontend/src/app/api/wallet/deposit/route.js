@@ -52,6 +52,16 @@ export async function POST(req) {
     const reference  = `DZ-WALLET-${Date.now()}-${Math.random().toString(36).slice(2,6).toUpperCase()}`;
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL || "https://dunazoe.com";
 
+    // Extract user_id from JWT for webhook idempotency
+    let user_id = null;
+    try {
+      const jwtParts = token.replace("Bearer ", "").split(".");
+      if (jwtParts.length === 3) {
+        const payload = JSON.parse(Buffer.from(jwtParts[1], "base64").toString("utf8"));
+        user_id = payload.id;
+      }
+    } catch (_) {}
+
     try {
       const psRes = await fetch(`${PAYSTACK_BASE}/transaction/initialize`, {
         method: "POST",
@@ -65,12 +75,15 @@ export async function POST(req) {
           reference,
           callback_url: `${appUrl}/wallet?deposit_ref=${reference}`,
           metadata: {
-            type: "wallet_deposit",
+            type:       "wallet_deposit",
+            user_id,                       // used by webhook for idempotent credit
             amount_ngn: parseFloat(amount),
-            platform: "DUNAZOE",
+            reference,
+            platform:   "DUNAZOE",
             custom_fields: [
-              { display_name: "Type",    variable_name: "type",    value: "Wallet Deposit" },
-              { display_name: "Platform", variable_name: "platform", value: "DUNAZOE" },
+              { display_name: "Type",      variable_name: "type",     value: "Wallet Deposit" },
+              { display_name: "User ID",   variable_name: "user_id",  value: String(user_id || "") },
+              { display_name: "Platform",  variable_name: "platform", value: "DUNAZOE" },
             ],
           },
           channels: ["card", "bank", "ussd", "bank_transfer", "mobile_money"],

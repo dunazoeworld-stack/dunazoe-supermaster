@@ -8,6 +8,7 @@
  * - Bank account management for withdrawals
  */
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import PageShell from "../../components/PageShell";
 
@@ -30,10 +31,16 @@ const LEVELS = [
 ];
 
 export default function KYCPage() {
+  const searchParams = useSearchParams();
+
   const [kyc,          setKyc]          = useState(null);
   const [accounts,     setAccounts]     = useState([]);
   const [loading,      setLoading]      = useState(true);
-  const [tab,          setTab]          = useState("status"); // status | identity | bank
+  // Honour ?tab=bank (or any valid tab) from URL — e.g. linked from wallet page
+  const [tab,          setTab]          = useState(() => {
+    const t = searchParams?.get("tab");
+    return (t === "bank" || t === "identity" || t === "status") ? t : "status";
+  });
 
   // BVN/NIN form
   const [bvn,          setBvn]          = useState("");

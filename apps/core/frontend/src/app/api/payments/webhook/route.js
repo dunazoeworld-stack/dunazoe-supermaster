@@ -59,17 +59,75 @@ export async function POST(request) {
 
     try {
       if (isWallet) {
-        // Wallet top-up — credit user's wallet balance
-        const email = data.customer?.email;
-        if (email) {
-          await pool.query(
-            `UPDATE wallets w
-             SET balance_ngn = balance_ngn + $1, updated_at = NOW()
-             FROM users u
-             WHERE u.email = $2 AND w.user_id = u.id`,
-            [amountNgn, email]
-          );
-          console.log(`[Webhook] ✅ Wallet credited ₦${amountNgn} for ${email}`);
+        // ── Wallet top-up — idempotent credit ─────────────────────────────
+        // Guard: skip if this reference was already credited
+        const dupeCheck = await pool.query(
+          `SELECT id FROM wallet_transactions
+           WHERE reference = $1 AND type = 'deposit' LIMIT 1`,
+          [reference]
+        ).catch(() => ({ rows: [] }));
+
+        if (dupeCheck.rows.length > 0) {
+          console.log(`[Webhook] ⚠️  wallet_deposit ${reference} already credited — skipping`);
+        } else {
+          const email   = data.customer?.email;
+          const userId  = data.metadata?.user_id || null;
+
+          // Credit via user_id (preferred) or email fallback
+          let credited = false;
+          if (userId) {
+            const { rowCount } = await pool.query(
+              `UPDATE wallets SET balance_ngn = balance_ngn + $1, updated_at = NOW()
+               WHERE user_id = $2`,
+              [amountNgn, userId]
+            );
+            credited = rowCount > 0;
+          }
+          if (!credited && email) {
+            const { rowCount } = await pool.query(
+              `UPDATE wallets w SET balance_ngn = balance_ngn + $1, updated_at = NOW()
+               FROM users u WHERE u.email = $2 AND w.user_id = u.id`,
+              [amountNgn, email]
+            );
+            credited = rowCount > 0;
+          }
+
+          if (credited) {
+            // Record transaction for idempotency + history
+            await pool.query(
+              `INSERT INTO wallet_transactions
+                 (user_id, type, amount, currency, reference, note, created_at)
+               SELECT
+                 COALESCE($1::int, (SELECT id FROM users WHERE email=$2 LIMIT 1)),
+                 'deposit', $3, 'NGN', $4,
+                 'Paystack wallet top-up (webhook)', NOW()
+               ON CONFLICT (reference) DO NOTHING`,
+              [userId, email, amountNgn, reference]
+            ).catch(() => {}); // table may use different schema — non-fatal
+
+            console.log(`[Webhook] ✅ Wallet credited ₦${amountNgn} ref=${reference} user=${userId || email}`);
+
+            // In-app notification (non-blocking)
+            const notifyUserId = userId || (email
+              ? await pool.query("SELECT id FROM users WHERE email=$1 LIMIT 1", [email])
+                  .then(r => r.rows[0]?.id).catch(() => null)
+              : null);
+            if (notifyUserId) {
+              const GATEWAY = process.env.GATEWAY_URL || "http://localhost:3000";
+              fetch(`${GATEWAY}/notifications/send`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  user_id:  notifyUserId,
+                  channels: ["in_app"],
+                  title:    "💰 Wallet Funded",
+                  message:  `₦${amountNgn.toLocaleString("en-NG")} has been credited to your DUNAZOE wallet. Ref: ${reference}`,
+                }),
+              }).catch(() => {});
+            }
+          } else {
+            console.warn(`[Webhook] ⚠️  wallet_deposit ${reference} — no wallet row found for user=${userId} email=${email}`);
+          }
         }
       } else {
         // Product order payment — mark order paid

@@ -103,7 +103,7 @@ export default function WalletPage() {
     setWdError(""); setWdSuccess("");
     if (!wdAmount || parseFloat(wdAmount) < 500) { setWdError("Minimum withdrawal is ₦500."); return; }
     if (!bankDetails?.account_no) {
-      setWdError("No verified bank account found. Please register a bank account in your vendor profile or contact support.");
+      setWdError("NO_BANK_ACCOUNT");
       return;
     }
     setWdLoading(true);
@@ -216,14 +216,26 @@ export default function WalletPage() {
                 </p>
               </div>
             ) : (
-              <div className="alert alert-error" style={{ marginBottom: "16px" }}>
-                ⚠️ No registered bank account found. To enable withdrawals, register a bank account in your{" "}
-                <Link href="/vendor/onboard" style={{ color: "var(--dz-blue)", fontWeight: 700 }}>vendor profile</Link>{" "}
-                or contact support.
+              <div className="alert alert-warning" style={{ marginBottom: "16px" }}>
+                <p style={{ fontWeight: 700, marginBottom: "6px" }}>🏦 No bank account registered</p>
+                <p style={{ fontSize: "0.85rem", marginBottom: "10px" }}>
+                  To enable withdrawals you must add a verified bank account first.
+                  A 48-hour cooling-off period applies for security after adding.
+                </p>
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                  <Link href="/kyc?tab=bank" className="btn btn-primary btn-sm">
+                    🏦 Add Bank Account →
+                  </Link>
+                  <Link href="/kyc" className="btn btn-outline btn-sm">
+                    📋 View KYC Status
+                  </Link>
+                </div>
               </div>
             )}
 
-            {wdError && <div className="alert alert-error" style={{ marginBottom: "12px" }}>⚠️ {wdError}</div>}
+            {wdError && wdError !== "NO_BANK_ACCOUNT" && (
+              <div className="alert alert-error" style={{ marginBottom: "12px" }}>⚠️ {wdError}</div>
+            )}
 
             {bankDetails?.account_no && (
               <form onSubmit={handleWithdraw} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
