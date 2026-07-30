@@ -1,0 +1,101 @@
+/**
+ * Server-side layout for product detail pages.
+ * Exports generateMetadata so OG tags are rendered at request time —
+ * before any client-side JS runs. This lets WhatsApp, Facebook, Twitter,
+ * and Google all pick up the correct product image, title, and price.
+ */
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://dunazoe.com";
+const FALLBACK_IMAGE = `${SITE_URL}/og-default.png`;
+
+export async function generateMetadata({ params }) {
+  const { id } = await params;
+
+  let product = null;
+  try {
+    const res = await fetch(`${API_BASE}/products/${id}`, {
+      next: { revalidate: 300 }, // cache 5 min — products change occasionally
+    });
+    if (res.ok) {
+      const data = await res.json();
+      product = data.product || data;
+    }
+  } catch (_) {
+    // Service unreachable — fall back to generic metadata below
+  }
+
+  if (!product) {
+    return {
+      title: "Product — DUNAZOE",
+      description: "Discover amazing products on DUNAZOE, Nigeria's AI-powered marketplace.",
+      openGraph: {
+        title: "DUNAZOE Marketplace",
+        description: "Shop, sell, and ship on Nigeria's leading AI marketplace.",
+        images: [{ url: FALLBACK_IMAGE, width: 1200, height: 630, alt: "DUNAZOE" }],
+        type: "website",
+        locale: "en_NG",
+        siteName: "DUNAZOE",
+      },
+    };
+  }
+
+  // Pick the best image: first in images array, or image_url field
+  const rawImage =
+    (Array.isArray(product.images) && product.images[0]) ||
+    product.image_url ||
+    product.image ||
+    FALLBACK_IMAGE;
+  // Strip any data-URI blobs (not valid OG images); fall back to default
+  const ogImage = rawImage.startsWith("data:") ? FALLBACK_IMAGE : rawImage;
+
+  const price    = parseFloat(product.price || 0);
+  const currency = "NGN";
+  const title    = `${product.name || "Product"} — DUNAZOE`;
+  const desc     = product.description
+    ? product.description.slice(0, 200)
+    : `Buy ${product.name} on DUNAZOE. Secure payment · Fast delivery · Escrow protected.`;
+
+  const productUrl = `${SITE_URL}/products/${id}`;
+
+  return {
+    title,
+    description: desc,
+    openGraph: {
+      title:       product.name || "Product on DUNAZOE",
+      description: desc,
+      url:         productUrl,
+      type:        "og:type", // will be set to product.item below via twitter/og raw
+      locale:      "en_NG",
+      siteName:    "DUNAZOE",
+      images: [
+        {
+          url:    ogImage,
+          width:  1200,
+          height: 630,
+          alt:    product.name || "Product image",
+        },
+      ],
+    },
+    twitter: {
+      card:        "summary_large_image",
+      title:       product.name || "Product on DUNAZOE",
+      description: desc,
+      images:      [ogImage],
+      site:        "@dunazoe",
+    },
+    // Product-specific structured metadata
+    other: {
+      "og:type":                 "product",
+      "og:price:amount":         price.toFixed(2),
+      "og:price:currency":       currency,
+      "product:price:amount":    price.toFixed(2),
+      "product:price:currency":  currency,
+      "og:availability":         "in stock",
+    },
+  };
+}
+
+export default function ProductDetailLayout({ children }) {
+  return children;
+}

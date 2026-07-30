@@ -63,6 +63,7 @@ export default function CheckoutPage() {
   const [loading,     setLoading]     = useState(false);
   const [error,       setError]       = useState("");
   const [offline,     setOffline]     = useState(false);
+  const [gwStatus,    setGwStatus]    = useState(null); // null | "ok" | "unavailable"
 
   // ── Logistics ───────────────────────────────────────────────────────────────
   const [quotes,         setQuotes]         = useState([]);
@@ -84,6 +85,13 @@ export default function CheckoutPage() {
     const off = () => setOffline(true);
     window.addEventListener("online", go);
     window.addEventListener("offline", off);
+
+    // Check payment gateway configuration
+    fetch("/api/payments/health")
+      .then(r => r.json())
+      .then(d => setGwStatus(d.any_gateway ? "ok" : "unavailable"))
+      .catch(() => setGwStatus(null)); // silently ignore — don't block checkout UI
+
     return () => { window.removeEventListener("online", go); window.removeEventListener("offline", off); };
   }, []);
 
@@ -243,6 +251,12 @@ export default function CheckoutPage() {
       {offline && (
         <div className="alert alert-error" style={{ marginBottom: "20px" }}>
           📡 You're offline. <strong>Payments require a live internet connection.</strong> Please reconnect before placing your order.
+        </div>
+      )}
+      {!offline && gwStatus === "unavailable" && (
+        <div className="alert alert-warning" style={{ marginBottom: "20px" }}>
+          ⚠️ <strong>Payment service is temporarily unavailable.</strong> Our team has been notified. Please try again shortly or{" "}
+          <a href="mailto:support@dunazoe.com" style={{ color: "inherit", fontWeight: 700 }}>contact support</a>.
         </div>
       )}
       {error && <div className="alert alert-error" style={{ marginBottom: "20px" }}>⚠️ {error}</div>}

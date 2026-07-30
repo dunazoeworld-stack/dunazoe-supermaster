@@ -60,17 +60,47 @@ export default function KYCPage() {
   const [idLoading,    setIdLoading]    = useState(false);
   const [idMsg,        setIdMsg]        = useState({ type: "", text: "" });
 
+  const [kycUnavailable, setKycUnavailable] = useState(false);
+  const [userRole,       setUserRole]       = useState("user");
+
   const token = typeof window !== "undefined" ? localStorage.getItem("dunazoe_token") || "" : "";
 
   useEffect(() => {
+    // Determine role for tab defaults
+    try {
+      const u = JSON.parse(localStorage.getItem("dunazoe_user") || "{}");
+      const r = u.role || "user";
+      setUserRole(r);
+      // Vendors start on identity tab; regular users start on bank tab
+      const isVendor = ["vendor","direct_vendor","delivery_vendor"].includes(r);
+      setTab(prev => {
+        const urlTab = typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search).get("tab") : null;
+        if (urlTab && ["status","identity","bank"].includes(urlTab)) return urlTab;
+        return isVendor ? "identity" : "bank";
+      });
+    } catch (_) {}
+
     if (!token) { setLoading(false); return; }
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 6000);
     Promise.allSettled([
-      fetch(`${API}/kyc/status`,        { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
-      fetch(`${API}/kyc/bank-accounts`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+      fetch(`${API}/kyc/status`,        { headers: { Authorization: `Bearer ${token}` }, signal: ctrl.signal }).then(r => r.json()),
+      fetch(`${API}/kyc/bank-accounts`, { headers: { Authorization: `Bearer ${token}` }, signal: ctrl.signal }).then(r => r.json()),
     ]).then(([kycR, bankR]) => {
-      if (kycR.status === "fulfilled" && kycR.value?.success !== false) setKyc(kycR.value);
+      clearTimeout(timer);
+      if (kycR.status === "fulfilled" && kycR.value?.success !== false && !kycR.value?.error?.includes("unavailable")) {
+        setKyc(kycR.value);
+      } else if (kycR.status === "rejected" || kycR.value?.error?.includes("unavailable")) {
+        setKycUnavailable(true);
+      }
       if (bankR.status === "fulfilled" && bankR.value?.accounts) setAccounts(bankR.value.accounts);
+    }).catch(() => {
+      clearTimeout(timer);
+      setKycUnavailable(true);
     }).finally(() => setLoading(false));
+
+    return () => { ctrl.abort(); clearTimeout(timer); };
   }, [token]);
 
   async function submitBVN(e) {
@@ -149,11 +179,18 @@ export default function KYCPage() {
   const currentLevel = kyc?.kyc_level ?? 0;
   const levelInfo    = LEVELS[currentLevel] || LEVELS[0];
 
-  const TABS = [
-    { id: "status",   icon: "📋", label: "KYC Status" },
-    { id: "identity", icon: "🪪", label: "Verify Identity" },
-    { id: "bank",     icon: "🏦", label: "Bank Accounts" },
-  ];
+  const isVendor = ["vendor","direct_vendor","delivery_vendor"].includes(userRole);
+  // Vendors see all 3 tabs (full KYC). Regular users see identity + bank only (no status dashboard needed).
+  const TABS = isVendor
+    ? [
+        { id: "status",   icon: "📋", label: "KYC Status" },
+        { id: "identity", icon: "🪪", label: "Verify Identity" },
+        { id: "bank",     icon: "🏦", label: "Bank Account" },
+      ]
+    : [
+        { id: "bank",     icon: "🏦", label: "Bank Account" },
+        { id: "identity", icon: "🪪", label: "Identity Verification" },
+      ];
 
   return (
     <PageShell title="KYC Verification" icon="🛡️" authRequired={true}
@@ -173,6 +210,13 @@ export default function KYCPage() {
           </button>
         ))}
       </div>
+
+      {kycUnavailable && (
+        <div className="alert alert-warning" style={{ marginBottom: "16px" }}>
+          ⚠️ <strong>KYC service is temporarily unavailable.</strong> Identity verification is paused.
+          You can still add or view your bank accounts below.
+        </div>
+      )}
 
       {loading ? (
         <div style={{ display: "flex", justifyContent: "center", padding: "40px" }}><div className="dz-spinner" /></div>
