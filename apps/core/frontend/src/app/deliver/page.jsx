@@ -27,8 +27,15 @@ export default function DeliverPage() {
   const [isAgent,      setIsAgent]     = useState(false);
   const [userRole,     setUserRole]    = useState(null);
 
-  // Registration form
-  const [regForm,    setRegForm]    = useState({ lat: "", lng: "", pickup_address: "", phone: "", service_area: "local" });
+  // Registration form — expanded with all required fields
+  const [regForm, setRegForm] = useState({
+    lat: "", lng: "", pickup_address: "", phone: "", service_area: "local",
+    whatsapp: "", email: "", home_address: "", business_address: "",
+    cac_name: "", vehicle_type: "motorcycle", vehicle_plate: "",
+    years_experience: "", profile_photo_url: "", id_doc_url: "",
+    agree_terms: false,
+  });
+  const [photoUploading, setPhotoUploading] = useState(false);
   const [regLoading, setRegLoading] = useState(false);
   const [regMsg,     setRegMsg]     = useState({ type: "", text: "" });
 
@@ -93,12 +100,22 @@ export default function DeliverPage() {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          lat:            parseFloat(regForm.lat),
-          lng:            parseFloat(regForm.lng),
-          pickup_address: regForm.pickup_address,
-          phone:          regForm.phone,
-          service_area:   regForm.service_area,
-          can_deliver:    true,
+          lat:              parseFloat(regForm.lat),
+          lng:              parseFloat(regForm.lng),
+          pickup_address:   regForm.pickup_address,
+          home_address:     regForm.home_address,
+          business_address: regForm.business_address || undefined,
+          phone:            regForm.phone,
+          whatsapp:         regForm.whatsapp || regForm.phone,
+          email:            regForm.email,
+          cac_name:         regForm.cac_name || undefined,
+          vehicle_type:     regForm.vehicle_type,
+          vehicle_plate:    regForm.vehicle_plate || undefined,
+          years_experience: regForm.years_experience ? parseInt(regForm.years_experience) : undefined,
+          profile_photo_url: regForm.profile_photo_url || undefined,
+          id_doc_url:       regForm.id_doc_url || undefined,
+          service_area:     regForm.service_area,
+          can_deliver:      true,
         }),
       });
       const d = await res.json();
@@ -375,52 +392,160 @@ export default function DeliverPage() {
                 )}
                 <div className="card"><div className="card-body">
                   <h3 style={{ fontWeight: 700, marginBottom: "4px" }}>🚀 Become a DUNAZOE Delivery Vendor</h3>
-                  <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", marginBottom: "16px" }}>
+                  <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", marginBottom: "12px" }}>
                     Earn 2% commission on every delivery + ₦5,000 milestone bonus every 100 deliveries.
-                    DUNAZOE Express uses a Delivery Vendor First policy — you get priority over courier services.
                   </p>
                   <div className="alert alert-success" style={{ marginBottom: "16px", fontSize: "0.82rem" }}>
-                    ✅ Your vendor account has been verified. You are eligible to register as a Delivery Vendor.
+                    ✅ Your vendor account is verified. You are eligible to register as a Delivery Vendor.
                   </div>
-                  <form onSubmit={handleRegister} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+
+                  <form onSubmit={handleRegister} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+
+                    {/* ── SECTION 1: Contact Details ─── */}
+                    <p style={{ fontWeight: 700, fontSize: "0.88rem", borderBottom: "1px solid var(--border)", paddingBottom: "6px" }}>📞 Contact Details</p>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                       <div className="form-group">
-                        <label className="form-label">Latitude (auto-detected)</label>
-                        <input className="form-input" type="number" step="0.000001" required
-                          value={regForm.lat} onChange={e => setRegForm(f => ({ ...f, lat: e.target.value }))} placeholder="e.g. 6.5244" />
+                        <label className="form-label">Phone Number *</label>
+                        <input className="form-input" type="tel" required value={regForm.phone}
+                          onChange={e => setRegForm(f => ({ ...f, phone: e.target.value }))} placeholder="08012345678" />
                       </div>
                       <div className="form-group">
-                        <label className="form-label">Longitude (auto-detected)</label>
-                        <input className="form-input" type="number" step="0.000001" required
-                          value={regForm.lng} onChange={e => setRegForm(f => ({ ...f, lng: e.target.value }))} placeholder="e.g. 3.3792" />
+                        <label className="form-label">WhatsApp Number *</label>
+                        <input className="form-input" type="tel" required value={regForm.whatsapp}
+                          onChange={e => setRegForm(f => ({ ...f, whatsapp: e.target.value }))} placeholder="08012345678" />
                       </div>
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Your Pickup Address *</label>
+                      <label className="form-label">Email Address *</label>
+                      <input className="form-input" type="email" required value={regForm.email}
+                        onChange={e => setRegForm(f => ({ ...f, email: e.target.value }))} placeholder="you@example.com" />
+                    </div>
+
+                    {/* ── SECTION 2: Address ─── */}
+                    <p style={{ fontWeight: 700, fontSize: "0.88rem", borderBottom: "1px solid var(--border)", paddingBottom: "6px" }}>📍 Address Details</p>
+                    <div className="form-group">
+                      <label className="form-label">Home Address *</label>
+                      <input className="form-input" required value={regForm.home_address}
+                        onChange={e => setRegForm(f => ({ ...f, home_address: e.target.value }))}
+                        placeholder="e.g. 5 Abeokuta Street, Agege, Lagos" />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Business / Pickup Address *</label>
                       <input className="form-input" required value={regForm.pickup_address}
                         onChange={e => setRegForm(f => ({ ...f, pickup_address: e.target.value }))}
                         placeholder="e.g. 15 Bode Thomas Street, Surulere, Lagos" />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Phone Number *</label>
-                      <input className="form-input" type="tel" required value={regForm.phone}
-                        onChange={e => setRegForm(f => ({ ...f, phone: e.target.value }))} placeholder="e.g. 08012345678" />
+                      <label className="form-label">Business Address <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>(optional)</span></label>
+                      <input className="form-input" value={regForm.business_address}
+                        onChange={e => setRegForm(f => ({ ...f, business_address: e.target.value }))}
+                        placeholder="Leave blank if same as pickup address" />
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                      <div className="form-group">
+                        <label className="form-label">Latitude (GPS)</label>
+                        <input className="form-input" type="number" step="0.000001" required
+                          value={regForm.lat} onChange={e => setRegForm(f => ({ ...f, lat: e.target.value }))} placeholder="6.5244" />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Longitude (GPS)</label>
+                        <input className="form-input" type="number" step="0.000001" required
+                          value={regForm.lng} onChange={e => setRegForm(f => ({ ...f, lng: e.target.value }))} placeholder="3.3792" />
+                      </div>
+                    </div>
+
+                    {/* ── SECTION 3: Vehicle & Experience ─── */}
+                    <p style={{ fontWeight: 700, fontSize: "0.88rem", borderBottom: "1px solid var(--border)", paddingBottom: "6px" }}>🚗 Vehicle & Experience</p>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                      <div className="form-group">
+                        <label className="form-label">Vehicle Type *</label>
+                        <select className="form-input" required value={regForm.vehicle_type}
+                          onChange={e => setRegForm(f => ({ ...f, vehicle_type: e.target.value }))}>
+                          <option value="motorcycle">Motorcycle / Okada</option>
+                          <option value="bicycle">Bicycle / Keke</option>
+                          <option value="car">Car / Saloon</option>
+                          <option value="van">Van / Bus</option>
+                          <option value="truck">Truck / Lorry</option>
+                          <option value="foot">On Foot (local only)</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Plate Number <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>(optional)</span></label>
+                        <input className="form-input" value={regForm.vehicle_plate}
+                          onChange={e => setRegForm(f => ({ ...f, vehicle_plate: e.target.value.toUpperCase() }))}
+                          placeholder="e.g. LND 123 AA" />
+                      </div>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                      <div className="form-group">
+                        <label className="form-label">Years of Delivery Experience</label>
+                        <select className="form-input" value={regForm.years_experience}
+                          onChange={e => setRegForm(f => ({ ...f, years_experience: e.target.value }))}>
+                          <option value="">Select…</option>
+                          <option value="0">Less than 1 year</option>
+                          <option value="1">1–2 years</option>
+                          <option value="3">3–5 years</option>
+                          <option value="5">5+ years</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Service Area *</label>
+                        <select className="form-input" required value={regForm.service_area}
+                          onChange={e => setRegForm(f => ({ ...f, service_area: e.target.value }))}>
+                          <option value="local">Local (same city)</option>
+                          <option value="regional">Regional (same state)</option>
+                          <option value="sw_nigeria">South-West Nigeria</option>
+                          <option value="nationwide">Nationwide</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* ── SECTION 4: Business Info ─── */}
+                    <p style={{ fontWeight: 700, fontSize: "0.88rem", borderBottom: "1px solid var(--border)", paddingBottom: "6px" }}>🏢 Business Info <span style={{ fontWeight: 400, color: "var(--text-muted)" }}>(optional)</span></p>
+                    <div className="form-group">
+                      <label className="form-label">CAC Business Name <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>(if registered)</span></label>
+                      <input className="form-input" value={regForm.cac_name}
+                        onChange={e => setRegForm(f => ({ ...f, cac_name: e.target.value }))}
+                        placeholder="Registered business name (optional)" />
+                    </div>
+
+                    {/* ── SECTION 5: Photo Upload ─── */}
+                    <p style={{ fontWeight: 700, fontSize: "0.88rem", borderBottom: "1px solid var(--border)", paddingBottom: "6px" }}>📷 Photo & ID Upload</p>
+                    <div className="form-group">
+                      <label className="form-label">Profile Photo URL <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>(passport-style photo)</span></label>
+                      <input className="form-input" type="url" value={regForm.profile_photo_url}
+                        onChange={e => setRegForm(f => ({ ...f, profile_photo_url: e.target.value }))}
+                        placeholder="https://… (upload to Cloudinary or imgbb first)" />
+                      <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "4px" }}>
+                        Upload your passport photo to a free image host (imgbb.com, postimages.org) and paste the URL here.
+                      </p>
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Service Area</label>
-                      <select className="form-input" value={regForm.service_area}
-                        onChange={e => setRegForm(f => ({ ...f, service_area: e.target.value }))}>
-                        <option value="local">Local (same city only)</option>
-                        <option value="regional">Regional (same state, 50km radius)</option>
-                        <option value="sw_nigeria">South-West Nigeria</option>
-                        <option value="nationwide">Nationwide (all 36 states)</option>
-                      </select>
+                      <label className="form-label">Government ID Photo URL <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>(NIN slip, voter card, or driver's licence)</span></label>
+                      <input className="form-input" type="url" value={regForm.id_doc_url}
+                        onChange={e => setRegForm(f => ({ ...f, id_doc_url: e.target.value }))}
+                        placeholder="https://… (image of your ID)" />
                     </div>
+
+                    {/* ── SECTION 6: Agreement ─── */}
                     <div className="alert alert-info" style={{ fontSize: "0.78rem" }}>
-                      ✅ By registering, you agree to: maintain a 30-minute response time on assigned deliveries,
-                      upload delivery photo proof for every completed order, and maintain a 4.5+ star rating.
+                      <strong>Delivery Vendor Agreement</strong><br />
+                      By registering you agree to:
+                      <ul style={{ margin: "6px 0 0 16px", lineHeight: 1.7 }}>
+                        <li>Respond to assigned deliveries within 30 minutes</li>
+                        <li>Upload photo proof for every completed delivery</li>
+                        <li>Maintain a minimum 4.5-star rating</li>
+                        <li>Comply with DUNAZOE Express delivery standards</li>
+                      </ul>
                     </div>
-                    <button type="submit" disabled={regLoading} className="btn btn-primary btn-lg" style={{ justifyContent: "center" }}>
+                    <label style={{ display: "flex", gap: "10px", alignItems: "flex-start", cursor: "pointer" }}>
+                      <input type="checkbox" required checked={regForm.agree_terms}
+                        onChange={e => setRegForm(f => ({ ...f, agree_terms: e.target.checked }))}
+                        style={{ marginTop: "2px", accentColor: "var(--dz-blue)", flexShrink: 0 }} />
+                      <span style={{ fontSize: "0.84rem" }}>I agree to the Delivery Vendor Agreement and DUNAZOE Terms of Service.</span>
+                    </label>
+
+                    <button type="submit" disabled={regLoading || !regForm.agree_terms} className="btn btn-primary btn-lg" style={{ justifyContent: "center" }}>
                       {regLoading ? "Registering…" : "⚡ Register as Delivery Vendor"}
                     </button>
                   </form>

@@ -16,6 +16,14 @@ export default function VendorDashboardPage() {
   const [verification, setVerification] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
 
+  // Edit / Delete product state
+  const [editProduct,  setEditProduct]  = useState(null);  // null = closed
+  const [editForm,     setEditForm]     = useState({});
+  const [editLoading,  setEditLoading]  = useState(false);
+  const [editMsg,      setEditMsg]      = useState({ type: "", text: "" });
+  const [deleteTarget, setDeleteTarget] = useState(null);  // product being confirmed for delete
+  const [deleteLoading,setDeleteLoading]= useState(false);
+
   useEffect(() => {
     let u = {};
     try {
@@ -76,6 +84,70 @@ export default function VendorDashboardPage() {
     ? Math.min(100, Math.round(((totalOrders - prevTarget) / (currentMilestone.target - prevTarget)) * 100))
     : 100;
 
+  // ── Product CRUD ────────────────────────────────────────────────────────────
+  function openEdit(p) {
+    setEditProduct(p);
+    setEditForm({
+      name:        p.name        || "",
+      description: p.description || "",
+      price:       p.price       || "",
+      stock:       p.stock       ?? "",
+      category:    p.category    || "",
+      weight:      p.weight      || "",
+    });
+    setEditMsg({ type: "", text: "" });
+  }
+
+  async function handleEditSave(e) {
+    e.preventDefault();
+    if (!editProduct) return;
+    const token = localStorage.getItem("dunazoe_token");
+    setEditLoading(true); setEditMsg({ type: "", text: "" });
+    try {
+      const res = await fetch(`${API}/products/${editProduct.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          name:        editForm.name,
+          description: editForm.description,
+          price:       parseFloat(editForm.price),
+          stock:       editForm.stock !== "" ? parseInt(editForm.stock) : undefined,
+          category:    editForm.category,
+          weight:      editForm.weight !== "" ? parseFloat(editForm.weight) : undefined,
+        }),
+      });
+      const d = await res.json();
+      if (d.success || res.ok) {
+        setProducts(prev => prev.map(p => p.id === editProduct.id ? { ...p, ...editForm, price: parseFloat(editForm.price) } : p));
+        setEditMsg({ type: "success", text: "Product updated successfully." });
+        setTimeout(() => setEditProduct(null), 1200);
+      } else {
+        setEditMsg({ type: "error", text: d.error || "Update failed. Please try again." });
+      }
+    } catch (_) { setEditMsg({ type: "error", text: "Connection error. Please try again." }); }
+    finally { setEditLoading(false); }
+  }
+
+  async function handleSoftDelete(p) {
+    const token = localStorage.getItem("dunazoe_token");
+    setDeleteLoading(true);
+    try {
+      const res = await fetch(`${API}/products/${p.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status: "deleted" }),
+      });
+      const d = await res.json();
+      if (d.success || res.ok) {
+        setProducts(prev => prev.filter(pr => pr.id !== p.id));
+        setDeleteTarget(null);
+      } else {
+        alert(d.error || "Could not remove product. Please try again.");
+      }
+    } catch (_) { alert("Connection error. Please try again."); }
+    finally { setDeleteLoading(false); }
+  }
+
   function copyLink(p) {
     const link = p.shareable_link ? `https://${p.shareable_link}` : `${window.location.origin}/products/${p.id}`;
     navigator.clipboard?.writeText(link).then(() => {
@@ -111,7 +183,6 @@ export default function VendorDashboardPage() {
           <span style={{ fontFamily: "monospace", fontWeight: 700, fontSize: "0.85rem", color: "var(--dz-blue)", background: "rgba(0,163,255,0.08)", padding: "3px 10px", borderRadius: "6px", border: "1px solid rgba(0,163,255,0.2)" }}>
             {vendorId}
           </span>
-          <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>Raw ID: {user?.vendor_id || user?.id}</span>
         </div>
       )}
 
@@ -272,18 +343,27 @@ export default function VendorDashboardPage() {
                     {p.category || "—"}
                   </p>
                   <p className="text-gradient" style={{ fontWeight: 800, fontSize: "1rem" }}>₦{parseFloat(p.price || 0).toLocaleString("en-NG")}</p>
-                  {/* Share & copy buttons */}
+                  {/* Action buttons row 1: Edit / Delete */}
                   <div style={{ display: "flex", gap: "6px", marginTop: "4px" }}>
-                    <button onClick={() => shareProduct(p)} className="btn btn-ghost btn-sm" style={{ flex: 1, fontSize: "0.72rem", padding: "5px" }}>
-                      📤 Share
+                    <button onClick={() => openEdit(p)} className="btn btn-outline btn-sm" style={{ flex: 1, fontSize: "0.72rem", padding: "5px" }}>
+                      ✏️ Edit
                     </button>
-                    <button onClick={() => copyLink(p)} className="btn btn-outline btn-sm" style={{ flex: 1, fontSize: "0.72rem", padding: "5px" }}>
-                      {copiedId === p.id ? "✅ Copied!" : "🔗 Copy"}
+                    <button onClick={() => setDeleteTarget(p)} className="btn btn-ghost btn-sm" style={{ flex: 1, fontSize: "0.72rem", padding: "5px", color: "var(--danger)" }}>
+                      🗑️ Remove
                     </button>
                   </div>
-                  <Link href={`/products/${p.id}`} className="btn btn-ghost btn-sm" style={{ width: "100%", textAlign: "center", fontSize: "0.72rem" }}>
-                    View Listing →
-                  </Link>
+                  {/* Action buttons row 2: Share / Copy / View */}
+                  <div style={{ display: "flex", gap: "6px" }}>
+                    <button onClick={() => shareProduct(p)} className="btn btn-ghost btn-sm" style={{ flex: 1, fontSize: "0.68rem", padding: "4px" }}>
+                      📤 Share
+                    </button>
+                    <button onClick={() => copyLink(p)} className="btn btn-ghost btn-sm" style={{ flex: 1, fontSize: "0.68rem", padding: "4px" }}>
+                      {copiedId === p.id ? "✅" : "🔗 Copy"}
+                    </button>
+                    <Link href={`/products/${p.id}`} className="btn btn-ghost btn-sm" style={{ flex: 1, fontSize: "0.68rem", padding: "4px", textAlign: "center" }}>
+                      👁 View
+                    </Link>
+                  </div>
                 </div>
               </div>
             );
@@ -324,6 +404,76 @@ export default function VendorDashboardPage() {
             })}
           </div>
         </>
+      )}
+
+      {/* ── EDIT PRODUCT MODAL ──────────────────────────────────────────────── */}
+      {editProduct && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}
+          onClick={e => { if (e.target === e.currentTarget) setEditProduct(null); }}>
+          <div className="card" style={{ width: "100%", maxWidth: "480px", maxHeight: "90vh", overflow: "auto" }}>
+            <div className="card-body">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                <h3 style={{ fontWeight: 700 }}>✏️ Edit Product</h3>
+                <button onClick={() => setEditProduct(null)} style={{ background: "none", border: "none", fontSize: "1.2rem", cursor: "pointer", color: "var(--text-muted)" }}>✕</button>
+              </div>
+              {editMsg.text && (
+                <div className={`alert alert-${editMsg.type === "success" ? "success" : "error"}`} style={{ marginBottom: "14px" }}>
+                  {editMsg.text}
+                </div>
+              )}
+              <form onSubmit={handleEditSave} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                {[
+                  { key: "name",        label: "Product Name *",    type: "text",   required: true },
+                  { key: "price",       label: "Price (₦) *",       type: "number", required: true, min: "0", step: "0.01" },
+                  { key: "stock",       label: "Stock / Quantity",  type: "number", min: "0", step: "1" },
+                  { key: "category",    label: "Category",          type: "text" },
+                  { key: "weight",      label: "Weight (kg)",       type: "number", min: "0", step: "0.01" },
+                ].map(({ key, label, type, required, min, step }) => (
+                  <div key={key} className="form-group">
+                    <label className="form-label">{label}</label>
+                    <input className="form-input" type={type} required={!!required} min={min} step={step}
+                      value={editForm[key] ?? ""}
+                      onChange={e => setEditForm(f => ({ ...f, [key]: e.target.value }))} />
+                  </div>
+                ))}
+                <div className="form-group">
+                  <label className="form-label">Description</label>
+                  <textarea className="form-input" rows={3} style={{ resize: "vertical" }}
+                    value={editForm.description || ""}
+                    onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))} />
+                </div>
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <button type="button" onClick={() => setEditProduct(null)} className="btn btn-ghost" style={{ flex: 1 }}>Cancel</button>
+                  <button type="submit" disabled={editLoading} className="btn btn-primary" style={{ flex: 2 }}>
+                    {editLoading ? "Saving…" : "💾 Save Changes"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── DELETE CONFIRMATION MODAL ───────────────────────────────────────── */}
+      {deleteTarget && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}>
+          <div className="card" style={{ width: "100%", maxWidth: "380px" }}>
+            <div className="card-body" style={{ textAlign: "center", padding: "28px 24px" }}>
+              <span style={{ fontSize: "2.4rem", display: "block", marginBottom: "12px" }}>🗑️</span>
+              <h3 style={{ fontWeight: 700, marginBottom: "8px" }}>Remove Product?</h3>
+              <p style={{ fontSize: "0.88rem", color: "var(--text-secondary)", marginBottom: "20px" }}>
+                "<strong>{deleteTarget.name}</strong>" will be hidden from buyers. Admins can restore it later.
+              </p>
+              <div style={{ display: "flex", gap: "10px" }}>
+                <button onClick={() => setDeleteTarget(null)} className="btn btn-ghost" style={{ flex: 1 }}>Keep It</button>
+                <button onClick={() => handleSoftDelete(deleteTarget)} disabled={deleteLoading}
+                  className="btn btn-primary" style={{ flex: 1, background: "var(--danger)", border: "none" }}>
+                  {deleteLoading ? "Removing…" : "Yes, Remove"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       <style>{`

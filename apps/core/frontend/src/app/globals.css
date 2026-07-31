@@ -202,9 +202,26 @@ body {
   .container-sm, .container-md { padding: 0 var(--sp-4); }
   .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
   .grid-auto { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+  /* Checkout: stack sidebar under form on mobile */
+  .checkout-grid { grid-template-columns: 1fr !important; }
+  /* Admin: prevent horizontal overflow */
+  .admin-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  /* General overflow safety */
+  .card { max-width: 100%; overflow-x: hidden; word-break: break-word; }
+  table { min-width: 480px; }
 }
 @media (max-width: 480px) {
-  .btn-lg { padding: 13px 24px; }
+  .btn-lg { padding: 13px 20px; font-size: 0.92rem; }
+  /* Smaller grid cards on very small phones (Samsung A10, Infinix Smart) */
+  .grid-auto { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  /* Tab bars: allow wrapping */
+  [style*="display: flex"][style*="gap: 8px"] { flex-wrap: wrap; }
+  /* Form inputs: prevent zoom on focus (iOS) */
+  .form-input { font-size: 16px !important; }
+  /* Page header: reduce font size */
+  .page-title { font-size: 1.3rem; }
+  /* Stats grids: 2 columns */
+  .stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
 }
 
 /* ── FOCUS & ACCESSIBILITY ── */
