@@ -114,6 +114,7 @@ BUILD_VERSION = "2.1.0"
 GATEWAY_URL = "http://localhost:3000"
 NEXT_PUBLIC_APP_URL = "https://dunazoeworld-stack.dunazoeworld.replit.app"
 NODE_ENV = "development"
+GH_TOKEN = "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"
 
 [deployment]
 deploymentTarget = "autoscale"
