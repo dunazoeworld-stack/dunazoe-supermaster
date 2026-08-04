@@ -27,7 +27,7 @@ In Paystack dashboard:
 
 ### 3. Set environment variable
 ```bash
-PAYSTACK_LSK=sk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+PAYSTACK_LSK=YOUR_PAYSTACK_LIVE_SECRET_KEY_HERE
 ```
 
 ### 4. Verify health
@@ -44,7 +44,7 @@ Visit `/deploy/health` and check **Payment Gateway** status.
 
 ### 2. Set environment variable
 ```bash
-STRIPE_SECRET_KEY=sk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+STRIPE_SECRET_KEY=YOUR_STRIPE_LIVE_SECRET_KEY_HERE
 ```
 
 ---
