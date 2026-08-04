@@ -5,7 +5,12 @@
  * and Google all pick up the correct product image, title, and price.
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+// Use relative URL for server-side fetch within the same Next.js process,
+// or fall back to the configured API URL (never hardcode localhost).
+const _origin = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL
+  ? `https://${process.env.VERCEL_URL || "dunazoe.com"}`
+  : "http://localhost:5000";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || `${_origin}/api`;
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://dunazoe.com";
 const FALLBACK_IMAGE = `${SITE_URL}/og-default.png`;
 
@@ -65,7 +70,7 @@ export async function generateMetadata({ params }) {
       title:       product.name || "Product on DUNAZOE",
       description: desc,
       url:         productUrl,
-      type:        "og:type", // will be set to product.item below via twitter/og raw
+      type:        "website",
       locale:      "en_NG",
       siteName:    "DUNAZOE",
       images: [

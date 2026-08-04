@@ -39,29 +39,33 @@ export default function CartPage() {
           <Link href="/products" className="btn btn-primary">🛒 Start Shopping</Link>
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "24px", alignItems: "start" }}>
+        <div className="cart-layout">
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
             {cart.map(item => (
               <div key={item.id} className="card">
-                <div className="card-body" style={{ display: "flex", gap: "14px", alignItems: "center" }}>
+                <div className="card-body" style={{ display: "flex", gap: "14px", alignItems: "flex-start" }}>
                   <div style={{ width: "64px", height: "64px", borderRadius: "10px", background: item.images ? `url(${item.images}) center/cover` : "var(--bg-3)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
                     {!item.images && <Image src="/assets/dunazoe-logo.jpg" alt="" width={32} height={32} style={{ borderRadius: "6px", opacity: 0.3 }} />}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ fontWeight: 600, fontSize: "0.9rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</p>
-                    <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>₦{parseFloat(item.price || 0).toLocaleString("en-NG")}</p>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <button onClick={() => updateQty(item.id, -1)} className="btn btn-ghost btn-sm" style={{ padding: "4px 10px" }}>−</button>
-                    <span style={{ fontWeight: 700, minWidth: "20px", textAlign: "center" }}>{item.qty || 1}</span>
-                    <button onClick={() => updateQty(item.id, 1)} className="btn btn-ghost btn-sm" style={{ padding: "4px 10px" }}>+</button>
-                    <button onClick={() => remove(item.id)} className="btn btn-danger btn-sm" style={{ padding: "4px 10px" }}>✕</button>
+                    <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: "10px" }}>₦{parseFloat(item.price || 0).toLocaleString("en-NG")} each</p>
+                    {/* Quantity controls — mobile-friendly large touch targets */}
+                    <div className="cart-qty-row">
+                      <button onClick={() => updateQty(item.id, -1)} className="btn btn-ghost cart-qty-btn" aria-label="Decrease quantity">−</button>
+                      <span className="cart-qty-val">{item.qty || 1}</span>
+                      <button onClick={() => updateQty(item.id, 1)} className="btn btn-ghost cart-qty-btn" aria-label="Increase quantity">+</button>
+                      <span style={{ flex: 1, fontWeight: 700, fontSize: "0.9rem", textAlign: "right", paddingRight: "4px" }}>
+                        ₦{(parseFloat(item.price || 0) * (item.qty || 1)).toLocaleString("en-NG")}
+                      </span>
+                      <button onClick={() => remove(item.id)} className="btn btn-danger btn-sm cart-remove-btn" aria-label="Remove item">✕</button>
+                    </div>
                   </div>
                 </div>
               </div>
             ))}
           </div>
-          <div className="card" style={{ minWidth: "240px", position: "sticky", top: "80px" }}>
+          <div className="card cart-summary">
             <div className="card-body">
               <p style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: "16px" }}>Order Summary</p>
               <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "16px" }}>
@@ -82,6 +86,58 @@ export default function CartPage() {
             </div>
           </div>
         </div>
+        <style>{`
+          .cart-layout {
+            display: grid;
+            grid-template-columns: 1fr 280px;
+            gap: 24px;
+            align-items: start;
+          }
+          .cart-summary { position: sticky; top: 80px; }
+          .cart-qty-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+          }
+          .cart-qty-btn {
+            min-width: 38px;
+            min-height: 38px;
+            padding: 0;
+            font-size: 1.1rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+          }
+          .cart-qty-val {
+            font-weight: 700;
+            min-width: 28px;
+            text-align: center;
+            font-size: 1rem;
+          }
+          .cart-remove-btn {
+            min-width: 34px;
+            min-height: 34px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+          }
+          @media (max-width: 640px) {
+            .cart-layout {
+              grid-template-columns: 1fr;
+            }
+            .cart-summary {
+              position: static;
+            }
+            .cart-qty-btn {
+              min-width: 44px;
+              min-height: 44px;
+            }
+          }
+        `}</style>
       )}
     </PageShell>
   );
