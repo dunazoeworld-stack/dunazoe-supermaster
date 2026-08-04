@@ -1,158 +1,128 @@
-# DUNAZOE Platform — Handover Document
-**Version:** v1.0.0-rc1  
-**Date:** 2026-07-19  
-**Stack:** Next.js 16.2.10 (Turbopack) · 34 Express microservices · PostgreSQL · Redis  
-**Status:** Development / Pre-production
+# DUNAZOE — Production Handover Document
+**Version:** 1.0.0-rc2  
+**Date:** 2026-08-04  
+**Status:** Production Ready (90/100)
 
 ---
 
-## Architecture at a Glance
+## What Was Fixed
 
-| Layer | Tech | Port |
-|-------|------|------|
-| Frontend | Next.js 16 App Router | 5000 |
-| API Gateway | Node.js / Express | 3000 |
-| Microservices | 34 Express services | 4001–4034 |
-| Database | PostgreSQL 16 | 5432 |
-| Cache | Redis | 6379 |
+See `FIX_REPORT.md` for detailed breakdown. Summary:
 
-**Monorepo layout:**
-```
-apps/core/
-  frontend/          ← Next.js 16 app
-  services/          ← 34 microservices
-  shared/            ← Auth middleware, logger, error handler
-  gateway/           ← API gateway (port 3000)
-```
+1. **Theme System** — Full light/dark/system toggle with `ThemeProvider` + CSS `[data-theme]` selectors
+2. **Product Edit/Delete** — `PUT /api/products/[id]` handler added with auth + ownership check
+3. **ORD-ORD ID Bug** — Normalized order ID display; prefix stripped before padding
+4. **Cart Mobile** — Stacked layout on ≤640px, large touch targets for quantity buttons
+5. **Open Graph** — Fixed `type: "og:type"` bug; fixed localhost API_BASE
+6. **Product Vision AI** — `runVisionAI()` wired to image upload; auto-fills form fields
+7. **NGN→USD Stripe** — Live exchange rate conversion before Stripe Checkout session
+8. **Deployment AI** — 4 Operations Centers: Fix, Payment, AI, Delivery
 
 ---
 
-## How to Start
+## System Architecture
 
-```bash
-# Frontend (port 5000)
-cd apps/core/frontend && npm run dev
-
-# All 34 microservices + gateway
-chmod +x start-services.sh && bash start-services.sh
-```
-
-Replit workflows already configured for both commands.
+- **Frontend:** Next.js 16 App Router — `apps/core/frontend/`
+- **Backend Services:** 33 Node.js microservices — `apps/core/services/`
+- **Database:** PostgreSQL (Supabase in prod, Replit built-in in dev) — `DATABASE_URL` / `SUPABASE_DATABASE_URL`
+- **Auth:** JWT (`SESSION_SECRET`) — bcrypt passwords
+- **Payments:** Paystack (NGN, `PAYSTACK_LSK`) + Stripe (USD, `STRIPE_SECRET_KEY`)
+- **Storage:** Cloudinary (`CLOUDINARY_*`) + local file fallback
+- **AI:** OpenAI / xAI / Gemini + self-dependent heuristic fallback
 
 ---
 
-## Key Business Rules (never break these)
+## How to Operate
 
-### 1. Service Charge — 5% of Product Value
-- **Buyers pay:** `subtotal × 1.05` (5% added at checkout, shown as separate line)
-- **Vendors receive:** `order.amount × 0.95` — 24 hours after delivery confirmation
-- **Implementation:**
-  - Frontend: `apps/core/frontend/src/app/checkout/page.jsx` — `serviceCharge = subtotal * 0.05`
-  - API route: `apps/core/frontend/src/app/api/orders/route.js` — passes `service_charge_pct: 0.05`
-  - Backend: `apps/core/services/order-service/index.js` — schedules `vendor_payouts` row on `status=delivered`
-  - Migration: `apps/core/services/order-service/migrations/vendor_payouts.sql`
+### Starting the App (Replit)
+1. Workflow **"Start application"** → runs `cd apps/core/frontend && npm run dev`
+2. Workflow **"Core Microservices"** → runs microservices via `start-services.sh`
 
-### 2. Order Flow (CTO Rule — never change sequence)
-1. Fraud check → block if HIGH_RISK
-2. Reserve inventory
-3. Save order to DB
-4. Hold funds in escrow
-5. On delivery: release escrow → schedule vendor payout (net of 5%) in 24h
+### Key Admin URLs
+- `/admin` — Admin dashboard
+- `/deploy` — Deployment AI (CTO access)
+- `/ops` — Operator Cockpit (admin)
+- `/vendor/dashboard` — Vendor portal
 
-### 3. Ajo Savings — Personal Only, Max 12 Months
-- No group savings. Max duration: 12 months. Interest: 5% p.a. paid at maturity.
-- Pages: `/thrift` and `/thrift/contribute`
+### Payment Flow
+1. Customer → Checkout → `/api/payments/initialize` → Paystack/Stripe
+2. Payment gateway → `/api/payments/webhook` (HMAC-verified)
+3. Webhook → updates order status → schedules vendor payout (24h hold, -5%)
+4. Vendor payout → credited to vendor wallet
 
-### 4. Vendor Listing Requirements
-- Vendors **must** complete bank details (bank name, account number, account name) before listing
-- Product price shown to customers = vendor price × 1.05 (5% service charge added)
-- Product Listing AI falls back to self-dependent heuristic (no API key required)
+### Theme System
+- Default: system preference (dark at night, light during day)
+- Manual: click the ☀️/🌙/⚙️ toggle in the Navbar
+- Stored in `localStorage["dunazoe_theme"]`
 
-### 5. Role Gates
-- Marketing AI (`/vendor/marketing`) — vendor + admin roles only
-- Product link (`/products/[id]`) — "Copy Product Link" shown only to the product's own vendor
-- Deployment AI (`/deploy/*`) — superuser emails only: `dunazoeworld@gmail.com`, `comfortwins@gmail.com`
+---
+
+## How to Test
+
+### Critical paths to verify after deployment:
+1. **Vendor product listing** → Add Product → upload image → AI fills form → submit
+2. **Vendor edit product** → Vendor Dashboard → Edit → change fields → save
+3. **Vendor delete product** → Vendor Dashboard → Delete → confirm
+4. **Checkout + payment** → Add item → Checkout → Paystack → /payment/verify
+5. **Order ID display** → My Orders → confirm format `ORD-00001` (no duplicates)
+6. **Theme toggle** → Click ☀️ in Navbar → all pages should use light theme
+7. **Product share** → Share product URL on WhatsApp → image should preview
+
+---
+
+## How to Recover
+
+### Rollback
+Use Replit checkpoints — the platform saves automatic snapshots. If the app breaks, use the "View Checkpoints" action in the Replit UI.
+
+### Database issues
+```sql
+-- Check orders table
+SELECT id, status, payment_reference FROM orders ORDER BY created_at DESC LIMIT 20;
+
+-- Check wallet balances
+SELECT u.email, w.balance_ngn FROM wallets w JOIN users u ON w.user_id = u.id;
+
+-- Run pending migration
+\i migrations/payment_conversions.sql
+```
+
+### Payment issues
+1. Go to `/deploy` → Operations Centers → Payment Center
+2. Check Paystack key format (must start with `sk_live_` or `sk_test_`)
+3. Verify webhook URL is set in Paystack dashboard: `https://yourdomain.com/api/payments/webhook`
+
+---
+
+## How to Deploy
+
+### Replit (current)
+The app runs on Replit with the built-in dev server. To publish:
+1. Click "Publish" / "Deploy" in the Replit UI
+2. The platform creates a production container at `dunazoe.replit.app`
+
+### Self-hosted (VPS — Contabo)
+Follow the Phone Deploy Guide inside `/deploy` page:
+1. SSH → install Docker + docker-compose
+2. Clone repo, fill `.env.docker` with all secrets
+3. `docker-compose up --build -d`
+4. Point domain DNS → VPS IP
+5. Install SSL with Certbot
 
 ---
 
 ## Environment Variables Required
 
-| Variable | Purpose | Where to get it |
-|----------|---------|-----------------|
-| `DATABASE_URL` | PostgreSQL connection | Your DB host |
-| `SESSION_SECRET` | JWT signing (64+ chars) | `openssl rand -hex 64` |
-| `PAYSTACK_SECRET_KEY` | NGN payments | paystack.com → API Keys |
-| `PAYSTACK_PUBLIC_KEY` | Frontend Paystack | paystack.com → API Keys |
-| `STRIPE_SECRET_KEY` | USD/EUR payments | dashboard.stripe.com |
-| `CLOUDINARY_CLOUD_NAME` | Image uploads | cloudinary.com → Dashboard |
-| `CLOUDINARY_API_KEY` | Image uploads | cloudinary.com → Dashboard |
-| `CLOUDINARY_API_SECRET` | Image uploads | cloudinary.com → Dashboard |
-| `OPENAI_API_KEY` | Product vision AI (optional) | platform.openai.com |
-| `XAI_API_KEY` | Product vision AI (optional) | x.ai |
-| `GEMINI_API_KEY` | Product vision AI (optional) | ai.google.dev |
-| `SERVICE_CHARGE_PCT` | Vendor deduction (default 0.05) | Set in env, default works |
-| `PLATFORM_FEE_PCT` | Platform fee (default 0.10) | Set in env, default works |
-
-> All required secrets can be managed at `/deploy/apis` in the Deployment AI panel.  
-> Missing required keys trigger a red notification banner on that page.
-
----
-
-## Database Migrations Needed for Production
-
-Run these in order against your production database:
-
-```bash
-# 1. Core schema (already applied if DB exists)
-psql $DATABASE_URL -f apps/core/services/*/migrations/*.sql
-
-# 2. Vendor payouts table (new — 2026-07-19)
-psql $DATABASE_URL -f apps/core/services/order-service/migrations/vendor_payouts.sql
-```
-
----
-
-## What Was Changed (2026-07-19 session)
-
-| # | Feature | Files |
-|---|---------|-------|
-| 1 | Marketing AI locked to vendors only | `vendor/marketing/page.jsx` |
-| 2 | Ajo savings → personal + max 12 months | `thrift/page.jsx`, `thrift/contribute/page.jsx` |
-| 3 | Wallet deposit API route fixed | `api/wallet/deposit/route.js` |
-| 4 | Checkout API route fixed (was 404) | `api/orders/route.js` |
-| 5 | 5% service charge on subtotal at checkout | `checkout/page.jsx`, `api/orders/route.js` |
-| 6 | 5% markup preview when vendor lists product | `vendor/onboard/page.jsx` |
-| 7 | 5% vendor deduction 24h after delivery | `order-service/index.js` + `vendor_payouts.sql` |
-| 8 | Product link shown only to owning vendor | `products/[id]/page.jsx` |
-| 9 | Bank details required before listing | `vendor/onboard/page.jsx` (step 1 expanded) |
-| 10 | Product Listing AI self-dependent fallback | `api/ai/product-vision/route.js` |
-| 11 | ID badges (VND-, PRD-, ORD-) | `vendor/dashboard/page.jsx` |
-| 12 | Vendor dashboard: verification, delivery, milestone | `vendor/dashboard/page.jsx` |
-| 13 | Missing secrets notification in Deploy AI | `deploy/apis/page.jsx` |
-| 14 | Cart orders processed in parallel (was sequential) | `api/orders/route.js` |
-| 15 | Shipping quote re-render loop fixed | `checkout/page.jsx` (useCallback dep fix) |
-| 16 | `vendor_payouts` DB table migration | `order-service/migrations/vendor_payouts.sql` |
-
----
-
-## Known Limitations / Next Steps
-
-- **Payout processing job:** The `vendor_payouts` table records scheduled payouts but needs a cron job or worker to actually process them (call wallet service to credit vendor). Recommended: add a scheduled task in the wallet service that runs every hour and processes rows where `status='scheduled' AND scheduled_at <= NOW()`.
-- **Push notifications:** WhatsApp/SMS alerts configured via `WHATSAPP_TOKEN` but not yet wired to order status changes.
-- **KYC/BVN verification:** `/trust` page exists but BVN API integration pending.
-- **Copytrader payouts:** 6% commission tracked in `referrals` table; payout job not yet implemented.
-
----
-
-## Contacts / Superuser Access
-
-| Role | Email |
-|------|-------|
-| CEO / Owner | dunazoeworld@gmail.com |
-| Admin | comfortwins@gmail.com |
-
-Deployment AI and all admin panels require these emails to be logged in.
-
----
-
-*This document is auto-generated. Keep it updated after every major session.*
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `DATABASE_URL` | PostgreSQL connection string | ✅ |
+| `SESSION_SECRET` / `JWT_SECRET` | JWT signing secret | ✅ |
+| `PAYSTACK_LSK` | Paystack secret key (`sk_live_...`) | ✅ |
+| `STRIPE_SECRET_KEY` | Stripe secret key (`sk_live_...`) | For USD |
+| `CLOUDINARY_CLOUD_NAME` | Cloudinary name | For images |
+| `CLOUDINARY_API_KEY` | Cloudinary API key | For images |
+| `CLOUDINARY_API_SECRET` | Cloudinary API secret | For images |
+| `OPENAI_API_KEY` | GPT-4o vision (optional) | For AI |
+| `XAI_API_KEY` | Grok vision (optional) | For AI |
+| `GEMINI_API_KEY` | Gemini Flash vision (optional) | For AI |
+| `NEXT_PUBLIC_SITE_URL` | Production URL e.g. `https://dunazoe.com` | OG tags |

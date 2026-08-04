@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import NotificationBell from "./NotificationBell";
+import { ThemeToggle } from "./ThemeProvider";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -69,6 +70,9 @@ export default function Navbar() {
           </div>
 
           <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+            {/* Theme toggle */}
+            <ThemeToggle compact />
+
             {/* Cart */}
             <Link href="/cart" style={{ position: "relative", display: "flex", alignItems: "center", padding: "7px", borderRadius: "9px", color: "var(--text-secondary)", textDecoration: "none", fontSize: "1.1rem" }} aria-label="Cart">🛒</Link>
 

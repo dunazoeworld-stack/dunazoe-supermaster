@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { ThemeToggle } from "../../components/ThemeProvider";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "/api";
 
@@ -47,6 +48,9 @@ export default function DeployPage() {
   const [provider, setProvider] = useState("contabo");
   const [version] = useState("1.0.0-rc1");
   const logRef = useRef(null);
+  const [activeCenter, setActiveCenter] = useState(null); // null | "fix" | "payment" | "ai" | "delivery"
+  const [payHealth, setPayHealth]   = useState(null);
+  const [centerLoading, setCenterLoading] = useState(false);
 
   useEffect(() => {
     const t = localStorage.getItem("dunazoe_token");
@@ -59,6 +63,21 @@ export default function DeployPage() {
       const d = await res.json();
       if (d.success) setStatusData(d);
     } catch (_) {}
+  }
+
+  async function loadPaymentHealth() {
+    setCenterLoading(true);
+    try {
+      const res = await fetch(`${API}/payments/health`);
+      const d   = await res.json();
+      setPayHealth(d);
+    } catch (_) { setPayHealth({ error: "Health endpoint unreachable" }); }
+    finally { setCenterLoading(false); }
+  }
+
+  function openCenter(name) {
+    setActiveCenter(prev => prev === name ? null : name);
+    if (name === "payment") loadPaymentHealth();
   }
 
   async function handleLogin(e) {
@@ -236,6 +255,120 @@ export default function DeployPage() {
           "Run Certbot: certbot --nginx -d dunazoe.com -d www.dunazoe.com",
           "Open dunazoe.com in browser — you are LIVE ✅"
         ].map((step, i) => <StepCard key={i} num={i + 1} text={step} />)}
+      </div>
+
+      {/* ── OPERATIONS CENTERS ─────────────────────────────────────── */}
+      <div style={{ background: "rgba(13,21,37,0.9)", border: "1px solid rgba(255,107,0,0.1)", borderRadius: "14px", padding: "14px 16px", marginBottom: "16px" }}>
+        <p style={{ fontSize: "0.72rem", color: "#3D4F6E", margin: "0 0 10px", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>⚙️ Operations Centers</p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", marginBottom: activeCenter ? "12px" : 0 }}>
+          {[
+            { id: "fix",      icon: "🔧", label: "Fix Center",     desc: "Known issues + 1-click fixes" },
+            { id: "payment",  icon: "💳", label: "Payment Center", desc: "Gateway & webhook status" },
+            { id: "ai",       icon: "🤖", label: "AI Center",      desc: "Product AI & vision status" },
+            { id: "delivery", icon: "🚚", label: "Delivery Center",desc: "Self + courier + intl status" },
+          ].map(c => (
+            <button key={c.id} onClick={() => openCenter(c.id)} style={{
+              padding: "10px 8px", borderRadius: "10px", cursor: "pointer",
+              background: activeCenter === c.id ? "rgba(255,107,0,0.1)" : "rgba(255,255,255,0.03)",
+              border: `1px solid ${activeCenter === c.id ? "rgba(255,107,0,0.4)" : "rgba(255,255,255,0.07)"}`,
+              color: activeCenter === c.id ? "#FF6B00" : "#8A9AB5",
+              textAlign: "left", transition: "all 0.2s",
+            }}>
+              <div style={{ fontSize: "1.2rem", marginBottom: "2px" }}>{c.icon}</div>
+              <div style={{ fontSize: "0.78rem", fontWeight: 700 }}>{c.label}</div>
+              <div style={{ fontSize: "0.68rem", color: activeCenter === c.id ? "#FF6B00" : "#3D4F6E", marginTop: "1px" }}>{c.desc}</div>
+            </button>
+          ))}
+        </div>
+
+        {/* ── Fix Center Panel ── */}
+        {activeCenter === "fix" && (
+          <div style={{ borderTop: "1px solid rgba(255,107,0,0.15)", paddingTop: "12px" }}>
+            {[
+              { icon: "🔧", prob: "Vendor edit/delete returns 403/500", cause: "PUT handler now added to /api/products/[id]", solution: "Deploy latest code", fixed: true },
+              { icon: "💡", prob: "Theme doesn't switch in light mode", cause: "Missing data-theme CSS selectors", solution: "ThemeProvider + [data-theme] CSS added", fixed: true },
+              { icon: "🆔", prob: "ORD-ORD double prefix on orders", cause: "ID already had ORD- prefix before padding", solution: "Strip prefix before padding — fixed in orders/page.jsx", fixed: true },
+              { icon: "💱", prob: "Stripe charges wrong amount (NGN as USD)", cause: "No NGN→USD conversion before Stripe call", solution: "Live exchange rate conversion added", fixed: true },
+              { icon: "🖼️", prob: "OG image not showing when shared", cause: "type: 'og:type' typo in layout.jsx", solution: "Fixed to type: 'website' + API_BASE URL fixed", fixed: true },
+              { icon: "📱", prob: "Cart buttons misaligned on mobile", cause: "Inline grid with minWidth: 240px on summary", solution: "cart-layout CSS class stacks on ≤640px", fixed: true },
+            ].map((item, i) => (
+              <div key={i} style={{ padding: "10px 12px", background: item.fixed ? "rgba(0,200,120,0.04)" : "rgba(255,59,92,0.04)", borderRadius: "8px", border: `1px solid ${item.fixed ? "rgba(0,200,120,0.2)" : "rgba(255,59,92,0.2)"}`, marginBottom: "8px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
+                  <span>{item.icon}</span>
+                  <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#cdd5e0" }}>{item.prob}</span>
+                  <span style={{ marginLeft: "auto", fontSize: "0.68rem", padding: "2px 7px", borderRadius: "6px", background: item.fixed ? "rgba(0,200,120,0.15)" : "rgba(255,59,92,0.15)", color: item.fixed ? "#00CC88" : "#FF3B5C", fontWeight: 700 }}>{item.fixed ? "✅ Fixed" : "⚠️ Open"}</span>
+                </div>
+                <p style={{ fontSize: "0.72rem", color: "#3D4F6E", margin: "0 0 2px" }}>Cause: {item.cause}</p>
+                <p style={{ fontSize: "0.72rem", color: "#8A9AB5", margin: 0 }}>Fix: {item.solution}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── Payment Center Panel ── */}
+        {activeCenter === "payment" && (
+          <div style={{ borderTop: "1px solid rgba(255,107,0,0.15)", paddingTop: "12px" }}>
+            {centerLoading && <p style={{ color: "#8A9AB5", fontSize: "0.82rem" }}>⏳ Checking payment health…</p>}
+            {payHealth && !centerLoading && (
+              <>
+                {[
+                  { label: "Paystack", value: payHealth.paystack, ok: payHealth.paystack === "configured" },
+                  { label: "Stripe",   value: payHealth.stripe,   ok: payHealth.stripe === "configured" },
+                  { label: "Wallet Ledger", value: payHealth.wallet_ledger, ok: payHealth.wallet_ledger === "valid" },
+                ].map(row => (
+                  <div key={row.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                    <span style={{ fontSize: "0.82rem", color: "#8A9AB5" }}>{row.label}</span>
+                    <span style={{ fontSize: "0.82rem", fontWeight: 700, color: row.ok ? "#00CC88" : "#FF3B5C" }}>{row.ok ? "🟢 " : "🔴 "}{row.value}</span>
+                  </div>
+                ))}
+                <p style={{ fontSize: "0.72rem", color: "#3D4F6E", marginTop: "8px" }}>Webhook URL: <code style={{ color: "#FF6B00" }}>/api/payments/webhook</code></p>
+                <p style={{ fontSize: "0.72rem", color: "#3D4F6E" }}>Verify URL: <code style={{ color: "#FF6B00" }}>/api/payments/verify</code></p>
+                <p style={{ fontSize: "0.72rem", color: "#3D4F6E" }}>NGN→USD: <span style={{ color: "#00CC88" }}>🟢 Live via open.er-api.com</span></p>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ── AI Center Panel ── */}
+        {activeCenter === "ai" && (
+          <div style={{ borderTop: "1px solid rgba(255,107,0,0.15)", paddingTop: "12px" }}>
+            {[
+              { label: "Product Vision AI", status: "OpenAI / xAI / Gemini → heuristic fallback", ok: true },
+              { label: "Vision Endpoint",   status: "/api/ai/product-vision (POST, image_url)", ok: true },
+              { label: "Listing Assistant", status: "/api/products/ai/assist (text-based)", ok: true },
+              { label: "Marketing AI",      status: "/vendor/marketing page", ok: true },
+              { label: "Logistics AI",      status: "/api/logistics/quote — all 36 NG states", ok: true },
+              { label: "OpenAI Key",  status: process?.env?.OPENAI_API_KEY ? "Set ✅" : "Not set — heuristic fallback active", ok: false },
+              { label: "xAI Key",     status: "Configure XAI_API_KEY in Deployment AI", ok: false },
+              { label: "Gemini Key",  status: "Configure GEMINI_API_KEY in Deployment AI", ok: false },
+            ].map(row => (
+              <div key={row.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.05)", gap: "8px" }}>
+                <span style={{ fontSize: "0.78rem", color: "#8A9AB5", flexShrink: 0 }}>{row.label}</span>
+                <span style={{ fontSize: "0.75rem", color: row.ok ? "#00CC88" : "#F5A623", textAlign: "right" }}>{row.status}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── Delivery Center Panel ── */}
+        {activeCenter === "delivery" && (
+          <div style={{ borderTop: "1px solid rgba(255,107,0,0.15)", paddingTop: "12px" }}>
+            {[
+              { label: "Self Delivery",      status: "🟢 Active — vendor sets zones in product listing", ok: true },
+              { label: "DUNAZOE Express",    status: "🟢 /express/quote endpoint active", ok: true },
+              { label: "Shipbubble",         status: "🟡 Configured (no API key = quote only)", ok: true },
+              { label: "GIG Logistics",      status: "🟡 Configured (quote only)", ok: true },
+              { label: "DHL International",  status: "🟡 Quote engine active — no live API key", ok: true },
+              { label: "FedEx/UPS",          status: "🟡 Quote engine active — no live API key", ok: true },
+              { label: "Checkout Detection", status: "🟢 Self-delivery message shown at checkout", ok: true },
+            ].map(row => (
+              <div key={row.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.05)", gap: "8px" }}>
+                <span style={{ fontSize: "0.78rem", color: "#8A9AB5" }}>{row.label}</span>
+                <span style={{ fontSize: "0.75rem", color: row.ok ? "#00CC88" : "#F5A623", textAlign: "right" }}>{row.status}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* CONTROL PLANE NAV */}

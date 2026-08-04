@@ -39,7 +39,9 @@ export default function OrdersPage() {
       ) : orders.length > 0 ? (
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
           {orders.map(o => {
-            const orderId = `ORD-${String(o.id).padStart(5, "0")}`;
+            // Strip any existing "ORD-" prefix before padding (prevents "ORD-ORD-xxx")
+            const rawId = String(o.id).replace(/^ORD-?/i, "");
+            const orderId = `ORD-${rawId.padStart(5, "0")}`;
             const canPay = ["pending","reserved"].includes(o.status);
             return (
               <div key={o.id} className="card">

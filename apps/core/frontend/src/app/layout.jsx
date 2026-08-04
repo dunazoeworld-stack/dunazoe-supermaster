@@ -1,6 +1,7 @@
 import "./globals.css";
 import ChatWidget from "../components/ChatWidget";
 import UpdateNotifier from "../components/UpdateNotifier";
+import { ThemeProvider } from "../components/ThemeProvider";
 
 export const metadata = {
   title: "DUNAZOE — Buy Anything · Sell Everything · Ship Worldwide",
@@ -47,11 +48,13 @@ export default function RootLayout({ children }) {
         <meta name="HandheldFriendly" content="true" />
       </head>
       <body>
-        {children}
-        {/* Auto-update banner — appears when a new version is detected */}
-        <UpdateNotifier />
-        {/* Global floating chat widget — only visible when logged in */}
-        <ChatWidget />
+        <ThemeProvider>
+          {children}
+          {/* Auto-update banner — appears when a new version is detected */}
+          <UpdateNotifier />
+          {/* Global floating chat widget — only visible when logged in */}
+          <ChatWidget />
+        </ThemeProvider>
       </body>
     </html>
   );

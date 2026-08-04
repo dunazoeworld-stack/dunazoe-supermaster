@@ -65,9 +65,50 @@ export async function POST(request) {
       if (d.payment_url) return NextResponse.json({ ...d, provider: "stripe" });
     } catch (_) {}
 
+    // ── NGN → USD conversion ──────────────────────────────────────────────
+    // If amount looks like NGN (> 500) convert to USD using live rate.
+    // Supports both explicit NGN-to-USD and already-USD amounts.
+    let amountUsd = parseFloat(amount);
+    let rateUsed  = 1;
+    let ngnAmount = null;
+    if (amountUsd > 500 && body.currency_hint !== "USD_EXACT") {
+      // Treat amount as NGN — fetch live exchange rate
+      try {
+        const rateRes = await fetch(
+          "https://open.er-api.com/v6/latest/USD",
+          { signal: AbortSignal.timeout(4000) }
+        );
+        if (rateRes.ok) {
+          const rateData = await rateRes.json();
+          const ngnRate  = rateData?.rates?.NGN;
+          if (ngnRate && ngnRate > 0) {
+            rateUsed  = ngnRate;
+            ngnAmount = amountUsd;
+            amountUsd = parseFloat((amountUsd / ngnRate).toFixed(2));
+          }
+        }
+      } catch (_) {
+        // Fallback: use static rate if API unavailable
+        const FALLBACK_RATE = 1600; // approximate NGN/USD
+        rateUsed  = FALLBACK_RATE;
+        ngnAmount = amountUsd;
+        amountUsd = parseFloat((amountUsd / FALLBACK_RATE).toFixed(2));
+      }
+
+      // Save conversion record to DB (non-blocking)
+      if (process.env.DATABASE_URL && ngnAmount) {
+        pool.query(
+          `INSERT INTO payment_conversions (ngn_amount, usd_amount, rate_used, order_ref, created_at)
+           VALUES ($1, $2, $3, $4, NOW())
+           ON CONFLICT DO NOTHING`,
+          [ngnAmount, amountUsd, rateUsed, order_id || null]
+        ).catch(() => {}); // table may not exist yet — non-fatal
+      }
+    }
+
     // Direct Stripe Checkout Session via REST API (no npm SDK required)
     try {
-      const amountCents = Math.round(parseFloat(amount) * 100);
+      const amountCents = Math.round(amountUsd * 100);
       const appUrl      = process.env.NEXT_PUBLIC_APP_URL || "https://dunazoe.com";
       const successRef  = `STRIPE-${order_id || Date.now()}`;
 
@@ -102,14 +143,16 @@ export async function POST(request) {
         return NextResponse.json({ success: false, error: msg }, { status: 502 });
       }
 
-      console.log(`[Payments/Stripe] ✅ Session ${session.id} for ${email} — $${parseFloat(amount).toFixed(2)}`);
+      console.log(`[Payments/Stripe] ✅ Session ${session.id} for ${email} — $${amountUsd.toFixed(2)}${ngnAmount ? ` (₦${ngnAmount} @ ${rateUsed})` : ""}`);
       return NextResponse.json({
-        success:     true,
-        provider:    "stripe",
-        payment_url: session.url,
-        session_id:  session.id,
-        currency:    "USD",
-        amount_usd:  parseFloat(amount),
+        success:      true,
+        provider:     "stripe",
+        payment_url:  session.url,
+        session_id:   session.id,
+        currency:     "USD",
+        amount_usd:   amountUsd,
+        amount_ngn:   ngnAmount || null,
+        rate_used:    ngnAmount ? rateUsed : null,
       });
     } catch (err) {
       console.error("[Payments/Stripe] Fatal:", err.message);

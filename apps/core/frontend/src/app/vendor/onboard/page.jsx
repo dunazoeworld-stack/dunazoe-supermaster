@@ -219,6 +219,52 @@ export default function VendorOnboardPage() {
     try { const u = JSON.parse(localStorage.getItem("dunazoe_user") || "{}"); setIsVendor(u.role === "vendor"); } catch (_) {}
   }, []);
 
+  // ── Vision AI — image analysis → auto-fill product fields ────────────────
+  async function runVisionAI(imageUrl) {
+    if (!imageUrl || imageUrl.startsWith("data:")) return; // data URIs not accepted by vision API
+    setAiVisionLoading(true);
+    try {
+      const token = localStorage.getItem("dunazoe_token");
+      const r = await fetch(`${API}/ai/product-vision`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ image_url: imageUrl, product_type: product.product_type }),
+      });
+      const d = await r.json();
+      if (d.success) {
+        setAiVision(d);
+        // Auto-fill empty fields only — never override what vendor already typed
+        const filled = {};
+        if (d.name        && !product.name)        { P("name",        d.name);        filled.name = true; }
+        if (d.description && !product.description) { P("description", d.description); filled.description = true; }
+        if (d.category    && !product.category) {
+          // Map AI category to DUNAZOE category list
+          const catMap = {
+            "phones_&_tablets":  "Phones & Tablets",
+            "fashion":           "Fashion",
+            "electronics":       "Electronics",
+            "beauty_&_health":   "Beauty & Health",
+            "food_&_groceries":  "Food & Groceries",
+            "home_&_living":     "Home & Living",
+            "solar_energy":      "Solar Energy",
+            "baby_&_kids":       "Baby & Kids",
+            "sports":            "Sports",
+            "books_&_education": "Books & Education",
+            "agriculture":       "Agriculture",
+          };
+          const mappedCat = catMap[d.category] || d.category;
+          P("category", mappedCat);
+          filled.category = true;
+        }
+        if (d.weight_kg   && !product.weight)      { P("weight",      String(d.weight_kg)); filled.weight = true; }
+        if (d.dimensions  && !product.dimensions)  { P("dimensions",  d.dimensions);        filled.dimensions = true; }
+        if (d.colors?.length && colors.length === 0) { d.colors.forEach(c => setColors(prev => prev.includes(c) ? prev : [...prev, c])); filled.colors = true; }
+        setAiApplied(filled);
+      }
+    } catch (_) {}
+    finally { setAiVisionLoading(false); }
+  }
+
   // ── AI listing assistant ──────────────────────────────────────
   async function runAI(imageUrls = []) {
     if (!product.name && !product.category && imageUrls.length === 0) return;
@@ -375,7 +421,11 @@ export default function VendorOnboardPage() {
     // Auto-run AI analysis after successful image upload
     if (newImages.length > 0) {
       const allUrls = [...images, ...newImages].map(i => i.url).filter(u => u && !u.startsWith("data:"));
-      if (allUrls.length > 0) runAI(allUrls);
+      if (allUrls.length > 0) {
+        runAI(allUrls);
+        // Run vision AI on the first cloud-hosted image to auto-fill product fields
+        runVisionAI(allUrls[0]);
+      }
     }
   }
 
@@ -734,6 +784,36 @@ export default function VendorOnboardPage() {
                 </p>
               ) : null}
             </div></div>
+
+            {/* Vision AI result banner */}
+            {(aiVisionLoading || aiVision) && (
+              <div style={{ padding: "14px 16px", borderRadius: "12px", border: `1px solid ${aiVisionLoading ? "var(--border)" : "rgba(0,163,255,0.3)"}`, background: aiVisionLoading ? "var(--surface)" : "rgba(0,163,255,0.07)" }}>
+                {aiVisionLoading ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <span className="dz-spinner dz-spinner-sm" />
+                    <p style={{ fontSize: "0.82rem", color: "var(--dz-blue)", fontWeight: 600 }}>🤖 AI is analysing your image…</p>
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+                      <p style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--dz-blue)" }}>
+                        🤖 AI Analysis {aiVision.source === "self_dependent_heuristic" ? "(Heuristic)" : `(${aiVision.source?.replace(/_/g," ")})`}
+                        {" · "}<span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>Confidence: {Math.round((aiVision.confidence || 0) * 100)}%</span>
+                      </p>
+                      <button type="button" onClick={() => setAiVision(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", fontSize: "0.85rem" }}>✕</button>
+                    </div>
+                    {Object.keys(aiApplied).length > 0 && (
+                      <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginBottom: "8px" }}>
+                        ✅ Auto-filled: {Object.keys(aiApplied).join(", ")}. Review and edit below.
+                      </p>
+                    )}
+                    {aiVision.note && (
+                      <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontStyle: "italic" }}>💡 {aiVision.note}</p>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
 
             {/* Core details */}
             <div className="card"><div className="card-body">
