@@ -10,6 +10,98 @@ import PageShell from "../../components/PageShell";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "/api";
 
+// ── Nigerian states for zone matching ─────────────────────────────────────────
+const NG_STATE_ALIASES = {
+  "abuja": ["abuja", "fct", "federal capital territory"],
+  "lagos": ["lagos", "eko"],
+  "rivers": ["rivers", "port harcourt"],
+  "kano": ["kano"],
+  "oyo": ["oyo", "ibadan"],
+  "kaduna": ["kaduna"],
+  "enugu": ["enugu"],
+  "delta": ["delta", "asaba"],
+  "ogun": ["ogun", "abeokuta"],
+  "anambra": ["anambra", "awka"],
+};
+
+function stateMatch(buyerState, zone) {
+  const bs = (buyerState || "").toLowerCase().trim();
+  const z  = (zone || "").toLowerCase().trim();
+  if (!bs || !z) return false;
+  if (bs === z) return true;
+  if (bs.includes(z) || z.includes(bs)) return true;
+  for (const aliases of Object.values(NG_STATE_ALIASES)) {
+    if (aliases.some(a => bs.includes(a) || a.includes(bs)) &&
+        aliases.some(a => z.includes(a) || a.includes(z))) return true;
+  }
+  return false;
+}
+
+// ── Self-Delivery Banner ──────────────────────────────────────────────────────
+function SelfDeliveryPanel({ vendors, buyerState }) {
+  if (!vendors.length) return null;
+  return (
+    <div className="card" style={{ border: "1.5px solid rgba(0,200,150,0.4)", background: "rgba(0,200,150,0.04)" }}>
+      <div className="card-body">
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
+          <span style={{ fontSize: "1.4rem" }}>🛵</span>
+          <div>
+            <p style={{ fontWeight: 700, fontSize: "0.95rem", color: "var(--success)" }}>Vendor Self-Delivery Available</p>
+            <p style={{ fontSize: "0.78rem", color: "var(--text-secondary)" }}>
+              {vendors.length === 1 ? "A vendor ships directly" : `${vendors.length} vendors ship directly`} to <strong>{buyerState}</strong>
+            </p>
+          </div>
+        </div>
+
+        {vendors.map((v, i) => (
+          <div key={i} style={{
+            padding: "12px 14px", borderRadius: "12px", marginBottom: "8px",
+            background: "var(--surface)", border: "1px solid var(--border)",
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
+              <div>
+                <p style={{ fontWeight: 600, fontSize: "0.88rem" }}>{v.productName}</p>
+                <p style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{v.vendorName || "Vendor"}</p>
+              </div>
+              <span style={{ fontWeight: 800, fontSize: "0.88rem", color: "var(--success)" }}>
+                {v.deliveryFee ? `₦${parseInt(v.deliveryFee).toLocaleString("en-NG")}` : "Contact vendor"}
+              </span>
+            </div>
+
+            {!v.deliveryFee ? (
+              <p style={{ fontSize: "0.75rem", color: "var(--warning)", marginBottom: "8px" }}>
+                ⚠️ This vendor hasn't set a delivery fee. Confirm the fee via chat or WhatsApp before paying.
+              </p>
+            ) : null}
+
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              {v.whatsapp && (
+                <a
+                  href={`https://wa.me/${v.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`Hi, I'd like to confirm delivery details for "${v.productName}" on DUNAZOE.`)}`}
+                  target="_blank" rel="noopener noreferrer"
+                  className="btn btn-sm"
+                  style={{ background: "#25D366", color: "#fff", border: "none", fontSize: "0.75rem" }}
+                >
+                  💬 WhatsApp Vendor
+                </a>
+              )}
+              {v.vendorId && (
+                <a href={`/messages?vendor=${v.vendorId}`} className="btn btn-ghost btn-sm" style={{ fontSize: "0.75rem" }}>
+                  💬 Chat on DUNAZOE
+                </a>
+              )}
+            </div>
+          </div>
+        ))}
+
+        <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "4px" }}>
+          ℹ️ Self-delivery is separate from the logistics options below. Select a logistics option for other items, or complete the order and coordinate delivery directly with the vendor.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // ── Delivery fee display helper ────────────────────────────────────────────────
 function formatNGN(n) {
   if (!n && n !== 0) return "—";
@@ -64,6 +156,32 @@ export default function CheckoutPage() {
   const [error,       setError]       = useState("");
   const [offline,     setOffline]     = useState(false);
   const [gwStatus,    setGwStatus]    = useState(null); // null | "ok" | "unavailable"
+
+  // ── Self-delivery zone matching ─────────────────────────────────────────────
+  const [selfDeliveryVendors, setSelfDeliveryVendors] = useState([]);
+
+  useEffect(() => {
+    if (!form.state) { setSelfDeliveryVendors([]); return; }
+    // Check cart items for self_delivery_zones that cover buyer's state
+    const matches = [];
+    cart.forEach(item => {
+      let zones = item.self_delivery_zones || item.vendor?.self_delivery_zones || [];
+      if (typeof zones === "string") { try { zones = JSON.parse(zones); } catch (_) { zones = []; } }
+      if (!Array.isArray(zones)) zones = [];
+      const hit = zones.find(z => stateMatch(form.state, z.state || z.zone || z));
+      if (hit) {
+        matches.push({
+          productName: item.name || "Product",
+          vendorId:    item.vendor_id || item.vendorId || null,
+          vendorName:  item.vendor_name || item.vendor?.business_name || null,
+          whatsapp:    item.vendor_whatsapp || item.vendor?.whatsapp || hit.whatsapp || null,
+          deliveryFee: hit.fee || hit.delivery_fee || null,
+          zone:        hit,
+        });
+      }
+    });
+    setSelfDeliveryVendors(matches);
+  }, [form.state, cart]);
 
   // ── Logistics ───────────────────────────────────────────────────────────────
   const [quotes,         setQuotes]         = useState([]);
@@ -296,6 +414,11 @@ export default function CheckoutPage() {
               </div>
             </div>
           </div></div>
+
+          {/* ── Self-Delivery Panel ─────────────────────────────────────────── */}
+          {selfDeliveryVendors.length > 0 && (
+            <SelfDeliveryPanel vendors={selfDeliveryVendors} buyerState={form.state} />
+          )}
 
           {/* ── AI Shipping Options ─────────────────────────────────────────── */}
           <div className="card"><div className="card-body">
