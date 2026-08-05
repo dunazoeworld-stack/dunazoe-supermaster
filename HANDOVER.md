@@ -111,6 +111,26 @@ Follow the Phone Deploy Guide inside `/deploy` page:
 
 ---
 
+## August 2026 — Task Batch 2 Changes
+
+### Task 1 — DB Connection Drops (Fixed)
+- `start-services.sh` now explicitly forwards all secrets (`DATABASE_URL`, `SESSION_SECRET`, `PAYSTACK_LSK`, `STRIPE_SECRET_KEY`, `CLOUDINARY_*`, `GEMINI_API_KEY`, `INTERNAL_SECRET`, `REALTIME_SERVICE_URL`) to every child node process — no more silent DB disconnects.
+- `upload-service/package.json` multer fixed from `^1.4.5` → `1.4.5-lts.1` (LTS version for Node 20+ compatibility).
+
+### Task 2 — Payment End-to-End (Verified + Wired)
+- Payment verify page (`/payment/verify`) was already solid — HMAC-SHA512 Paystack verification confirmed.
+- **New:** Webhook `charge.success` handler now calls realtime-service after marking order paid, so buyer's browser receives `order:status_update` socket event instantly.
+- Webhook also emits realtime notification on `transfer.success` / `transfer.failed`.
+
+### Task 3 — Real-Time Order Tracking (Live)
+- `src/hooks/useOrderSocket.js` — new Socket.IO hook; connects to realtime-service on port 4021, joins `order:{id}` room, handles `order:status_update`, `agent:location`, `chat:message`.
+- `orders/page.jsx` — upgraded with 15s auto-polling, animated 🔴 LIVE indicator, last-refresh timestamp, emoji status labels, vendor name display.
+- `api/orders/[id]/status/route.js` — new `PATCH` endpoint; vendor-only status transitions (`paid→processing→shipped→delivered`), emits socket event to buyer after DB update.
+- Vendor dashboard — order cards now show a status update dropdown + ✓ button for actionable transitions; updates reflect instantly in the orders list.
+
+### `INTERNAL_SECRET`
+Services communicate internally using `INTERNAL_SECRET` (default: `"dunazoe_internal_shared"`). Set this as a Replit Secret for hardened production environments.
+
 ## Environment Variables Required
 
 | Variable | Description | Required |
