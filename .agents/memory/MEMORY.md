@@ -13,4 +13,4 @@
 - [Auth SSL fix](auth-ssl-fix.md) — conditional ssl in Pool; Replit built-in Postgres has no SSL; params is Promise in Next.js 16
 - [July 2026 major feature batch](july-2026-major-batch.md) — KYC /kyc page, delivery /deliver page, wallet deposit Paystack callback, image upload local fallback, order not-found fix, Stripe in features, auto light/dark theme
 - [CTO final patch July 2026](cto-final-patch-july2026.md) — Vendor edit/delete modals, delivery form expanded (WhatsApp/vehicle/ID), checkout mobile grid, 480px CSS, 4 docs, 2 commits unpushed (NO_CREDENTIALS on gitPush)
-- [August 2026 production fixes](aug2026-fixes.md) — Product PUT handler (edit/delete), ThemeProvider, ORD-ORD fix, cart mobile, OG type bug, vision AI wiring, NGN→USD Stripe, deploy centers
+- [August 2026 production fixes](aug2026-fixes.md) — Cart JSX rewrite, navbar theme vars, mobile 360px breakpoint, OG image JSON parse, currency.js service, vendor ID off image, delivery error fallback
