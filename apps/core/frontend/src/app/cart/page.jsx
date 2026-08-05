@@ -39,6 +39,7 @@ export default function CartPage() {
           <Link href="/products" className="btn btn-primary">🛒 Start Shopping</Link>
         </div>
       ) : (
+        <>
         <div className="cart-layout">
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
             {cart.map(item => (
@@ -154,6 +155,7 @@ export default function CartPage() {
             }
           }
         `}</style>
+        </>
       )}
     </PageShell>
   );
