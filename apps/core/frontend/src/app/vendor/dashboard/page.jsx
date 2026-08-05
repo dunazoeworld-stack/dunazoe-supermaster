@@ -355,12 +355,7 @@ export default function VendorDashboardPage() {
                   position: "relative",
                 }}>
                   {!imgSrc && <span style={{ fontSize: "2.2rem", opacity: 0.2 }}>📦</span>}
-                  <span style={{
-                    position: "absolute", top: "8px", left: "8px",
-                    fontFamily: "monospace", fontWeight: 700, fontSize: "0.68rem",
-                    color: "var(--dz-blue)", background: "rgba(0,0,0,0.6)",
-                    padding: "2px 8px", borderRadius: "6px", backdropFilter: "blur(4px)",
-                  }}>{productId}</span>
+                  {/* Status badge only — no ID over image */}
                   <span className={`badge badge-${p.status === "published" ? "success" : "muted"}`}
                     style={{ position: "absolute", top: "8px", right: "8px", fontSize: "0.62rem" }}>
                     {p.status || "published"}
@@ -372,6 +367,8 @@ export default function VendorDashboardPage() {
                     {p.category || "—"}
                   </p>
                   <p className="text-gradient" style={{ fontWeight: 800, fontSize: "1rem" }}>₦{parseFloat(p.price || 0).toLocaleString("en-NG")}</p>
+                  {/* Product ID — in card body, never over the image */}
+                  <p style={{ fontFamily: "monospace", fontSize: "0.68rem", color: "var(--text-muted)", marginTop: "-2px" }}>{productId}</p>
                   {/* Action buttons row 1: Edit / Delete */}
                   <div style={{ display: "flex", gap: "6px", marginTop: "4px" }}>
                     <button onClick={() => openEdit(p)} className="btn btn-outline btn-sm" style={{ flex: 1, fontSize: "0.72rem", padding: "5px" }}>

@@ -1,7 +1,7 @@
 [
   {
-    "id": "local_1785832221155_tvjd2",
-    "name": "DC solar bulb",
+    "id": "local_1785907060744_j0vuk",
+    "name": "DC solar bulb ",
     "description": "",
     "price": 1000,
     "base_price": 1000,
@@ -18,38 +18,7 @@
     "brand": null,
     "stock_quantity": null,
     "status": "published",
-    "created_at": "2026-08-04T08:30:21.155Z",
-    "vendor_id": "local"
-  },
-  {
-    "id": "local_1",
-    "name": "DUNAZOE Test Sneakers",
-    "description": "Premium quality unisex sneakers — comfort meets style. Available in sizes 38–45.",
-    "price": 15000,
-    "category": "fashion",
-    "type": "physical",
-    "product_type": "physical",
-    "images": [],
-    "sizes": [
-      "38",
-      "39",
-      "40",
-      "41",
-      "42",
-      "43",
-      "44",
-      "45"
-    ],
-    "colors": [
-      "Black",
-      "White",
-      "Navy"
-    ],
-    "ajo_enabled": true,
-    "ajo_weeks": 6,
-    "business_name": "DUNAZOE Store",
-    "status": "published",
-    "created_at": "2026-07-23T00:00:00.000Z",
+    "created_at": "2026-08-05T05:17:40.745Z",
     "vendor_id": "local"
   },
   {
@@ -69,72 +38,6 @@
     ],
     "ajo_enabled": false,
     "ajo_weeks": 0,
-    "business_name": "DUNAZOE Store",
-    "status": "published",
-    "created_at": "2026-07-23T00:00:00.000Z",
-    "vendor_id": "local"
-  },
-  {
-    "id": "local_3",
-    "name": "Ankara Print Dress",
-    "description": "Hand-crafted Ankara print midi dress. Available in M, L, XL. Multiple colour options.",
-    "price": 8500,
-    "category": "fashion",
-    "type": "physical",
-    "product_type": "physical",
-    "images": [],
-    "sizes": [
-      "M",
-      "L",
-      "XL",
-      "XXL"
-    ],
-    "colors": [
-      "Red/Gold",
-      "Blue/White",
-      "Green/Yellow"
-    ],
-    "ajo_enabled": true,
-    "ajo_weeks": 4,
-    "business_name": "DUNAZOE Store",
-    "status": "published",
-    "created_at": "2026-07-23T00:00:00.000Z",
-    "vendor_id": "local"
-  },
-  {
-    "id": "local_4",
-    "name": "Organic Turmeric Powder 500g",
-    "description": "100% organic Nigerian turmeric. Sun-dried and stone-ground. No preservatives.",
-    "price": 2200,
-    "category": "food_groceries",
-    "type": "physical",
-    "product_type": "physical",
-    "images": [],
-    "sizes": [],
-    "colors": [],
-    "ajo_enabled": false,
-    "ajo_weeks": 0,
-    "business_name": "DUNAZOE Store",
-    "status": "published",
-    "created_at": "2026-07-23T00:00:00.000Z",
-    "vendor_id": "local"
-  },
-  {
-    "id": "local_5",
-    "name": "Solar Power Bank 40000mAh",
-    "description": "Dual USB + Type-C solar power bank. Charges in 4 hours of sunlight. Waterproof.",
-    "price": 12000,
-    "category": "solar_energy",
-    "type": "physical",
-    "product_type": "physical",
-    "images": [],
-    "sizes": [],
-    "colors": [
-      "Black",
-      "Silver"
-    ],
-    "ajo_enabled": true,
-    "ajo_weeks": 6,
     "business_name": "DUNAZOE Store",
     "status": "published",
     "created_at": "2026-07-23T00:00:00.000Z",

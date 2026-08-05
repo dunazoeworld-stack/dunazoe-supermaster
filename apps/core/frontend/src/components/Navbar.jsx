@@ -39,10 +39,10 @@ export default function Navbar() {
     <>
       <nav style={{
         position: "sticky", top: 0, zIndex: 200,
-        background: scrolled ? "rgba(4,9,28,0.97)" : "rgba(4,9,28,0.92)",
+        background: scrolled ? "var(--nav-bg-scrolled)" : "var(--nav-bg)",
         backdropFilter: "blur(20px)",
         WebkitBackdropFilter: "blur(20px)",
-        borderBottom: `1px solid ${scrolled ? "rgba(80,160,255,0.2)" : "rgba(80,160,255,0.1)"}`,
+        borderBottom: `1px solid ${scrolled ? "var(--border-strong)" : "var(--border)"}`,
         transition: "all 0.25s ease",
       }}>
         <div className="container" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: "60px" }}>
@@ -111,26 +111,47 @@ export default function Navbar() {
 
         {/* Mobile menu */}
         {menuOpen && (
-          <div style={{
-            background: "rgba(4,9,28,0.98)", borderTop: "1px solid var(--border)",
-            padding: "16px 24px 24px", display: "flex", flexDirection: "column", gap: "4px",
-          }}>
-            {[
-              { href: "/products",         label: "🛒 Shop" },
-              { href: "/vendors",          label: "🏪 Vendors" },
-              { href: "/thrift",           label: "⬡ Ajo Savings" },
-              { href: "/services",         label: "⚡ Services" },
-              { href: "/cart",             label: "🛒 Cart" },
-              { href: "/wallet",           label: "💳 Wallet" },
-              { href: "/orders",           label: "📦 Orders" },
-              ...(user?.role === "vendor" || user?.role === "admin" || user?.role === "superuser" ? [{ href: "/vendor/marketing", label: "📣 Marketing AI" }] : []),
-            ].map(({ href, label }) => (
-              <Link key={href} href={href} style={{
-                padding: "12px 14px", borderRadius: "10px", fontSize: "0.95rem", fontWeight: 600,
-                color: isActive(href) ? "var(--dz-blue)" : "var(--text)",
-                textDecoration: "none", background: isActive(href) ? "rgba(0,163,255,0.1)" : "transparent",
-              }}>{label}</Link>
-            ))}
+          <div className="mobile-menu-drawer">
+            {/* Primary nav links */}
+            <div className="mobile-menu-section">
+              {[
+                { href: "/products", label: "🛒 Shop" },
+                { href: "/vendors",  label: "🏪 Vendors" },
+                { href: "/thrift",   label: "⬡ Ajo Savings" },
+                { href: "/services", label: "⚡ Services" },
+                { href: "/cart",     label: "🛒 Cart" },
+                { href: "/orders",   label: "📦 Orders" },
+                { href: "/profile",  label: "👤 Profile" },
+              ].map(({ href, label }) => (
+                <Link key={href} href={href} className={`mobile-menu-link${isActive(href) ? " active" : ""}`}>{label}</Link>
+              ))}
+            </div>
+
+            {/* More section */}
+            <p className="mobile-menu-heading">More</p>
+            <div className="mobile-menu-section">
+              {[
+                { href: "/wallet",               label: "💳 Wallet" },
+                { href: "/notifications",        label: "🔔 Notifications" },
+                { href: "/messages",             label: "💬 Messages" },
+                ...(user?.role === "vendor" || user?.role === "admin" || user?.role === "superuser"
+                  ? [
+                      { href: "/vendor/dashboard", label: "🏪 Vendor Dashboard" },
+                      { href: "/vendor/marketing", label: "📣 Marketing AI" },
+                    ]
+                  : []),
+                ...(user?.role === "admin" || user?.role === "superuser"
+                  ? [{ href: "/ops", label: "🔧 Admin Panel" }]
+                  : []),
+                { href: "/deliver",  label: "🚗 Delivery" },
+                { href: "/kyc",      label: "🪪 KYC / Verify" },
+                { href: "/settings", label: "⚙️ Settings" },
+                { href: "/support",  label: "🆘 Support" },
+              ].map(({ href, label }) => (
+                <Link key={href} href={href} className={`mobile-menu-link${isActive(href) ? " active" : ""}`}>{label}</Link>
+              ))}
+            </div>
+
             <div style={{ borderTop: "1px solid var(--border)", marginTop: "8px", paddingTop: "12px" }}>
               {user ? (
                 <button onClick={handleLogout} className="btn btn-ghost" style={{ width: "100%" }}>Sign Out</button>
@@ -142,9 +163,66 @@ export default function Navbar() {
         )}
       </nav>
       <style>{`
+        :root {
+          --nav-bg: rgba(4,9,28,0.92);
+          --nav-bg-scrolled: rgba(4,9,28,0.97);
+        }
+        [data-theme="light"] {
+          --nav-bg: rgba(240,244,250,0.92);
+          --nav-bg-scrolled: rgba(240,244,250,0.97);
+        }
+        @media (prefers-color-scheme: light) {
+          :root:not([data-theme="dark"]) {
+            --nav-bg: rgba(240,244,250,0.92);
+            --nav-bg-scrolled: rgba(240,244,250,0.97);
+          }
+        }
         @media (max-width: 768px) {
           .desktop-nav { display: none !important; }
           .hamburger-btn { display: flex !important; }
+        }
+        .mobile-menu-drawer {
+          background: var(--bg);
+          border-top: 1px solid var(--border);
+          padding: 12px 16px 20px;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          max-height: calc(100vh - 60px);
+          overflow-y: auto;
+        }
+        .mobile-menu-section {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          margin-bottom: 4px;
+        }
+        .mobile-menu-heading {
+          font-size: 0.7rem;
+          font-weight: 700;
+          color: var(--text-muted);
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          padding: 8px 14px 4px;
+        }
+        .mobile-menu-link {
+          display: block;
+          padding: 11px 14px;
+          border-radius: 10px;
+          font-size: 0.92rem;
+          font-weight: 600;
+          color: var(--text);
+          text-decoration: none;
+          background: transparent;
+          transition: background 0.15s;
+        }
+        .mobile-menu-link:hover, .mobile-menu-link:active {
+          background: var(--surface-hover);
+          color: var(--text);
+        }
+        .mobile-menu-link.active {
+          color: var(--dz-blue);
+          background: var(--dz-gradient-soft);
         }
       `}</style>
     </>

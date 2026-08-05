@@ -1,14 +1,15 @@
 # DUNAZOE — Production Handover Document
-**Version:** 1.0.0-rc2  
-**Date:** 2026-08-04  
-**Status:** Production Ready (90/100)
+**Version:** 1.0.0-rc3  
+**Date:** 2026-08-05  
+**Status:** Production Ready (87/100)
 
 ---
 
-## What Was Fixed
+## What Was Fixed (August 2026 Batch 2 — rc3)
 
 See `FIX_REPORT.md` for detailed breakdown. Summary:
 
+### rc2 (2026-08-04)
 1. **Theme System** — Full light/dark/system toggle with `ThemeProvider` + CSS `[data-theme]` selectors
 2. **Product Edit/Delete** — `PUT /api/products/[id]` handler added with auth + ownership check
 3. **ORD-ORD ID Bug** — Normalized order ID display; prefix stripped before padding
@@ -17,6 +18,17 @@ See `FIX_REPORT.md` for detailed breakdown. Summary:
 6. **Product Vision AI** — `runVisionAI()` wired to image upload; auto-fills form fields
 7. **NGN→USD Stripe** — Live exchange rate conversion before Stripe Checkout session
 8. **Deployment AI** — 4 Operations Centers: Fix, Payment, AI, Delivery
+
+### rc3 (2026-08-05)
+1. **Cart Image Fix** — JSON string images now parsed correctly (handles array/string/URL)
+2. **Global Mobile CSS** — `overflow-x: hidden` on html/body; 360px breakpoint added for Samsung A10
+3. **Navbar Theme-Aware** — Background replaced with CSS vars; light/dark mode nav background works
+4. **Expanded Mobile Menu** — All key items now accessible from hamburger: Vendor Dashboard, Wallet, Notifications, Messages, Admin, Delivery, KYC, Settings, Support; menu uses theme-aware background
+5. **Product ID Off Image** — Product ID badge removed from image overlay; shown below card details
+6. **OG Image JSON Parsing** — Product layout now parses JSON string `images` field before extracting OG image
+7. **OG Origin Fix** — Fixed precedence bug in `_origin` expression for correct OG URLs
+8. **Currency Service** — New `src/lib/currency.js`: `convertNGNtoUSD()`, `getExchangeRate()`, `ngnToStripeCents()` with live rate API + 1h cache + static fallback
+9. **Delivery Registration** — Better error messaging; saves registration data locally when gateway unreachable
 
 ---
 

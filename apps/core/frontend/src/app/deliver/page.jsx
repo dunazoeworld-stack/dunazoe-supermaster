@@ -125,7 +125,23 @@ export default function DeliverPage() {
       } else {
         setRegMsg({ type: "error", text: d.error || "Registration failed. Please try again." });
       }
-    } catch (_) { setRegMsg({ type: "error", text: "Connection error. Please try again." }); }
+    } catch (err) {
+      const msg = err?.message || "";
+      if (msg.includes("fetch") || msg.includes("network") || msg.includes("Failed")) {
+        setRegMsg({
+          type: "error",
+          text: "Unable to reach the delivery service right now. Your registration details have been saved locally. Please try again shortly or contact support.",
+        });
+        // Save registration locally as fallback
+        try {
+          const pending = JSON.parse(localStorage.getItem("dunazoe_pending_delivery_reg") || "[]");
+          pending.push({ ...regForm, submitted_at: new Date().toISOString() });
+          localStorage.setItem("dunazoe_pending_delivery_reg", JSON.stringify(pending));
+        } catch (_) {}
+      } else {
+        setRegMsg({ type: "error", text: msg || "Registration failed. Please check your details and try again." });
+      }
+    }
     finally { setRegLoading(false); }
   }
 

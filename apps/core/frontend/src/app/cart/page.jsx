@@ -44,9 +44,25 @@ export default function CartPage() {
             {cart.map(item => (
               <div key={item.id} className="card">
                 <div className="card-body" style={{ display: "flex", gap: "14px", alignItems: "flex-start" }}>
-                  <div style={{ width: "64px", height: "64px", borderRadius: "10px", background: item.images ? `url(${item.images}) center/cover` : "var(--bg-3)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    {!item.images && <Image src="/assets/dunazoe-logo.jpg" alt="" width={32} height={32} style={{ borderRadius: "6px", opacity: 0.3 }} />}
-                  </div>
+                  {(() => {
+                    // images can be: array, JSON string of array, or plain URL string
+                    let imgSrc = item.images || item.image_url || item.image || null;
+                    if (imgSrc && typeof imgSrc === "string") {
+                      try {
+                        const parsed = JSON.parse(imgSrc);
+                        imgSrc = Array.isArray(parsed) ? parsed[0] : imgSrc;
+                      } catch (_) {}
+                    } else if (Array.isArray(imgSrc)) {
+                      imgSrc = imgSrc[0] || null;
+                    }
+                    // Reject data URIs in CSS backgrounds
+                    if (imgSrc?.startsWith("data:")) imgSrc = null;
+                    return (
+                      <div style={{ width: "64px", height: "64px", borderRadius: "10px", background: imgSrc ? `url(${imgSrc}) center/cover` : "var(--bg-3)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        {!imgSrc && <Image src="/assets/dunazoe-logo.jpg" alt="" width={32} height={32} style={{ borderRadius: "6px", opacity: 0.3 }} />}
+                      </div>
+                    );
+                  })()}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ fontWeight: 600, fontSize: "0.9rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</p>
                     <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: "10px" }}>₦{parseFloat(item.price || 0).toLocaleString("en-NG")} each</p>

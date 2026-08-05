@@ -7,9 +7,13 @@
 
 // Use relative URL for server-side fetch within the same Next.js process,
 // or fall back to the configured API URL (never hardcode localhost).
-const _origin = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL || "dunazoe.com"}`
-  : "http://localhost:5000";
+const SITE_URL_ENV = process.env.NEXT_PUBLIC_SITE_URL || "";
+const VERCEL_URL_ENV = process.env.VERCEL_URL || "";
+const _origin = SITE_URL_ENV
+  ? SITE_URL_ENV
+  : VERCEL_URL_ENV
+    ? `https://${VERCEL_URL_ENV}`
+    : "http://localhost:5000";
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || `${_origin}/api`;
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://dunazoe.com";
 const FALLBACK_IMAGE = `${SITE_URL}/og-default.png`;
@@ -45,9 +49,14 @@ export async function generateMetadata({ params }) {
     };
   }
 
-  // Pick the best image: first in images array, or image_url field
+  // Pick the best image: handle array, JSON string array, or plain URL
+  let parsedImages = product.images;
+  if (typeof parsedImages === "string") {
+    try { parsedImages = JSON.parse(parsedImages); } catch (_) {}
+  }
   const rawImage =
-    (Array.isArray(product.images) && product.images[0]) ||
+    (Array.isArray(parsedImages) && parsedImages[0]) ||
+    (typeof parsedImages === "string" && parsedImages) ||
     product.image_url ||
     product.image ||
     FALLBACK_IMAGE;

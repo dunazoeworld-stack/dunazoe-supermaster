@@ -29,6 +29,9 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* Prevent horizontal scroll globally — mobile-first safety */
+html { overflow-x: hidden; max-width: 100%; }
+
 body {
   font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background: var(--bg);
@@ -40,6 +43,9 @@ body {
   min-height: 100vh;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden; /* No horizontal scroll on mobile */
+  word-break: break-word;
+  max-width: 100vw;
 }
 
 /* ── TYPOGRAPHY ── */
@@ -209,19 +215,39 @@ body {
   /* General overflow safety */
   .card { max-width: 100%; overflow-x: hidden; word-break: break-word; }
   table { min-width: 480px; }
+  /* Button rows — allow wrapping on small screens */
+  .btn-row { flex-wrap: wrap !important; }
+  /* Make stat tiles 2-column */
+  .stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  /* Prevent any element from exceeding viewport */
+  img, video, iframe { max-width: 100%; height: auto; }
 }
 @media (max-width: 480px) {
+  /* Samsung A10, Tecno, Infinix (320-480px screens) */
   .btn-lg { padding: 13px 20px; font-size: 0.92rem; }
-  /* Smaller grid cards on very small phones (Samsung A10, Infinix Smart) */
+  .btn { padding: 10px 16px; font-size: 0.85rem; }
+  /* Smaller grid cards on very small phones */
   .grid-auto { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
   /* Tab bars: allow wrapping */
   [style*="display: flex"][style*="gap: 8px"] { flex-wrap: wrap; }
-  /* Form inputs: prevent zoom on focus (iOS) */
+  /* Form inputs: 16px prevents iOS auto-zoom */
   .form-input { font-size: 16px !important; }
   /* Page header: reduce font size */
   .page-title { font-size: 1.3rem; }
-  /* Stats grids: 2 columns */
+  /* Stats grids: 2 columns on tiny screens */
   .stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  /* Cards: full-width, no clipping */
+  .card { border-radius: var(--r-lg) !important; }
+  /* Card body padding — tighter on small screens */
+  .card-body { padding: var(--sp-4) !important; }
+  /* Page body padding */
+  main, section { padding-left: var(--sp-3) !important; padding-right: var(--sp-3) !important; }
+}
+@media (max-width: 360px) {
+  /* Extra small screens (Samsung A10, Galaxy A01) */
+  .grid-auto { grid-template-columns: 1fr 1fr; }
+  .btn-sm { padding: 6px 10px; font-size: 0.78rem; }
+  .page-title { font-size: 1.15rem; }
 }
 
 /* ── FOCUS & ACCESSIBILITY ── */
