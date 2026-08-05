@@ -21,6 +21,23 @@ const pool = new Pool({
 
 const SERVICE_CHARGE_PCT = 0.05; // 5% deducted from vendor payout
 
+// ── Realtime notify (non-blocking) ───────────────────────────────────────────
+async function notifyRealtime(orderId, status, extra = {}) {
+  if (!orderId) return;
+  const url    = process.env.REALTIME_SERVICE_URL || "http://localhost:4021";
+  const secret = process.env.INTERNAL_SECRET      || "dunazoe_internal_shared";
+  try {
+    await fetch(`${url}/emit/order/${orderId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-internal-key": secret },
+      body: JSON.stringify({
+        event: "order:status_update",
+        data:  { order_id: orderId, status, updated_at: new Date().toISOString(), ...extra },
+      }),
+    });
+  } catch (_) {} // non-fatal — socket is best-effort
+}
+
 export async function POST(request) {
   const PAYSTACK_SECRET = process.env.PAYSTACK_LSK || process.env.PAYSTACK_SECRET_KEY || "";
 
@@ -140,6 +157,8 @@ export async function POST(request) {
           );
           if (rowCount > 0) {
             console.log(`[Webhook] ✅ Order ${orderId} → paid ₦${amountNgn}`);
+            // Notify buyer in real time
+            notifyRealtime(orderId, "paid", { amount_ngn: amountNgn, reference });
             // Schedule vendor payout: gross - 5% service charge (24h hold simulated by DB flag)
             if (vendorId) {
               const vendorAmount = parseFloat((amountNgn * (1 - SERVICE_CHARGE_PCT)).toFixed(2));

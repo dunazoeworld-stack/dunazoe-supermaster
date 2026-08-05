@@ -16,6 +16,35 @@ export default function VendorDashboardPage() {
   const [verification, setVerification] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
 
+  // Order status update state
+  const [orderUpdating,  setOrderUpdating]  = useState(null); // order id being updated
+  const [orderStatusSel, setOrderStatusSel] = useState({});   // { [orderId]: selectedStatus }
+
+  const VENDOR_NEXT_STATUS = { paid: "processing", processing: "shipped", shipped: "delivered" };
+
+  async function handleStatusUpdate(orderId, newStatus) {
+    if (!newStatus) return;
+    setOrderUpdating(orderId);
+    try {
+      const token = localStorage.getItem("dunazoe_token") || "";
+      const r = await fetch(`${API}/orders/${orderId}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const d = await r.json();
+      if (d.success) {
+        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+        setOrderStatusSel(prev => ({ ...prev, [orderId]: "" }));
+      } else {
+        alert(d.error || "Could not update status.");
+      }
+    } catch (_) {
+      alert("Network error — try again.");
+    }
+    setOrderUpdating(null);
+  }
+
   // Edit / Delete product state
   const [editProduct,  setEditProduct]  = useState(null);  // null = closed
   const [editForm,     setEditForm]     = useState({});
@@ -395,6 +424,37 @@ export default function VendorDashboardPage() {
                     <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                       <span className={`badge badge-${STATUS_BADGE[o.status] || "info"}`}>{o.status || "pending"}</span>
                       <p style={{ fontSize: "0.88rem", fontWeight: 700 }}>₦{parseFloat(o.total || 0).toLocaleString("en-NG")}</p>
+
+                      {/* Status update — only show when a vendor transition is possible */}
+                      {VENDOR_NEXT_STATUS[o.status] && (
+                        <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+                          <select
+                            value={orderStatusSel[o.id] || ""}
+                            onChange={e => setOrderStatusSel(prev => ({ ...prev, [o.id]: e.target.value }))}
+                            style={{
+                              fontSize: "0.72rem", padding: "4px 6px", borderRadius: "7px",
+                              border: "1px solid var(--border)", background: "var(--surface)",
+                              color: "var(--text)", cursor: "pointer",
+                            }}
+                          >
+                            <option value="">Update status…</option>
+                            <option value={VENDOR_NEXT_STATUS[o.status]}>
+                              → {VENDOR_NEXT_STATUS[o.status]}
+                            </option>
+                          </select>
+                          {orderStatusSel[o.id] && (
+                            <button
+                              onClick={() => handleStatusUpdate(o.id, orderStatusSel[o.id])}
+                              disabled={orderUpdating === o.id}
+                              className="btn btn-primary btn-sm"
+                              style={{ fontSize: "0.72rem", padding: "4px 10px" }}
+                            >
+                              {orderUpdating === o.id ? "…" : "✓"}
+                            </button>
+                          )}
+                        </div>
+                      )}
+
                       <Link href={`/track?order=${o.id}`} className="btn btn-ghost btn-sm" style={{ fontSize: "0.72rem" }}>📍 Track</Link>
                       <Link href={`/orders/${o.id}`} className="btn btn-outline btn-sm" style={{ fontSize: "0.72rem" }}>View →</Link>
                     </div>

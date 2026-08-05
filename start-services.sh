@@ -61,7 +61,19 @@ start_service() {
   fi
 
   echo "🚀 [$name] Starting on :$port (Tier $tier)..."
-  PORT=$port node "$dir/index.js" \
+  PORT=$port \
+    DATABASE_URL="${DATABASE_URL:-}" \
+    SESSION_SECRET="${SESSION_SECRET:-}" \
+    JWT_SECRET="${SESSION_SECRET:-dunazoe_jwt_change_in_prod}" \
+    PAYSTACK_LSK="${PAYSTACK_LSK:-}" \
+    STRIPE_SECRET_KEY="${STRIPE_SECRET_KEY:-}" \
+    CLOUDINARY_CLOUD_NAME="${CLOUDINARY_CLOUD_NAME:-}" \
+    CLOUDINARY_API_KEY="${CLOUDINARY_API_KEY:-}" \
+    CLOUDINARY_API_SECRET="${CLOUDINARY_API_SECRET:-}" \
+    GEMINI_API_KEY="${GEMINI_API_KEY:-}" \
+    INTERNAL_SECRET="${INTERNAL_SECRET:-dunazoe_internal_shared}" \
+    REALTIME_SERVICE_URL="${REALTIME_SERVICE_URL:-http://localhost:4021}" \
+    node "$dir/index.js" \
     >> "$LOG_DIR/$name.log" 2>&1 &
 
   echo $! > "$LOG_DIR/$name.pid"
