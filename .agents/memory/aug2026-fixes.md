@@ -1,7 +1,46 @@
 ---
-name: August 2026 production fixes (rc3)
-description: Key bugs fixed in August 2026 batch 2 — cart JSX, navbar theme, mobile CSS, OG image, currency service, vendor ID off image
+name: August 2026 production fixes (rc3–rc5)
+description: Key bugs fixed in August 2026 — cart JSX, navbar theme, mobile CSS, OG image, currency service, vendor ID, self-delivery, AI scaling, deploy assistant
 ---
+
+## rc5 (2026-08-06) — Final Production Patch
+
+### Cloudinary Upload JSON Error Fix
+- `uploadWithRetry` in vendor/onboard calls `r.json()` — Cloudinary returns HTML on gateway 5xx errors
+- **Fix:** In upload route, changed `response.json()` to `response.text()` + `JSON.parse()` with catch block
+- Returns 502 with clear message instead of crashing with "Unexpected end of JSON input"
+- **Pattern:** Always use `text()` then `JSON.parse()` when calling external APIs that may return non-JSON on error
+
+### Product Page Mobile Responsive
+- Grid used `gridTemplateColumns: "clamp(280px,45%,520px) 1fr"` — inline style, no media query → overflows on mobile
+- **Fix:** Replaced with `.product-top-grid` and `.product-specs-grid` CSS classes in globals.css
+- Added `@media (max-width: 768px)` → both grids collapse to `1fr`
+- **Pattern:** Never put two-column grids with `clamp()` as inline styles — they can't have media queries
+
+### Quantity Controller
+- Old: `<p>QTY</p> <button>−</button> <span>n</span> <button>+</button>` — misaligned on mobile
+- **Fix:** Unified border container with 44px touch targets — `[-] 1 [+]` centered pattern
+
+### Checkout Grid
+- Inline `gridTemplateColumns: "1fr 320px"` had no media query
+- **Fix:** `.checkout-grid` class in globals.css; stacks to `1fr` at 768px
+
+### Payment Health Upgrade
+- Added live Paystack API ping (4s timeout) to confirm connectivity beyond key format check
+- Added `PAYSTACK_WEBHOOK_SECRET` existence check
+- Returns `summary: { PAYSTACK, STRIPE, WEBHOOK }` with emoji labels for Deployment AI display
+
+### Light Theme Full Coverage
+- Dark theme vars were `:root` defaults; light theme was incomplete (nav only)
+- **Fix:** Full `[data-theme="light"]` ruleset in globals.css covering all CSS vars + card/form/button overrides
+- `@media (prefers-color-scheme: light)` fallback for `body:not([data-theme="dark"])`
+
+### Deploy Assistant Upgrade
+- Added `AppPreviewPanel`: iframe, URL input, mobile/desktop toggle, refresh button
+- Added `OperationsPanel`: 7 operations (Build/Test/Fix/Run/Deploy/Publish/Rollback)
+  - Manual/Assisted/Auto modes filter which operations are shown
+  - HIGH risk operations always require confirmation regardless of mode
+  - Each operation shows: risk level, what it does, recovery option, result with timestamp
 
 ## Cart Build Error Fix
 - Original cart had `<style>{...}</style>` as JSX sibling of `<div className="cart-layout">` inside ternary — valid only with Fragment wrapper

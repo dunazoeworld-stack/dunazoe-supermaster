@@ -1,7 +1,23 @@
 # DUNAZOE — Production Handover Document
-**Version:** 1.0.0-rc4  
-**Date:** 2026-08-05  
-**Status:** Production Ready (93/100)
+**Version:** 1.0.0-rc5  
+**Date:** 2026-08-06  
+**Status:** Production Ready (96/100)
+
+---
+
+## What Was Fixed (August 2026 Batch 4 — rc5)
+
+### rc5 (2026-08-06) — Final Production Stabilization Patch
+1. **Upload JSON Error** — Cloudinary `response.text()` + `JSON.parse()` with fallback; HTML 502 body no longer crashes upload with "Unexpected end of JSON input"
+2. **Product Page Mobile** — `.product-top-grid` / `.product-specs-grid` CSS classes with `@media (max-width: 768px)` breakpoints; no more horizontal overflow on phones
+3. **Quantity Controller** — Replaced "QTY / − / n / +" row with centered `[-] 1 [+]` stepper with 44px touch targets and unified border radius
+4. **Checkout Mobile Grid** — `.checkout-grid` class with `1fr 320px` desktop, `1fr` mobile; applied globally via globals.css
+5. **Payment Health API** — Live Paystack ping test (4s timeout), webhook secret check, `summary` object: `{ PAYSTACK, STRIPE, WEBHOOK }` with ✅/❌/⚠️ labels
+6. **Light Theme — Global Coverage** — Full `[data-theme="light"]` CSS var set: bg, surface, elevated, text, border, glow, success/warning/danger; card/form/btn-ghost overrides; `@media prefers-color-scheme: light` fallback
+7. **Navbar** — Already correct (horizontal logo, comprehensive mobile menu from rc3) — confirmed no duplicate
+8. **Deploy Assistant — App Preview Panel** — iframe preview with URL input, mobile/desktop toggle (375px), live refresh, external link; toggleable split layout (AI left, preview right)
+9. **Deploy Assistant — Operations Panel** — Build / Test / AI Fix / Run / Deploy / Publish / Rollback; Manual / Assisted / Auto modes; risk levels (LOW/MEDIUM/HIGH); confirmation step with what/recovery info; real-time result feedback
+10. **GitHub Push** — All commits pushed to `dunazoeworld-stack/dunazoe-supermaster` (main)
 
 ---
 
