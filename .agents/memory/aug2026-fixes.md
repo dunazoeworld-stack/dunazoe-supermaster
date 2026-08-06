@@ -1,7 +1,23 @@
 ---
-name: August 2026 production fixes (rc3–rc5)
-description: Key bugs fixed in August 2026 — cart JSX, navbar theme, mobile CSS, OG image, currency service, vendor ID, self-delivery, AI scaling, deploy assistant
+name: August 2026 production fixes (rc3–rc6)
+description: Key bugs fixed in August 2026 — cart JSX, navbar theme, mobile CSS, OG image, currency service, vendor ID, self-delivery, AI scaling, deploy assistant, canonical webhooks
 ---
+
+## rc6 (2026-08-06) — Canonical Webhook Routes + Secret Audit
+
+### Canonical Webhook URLs
+- Created `/api/webhooks/paystack` (re-exports HMAC-SHA512 handler from payments/webhook)
+- Created `/api/webhooks/stripe` (full Stripe-Signature timestamp verification + payment_intent.succeeded + charge.refunded)
+- Created `/api/webhooks/notify` (Termii DLR callback, GET ping for URL validation)
+- **Why:** ops/status referenced these URLs; without the routes the URLs would 404 when Paystack/Stripe POSTed events
+
+### Empty Secrets Audit (action required by user)
+- `PAYSTACK_LSK` — registered as Replit Secret but value is empty string (length 0)
+- `PAYSTACK_WEBHOOK_SECRET` — same, empty
+- `CLOUDINARY_API_SECRET` — same, empty
+- `CLOUDINARY_CLOUD_NAME` ✅ set (length 9), `CLOUDINARY_API_KEY` ✅ set (length 15)
+- **Pattern:** Shell `node -e "console.log(process.env.X?.length)"` to audit secret values without revealing them
+- **Fix needed:** User must go to Replit Secrets and set actual values — no code changes required, all handlers read at request time
 
 ## rc5 (2026-08-06) — Final Production Patch
 
