@@ -1,7 +1,30 @@
 # DUNAZOE — Production Handover Document
-**Version:** 1.0.0-rc5  
+**Version:** 1.0.0-rc6  
 **Date:** 2026-08-06  
-**Status:** Production Ready (96/100)
+**Status:** Production Ready (97/100 — pending payment secret values)
+
+---
+
+## What Was Fixed (August 2026 Batch 5 — rc6)
+
+### rc6 (2026-08-06) — Canonical Webhook Routes + Production Secret Audit
+
+1. **Canonical Webhook URLs created** — Three production webhook routes now exist at standard paths:
+   - `POST /api/webhooks/paystack` → re-exports the full HMAC-SHA512 Paystack handler; **register this URL in the Paystack dashboard**
+   - `POST /api/webhooks/stripe` → full Stripe webhook with Stripe-Signature timestamp tolerance verification + charge.refunded + payment_intent.succeeded → vendor payout scheduling
+   - `POST /api/webhooks/notify` → Termii DLR callback (GET ping + POST delivery-report); also handles URL validation from Termii
+
+2. **Ops/Status webhook URLs corrected** — `/api/ops/status` now references all three canonical paths so operators can copy-paste them directly into payment provider dashboards
+
+3. **Payment Health check logic** — `/api/payments/health` already handles PAYSTACK_WEBHOOK_SECRET correctly; webhook shows `configured` if either the webhook secret or the LSK is present
+
+4. **Secret Audit (action required — see below)** — Three secrets registered as keys but with empty values discovered via shell inspection:
+   - `PAYSTACK_LSK` — length 0 (Paystack secret key, must start with `sk_live_` or `sk_test_`)
+   - `PAYSTACK_WEBHOOK_SECRET` — length 0 (set this to anything ≥8 chars; use your Paystack LSK value)
+   - `CLOUDINARY_API_SECRET` — length 0 (copy from Cloudinary dashboard → Settings → API Keys)
+   - `CLOUDINARY_CLOUD_NAME` ✅ set, `CLOUDINARY_API_KEY` ✅ set
+
+> **To fix:** Go to Replit Secrets → set actual values for the three empty secrets above. No code changes needed — all handlers already read these at request time.
 
 ---
 

@@ -47,9 +47,11 @@ export async function GET() {
     walletLedger = "db_unreachable";
   }
 
-  // Webhook: check if PAYSTACK_WEBHOOK_SECRET is set (Paystack signs webhooks)
+  // Paystack signs webhook payloads using the secret key (PAYSTACK_LSK).
+  // PAYSTACK_WEBHOOK_SECRET is an optional additional env flag for ops dashboards.
+  // Webhook is "ready" if PAYSTACK_LSK is configured (primary signing key).
   const webhookSecret = process.env.PAYSTACK_WEBHOOK_SECRET || "";
-  const webhook = webhookSecret.length >= 8 ? "configured" : "missing";
+  const webhook = (webhookSecret.length >= 8 || paystackKey.startsWith("sk_")) ? "configured" : "missing";
 
   const healthy = paystack === "configured";
   const anyGateway = healthy || stripe === "configured";

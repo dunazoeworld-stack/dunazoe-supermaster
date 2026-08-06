@@ -39,10 +39,16 @@ async function notifyRealtime(orderId, status, extra = {}) {
 }
 
 export async function POST(request) {
-  const PAYSTACK_SECRET = process.env.PAYSTACK_LSK || process.env.PAYSTACK_SECRET_KEY || "";
+  // Paystack signs webhooks with the secret key (HMAC-SHA512).
+  // PAYSTACK_WEBHOOK_SECRET overrides PAYSTACK_LSK if set (ops separation).
+  const PAYSTACK_SECRET =
+    process.env.PAYSTACK_WEBHOOK_SECRET ||
+    process.env.PAYSTACK_LSK ||
+    process.env.PAYSTACK_SECRET_KEY ||
+    "";
 
   if (!PAYSTACK_SECRET) {
-    console.error("[Webhook] PAYSTACK_LSK not set — cannot verify webhook");
+    console.error("[Webhook] No Paystack signing key — set PAYSTACK_WEBHOOK_SECRET or PAYSTACK_LSK");
     return NextResponse.json({ received: false }, { status: 503 });
   }
 
