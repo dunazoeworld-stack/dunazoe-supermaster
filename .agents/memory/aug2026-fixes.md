@@ -3,6 +3,24 @@ name: August 2026 production fixes (rc3–rc6)
 description: Key bugs fixed in August 2026 — cart JSX, navbar theme, mobile CSS, OG image, currency service, vendor ID, self-delivery, AI scaling, deploy assistant, canonical webhooks
 ---
 
+## rc7 (2026-08-06) — CTO Audit: 4 Missing Pages + Turbopack Config
+
+### Missing Pages (mobile menu ghost links fixed)
+- `/settings` — Account/Appearance/Notifications/Privacy/Danger Zone tabs; theme toggle persists to localStorage + document
+- `/support` — 10-question FAQ accordion + contact form (select + textarea) + 6 quick-action shortcut cards
+- `/notifications` — All/Unread filter, mark-one/mark-all-read via `/api/notifications`, graceful offline banner
+- `/messages` — Conversation list + full chat UI; DUNAZOE Support bot with auto-reply; send on Enter
+- **Why:** All 4 were in the mobile menu but returned 404; 0 broken nav links now
+
+### Turbopack root config
+- Added `turbopack: { root: __dirname }` to `next.config.js`
+- **Why:** 3 lockfiles at different workspace levels triggered "Found additional lockfiles" warning on every start
+
+### Full page audit result
+- 25 pages all return 200; `/api/webhooks/paystack` 401 (correct — rejects unsigned); `/api/webhooks/stripe` 503 (correct — Stripe secrets not set)
+
+---
+
 ## rc6 (2026-08-06) — Canonical Webhook Routes + Secret Audit
 
 ### Canonical Webhook URLs
