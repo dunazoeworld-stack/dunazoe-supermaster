@@ -1,7 +1,17 @@
 # DUNAZOE — Production Handover Document
-**Version:** 1.0.0-rc3  
+**Version:** 1.0.0-rc4  
 **Date:** 2026-08-05  
-**Status:** Production Ready (87/100)
+**Status:** Production Ready (93/100)
+
+---
+
+## What Was Fixed (August 2026 Batch 3 — rc4)
+
+### rc4 (2026-08-05)
+1. **Self-Delivery Zone Matching at Checkout** — `SelfDeliveryPanel` component added to checkout page; when buyer enters their state, cart items with vendor `self_delivery_zones` covering that state show a "Vendor Self-Delivery Available" banner with WhatsApp deeplink and in-app chat button; Nigerian state alias matching (Abuja/FCT, Port Harcourt/Rivers etc.); warns if vendor hasn't set a delivery fee
+2. **AI Scaling Engine Dashboard** — `ScalingEnginePanel` added to `/deploy/scaling`; shows live metrics (users/vendors/orders/uptime), feature lifecycle cards with current status + AI reason + threshold, manual override buttons (→ active / → beta / → suspended), status filter bar, 30s auto-refresh, and link to full `/deploy/features` control
+3. **NEXT_PUBLIC_SITE_URL** — Environment variable set to `https://dunazoe.com` so OG image URLs, canonical links and social share images resolve correctly in production
+4. **GitHub Push** — All rc3 + rc4 commits pushed to `dunazoeworld-stack/dunazoe-supermaster` (main branch) via Replit GitHub integration
 
 ---
 

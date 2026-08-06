@@ -87,7 +87,20 @@ export async function POST(request) {
 
     const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
     const response  = await fetch(uploadUrl, { method: "POST", body: uploadForm });
-    const result    = await response.json();
+
+    // Guard: Cloudinary sometimes returns HTML on gateway errors — parse safely
+    let result;
+    const rawText = await response.text();
+    try {
+      result = JSON.parse(rawText);
+    } catch (_) {
+      console.error("[Upload] Cloudinary non-JSON response:", rawText.slice(0, 200));
+      return NextResponse.json({
+        success: false,
+        error:   `Cloudinary gateway error (HTTP ${response.status}). Please try again in a moment.`,
+        reason:  "cloudinary_non_json",
+      }, { status: 502 });
+    }
 
     // ── Case 2: Credentials present but INVALID (401/403 from Cloudinary) ────
     if (response.status === 401 || response.status === 403) {

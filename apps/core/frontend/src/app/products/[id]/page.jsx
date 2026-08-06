@@ -167,7 +167,7 @@ export default function ProductDetailPage({ params }) {
           <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
 
             {/* ── TOP GRID ── */}
-            <div style={{ display: "grid", gridTemplateColumns: "clamp(280px,45%,520px) 1fr", gap: "40px", alignItems: "start" }}>
+            <div className="product-top-grid">
 
               {/* Image gallery */}
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -294,13 +294,15 @@ export default function ProductDetailPage({ params }) {
                   </div>
                 )}
 
-                {/* QTY */}
+                {/* QTY — centered touch-friendly [-] 1 [+] */}
                 {type !== "service" && (
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    <p style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-secondary)" }}>QTY</p>
-                    <button onClick={() => setQty(q => Math.max(1, q - 1))} className="btn btn-ghost btn-sm" style={{ padding: "6px 14px" }}>−</button>
-                    <span style={{ fontWeight: 800, fontSize: "1.1rem", minWidth: "28px", textAlign: "center" }}>{qty}</span>
-                    <button onClick={() => setQty(q => q + 1)} className="btn btn-ghost btn-sm" style={{ padding: "6px 14px" }}>+</button>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0" }}>
+                    <p style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-secondary)", marginRight: "12px" }}>Quantity</p>
+                    <div style={{ display: "inline-flex", alignItems: "center", border: "1.5px solid var(--border)", borderRadius: "12px", overflow: "hidden" }}>
+                      <button onClick={() => setQty(q => Math.max(1, q - 1))} style={{ width: "44px", height: "44px", background: "var(--surface)", border: "none", cursor: "pointer", fontSize: "1.2rem", fontWeight: 700, color: "var(--text)", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                      <span style={{ minWidth: "48px", textAlign: "center", fontWeight: 800, fontSize: "1rem", color: "var(--text)", borderLeft: "1px solid var(--border)", borderRight: "1px solid var(--border)", height: "44px", display: "flex", alignItems: "center", justifyContent: "center" }}>{qty}</span>
+                      <button onClick={() => setQty(q => q + 1)} style={{ width: "44px", height: "44px", background: "var(--surface)", border: "none", cursor: "pointer", fontSize: "1.2rem", fontWeight: 700, color: "var(--text)", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+                    </div>
                   </div>
                 )}
 
@@ -366,7 +368,7 @@ export default function ProductDetailPage({ params }) {
             </div>
 
             {/* ── SPECS + DESCRIPTION GRID ── */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", alignItems: "start" }}>
+            <div className="product-specs-grid">
               <div className="card">
                 <div className="card-body">
                   <p style={{ fontWeight: 800, marginBottom: "12px" }}>📄 Description</p>
@@ -443,3 +445,6 @@ export default function ProductDetailPage({ params }) {
     </PageShell>
   );
 }
+
+// ── Responsive CSS injected via globals — product page ───────────────────────
+// (Actual styles are in globals.css via .product-top-grid / .product-specs-grid)

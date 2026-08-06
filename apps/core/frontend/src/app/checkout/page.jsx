@@ -379,7 +379,7 @@ export default function CheckoutPage() {
       )}
       {error && <div className="alert alert-error" style={{ marginBottom: "20px" }}>⚠️ {error}</div>}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: "24px", alignItems: "start" }} className="checkout-grid">
+      <div className="checkout-grid">
         <form onSubmit={handleCheckout} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
 
           {/* ── Delivery Details ────────────────────────────────────────────── */}

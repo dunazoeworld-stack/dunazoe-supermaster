@@ -13,6 +13,25 @@ export async function GET() {
   const paystack = paystackKey.startsWith("sk_") ? "configured" : "missing";
   const stripe   = stripeKey.startsWith("sk_")   ? "configured" : "missing";
 
+  // Live Paystack reachability check (quick ping — 4s timeout)
+  let paystackLive = "unknown";
+  if (paystack === "configured") {
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 4000);
+      const r = await fetch("https://api.paystack.co/transaction?perPage=1", {
+        headers: { Authorization: `Bearer ${paystackKey}` },
+        signal: ctrl.signal,
+      });
+      clearTimeout(t);
+      paystackLive = r.ok ? "connected" : (r.status === 401 ? "invalid_key" : `error_${r.status}`);
+    } catch (_) {
+      paystackLive = "unreachable";
+    }
+  } else {
+    paystackLive = "not_configured";
+  }
+
   // Check wallet ledger schema using shared pool (matches lib/db.js SSL logic)
   let walletLedger = "unknown";
   try {
@@ -28,14 +47,26 @@ export async function GET() {
     walletLedger = "db_unreachable";
   }
 
+  // Webhook: check if PAYSTACK_WEBHOOK_SECRET is set (Paystack signs webhooks)
+  const webhookSecret = process.env.PAYSTACK_WEBHOOK_SECRET || "";
+  const webhook = webhookSecret.length >= 8 ? "configured" : "missing";
+
   const healthy = paystack === "configured";
+  const anyGateway = healthy || stripe === "configured";
 
   return NextResponse.json(
     {
       paystack,
+      paystack_live: paystackLive,
       stripe,
+      webhook,
       wallet_ledger: walletLedger,
-      any_gateway:   healthy || stripe === "configured",
+      any_gateway:   anyGateway,
+      summary: {
+        PAYSTACK: paystackLive === "connected" ? "✅ Connected" : paystack === "missing" ? "❌ Key Missing" : `⚠️ ${paystackLive}`,
+        STRIPE:   stripe === "configured" ? "✅ Configured" : "❌ Key Missing",
+        WEBHOOK:  webhook === "configured" ? "✅ Active" : "⚠️ Secret Not Set",
+      },
     },
     { status: healthy ? 200 : 503 }
   );
