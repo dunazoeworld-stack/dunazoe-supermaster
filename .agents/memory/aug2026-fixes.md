@@ -16,6 +16,16 @@ description: Key bugs fixed in August 2026 — cart JSX, navbar theme, mobile CS
 - Added `turbopack: { root: __dirname }` to `next.config.js`
 - **Why:** 3 lockfiles at different workspace levels triggered "Found additional lockfiles" warning on every start
 
+## rc8 (2026-08-07) — Build and Preview Stabilization
+
+### Next.js query-string pages
+- Next.js 16 production builds require `useSearchParams()` to be below a Suspense boundary in client pages.
+- **Why:** Without the boundary, static page generation fails even when the page works in the dev preview.
+
+### Replit preview bundler
+- The repository has multiple lockfiles and Next.js Turbopack inferred the workspace root incorrectly, causing recurring React Client Manifest and missing-module errors after restarts.
+- **Why:** Webpack dev mode is stable in this workspace; the remaining lockfile root warning is cosmetic.
+
 ### Full page audit result
 - 25 pages all return 200; `/api/webhooks/paystack` 401 (correct — rejects unsigned); `/api/webhooks/stripe` 503 (correct — Stripe secrets not set)
 

@@ -1,12 +1,12 @@
 "use client";
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import PageShell from "../../components/PageShell";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "/api";
 
-export default function WalletPage() {
+function WalletContent() {
   const searchParams = useSearchParams();
 
   const [data,         setData]         = useState(null);
@@ -306,5 +306,13 @@ export default function WalletPage() {
         </div>
       )}
     </PageShell>
+  );
+}
+
+export default function WalletPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: "100vh", background: "var(--bg-1, #04091C)" }} />}>
+      <WalletContent />
+    </Suspense>
   );
 }

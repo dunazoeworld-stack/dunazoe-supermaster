@@ -4,11 +4,9 @@ const nextConfig = {
   // This eliminates the "slow filesystem" warning and speeds up hot-reload.
   distDir: process.env.NODE_ENV === "development" ? "/tmp/dunazoe-next-dev" : ".next",
 
-  // Silence "multiple lockfiles detected" warning — our workspace root has an
-  // unrelated package-lock.json; the real frontend root is apps/core/frontend.
-  turbopack: {
-    root: __dirname,
-  },
+  // NOTE: turbopack.root was intentionally removed — setting it caused React Client
+  // Manifest ID mismatches after OOM-triggered restarts (homepage 500 errors).
+  // The "multiple lockfiles" warning it suppressed is cosmetic; the crash is not.
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "res.cloudinary.com" },

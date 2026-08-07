@@ -39,8 +39,11 @@ async function notifyRealtime(orderId, status, extra = {}) {
 }
 
 export async function POST(request) {
-  // Paystack signs webhooks with the secret key (HMAC-SHA512).
+  // Paystack signs webhooks with the SECRET key (HMAC-SHA512).
   // PAYSTACK_WEBHOOK_SECRET overrides PAYSTACK_LSK if set (ops separation).
+  // NOTE: pk_live_/pk_test_ (public keys) CANNOT verify webhook signatures —
+  //       only sk_live_/sk_test_ (secret keys) work for HMAC. If a public key
+  //       is present, ALL webhooks will be rejected as "invalid signature".
   const PAYSTACK_SECRET =
     process.env.PAYSTACK_WEBHOOK_SECRET ||
     process.env.PAYSTACK_LSK ||
@@ -50,6 +53,15 @@ export async function POST(request) {
   if (!PAYSTACK_SECRET) {
     console.error("[Webhook] No Paystack signing key — set PAYSTACK_WEBHOOK_SECRET or PAYSTACK_LSK");
     return NextResponse.json({ received: false }, { status: 503 });
+  }
+
+  // Detect public-key misconfiguration before attempting HMAC verification
+  if (PAYSTACK_SECRET.startsWith("pk_live_") || PAYSTACK_SECRET.startsWith("pk_test_")) {
+    console.error("[Webhook] ❌ PAYSTACK secret is a PUBLIC key (pk_…) — webhooks require the SECRET key (sk_live_…). All events rejected.");
+    return NextResponse.json({
+      received: false,
+      error: "Webhook signing requires the Paystack secret key (sk_live_…), not the public key (pk_…). Update PAYSTACK_WEBHOOK_SECRET in Replit Secrets."
+    }, { status: 503 });
   }
 
   // ── Signature verification (HMAC-SHA512) ─────────────────────────────────

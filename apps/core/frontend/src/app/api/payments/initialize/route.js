@@ -10,11 +10,12 @@ import { Pool } from "pg";
 const PAYSTACK_BASE = "https://api.paystack.co";
 const GATEWAY = process.env.GATEWAY_URL || "http://localhost:3000";
 
+// Prefer explicit connection string; fall back to PGHOST/PGPORT/PGDATABASE/PGUSER/PGPASSWORD
+// which Replit built-in Postgres exports automatically (DATABASE_URL may be empty).
+const _connStr = process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL || undefined;
 const pool = new Pool({
-  connectionString: process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL,
-  ssl: (process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL || "").includes("sslmode=require")
-    ? { rejectUnauthorized: false }
-    : false,
+  connectionString: _connStr,
+  ssl: _connStr?.includes("sslmode=require") ? { rejectUnauthorized: false } : false,
 });
 
 export async function POST(request) {

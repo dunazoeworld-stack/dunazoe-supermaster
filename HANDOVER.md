@@ -1,7 +1,26 @@
 # DUNAZOE — Production Handover Document
-**Version:** 1.0.0-rc6  
-**Date:** 2026-08-06  
-**Status:** Production Ready (97/100 — pending payment secret values)
+**Version:** 1.0.0-rc8
+**Date:** 2026-08-07
+**Status:** Production Ready (98/100 — payment and Cloudinary secret values still pending)
+
+---
+
+## rc8 (2026-08-07) — Production Build and Runtime Stabilization
+
+1. **Payment health route hardened** — Paystack and Stripe key formats are classified without exposing values; live Paystack reachability and wallet-ledger checks remain visible to operators; the route reuses the shared PostgreSQL pool.
+2. **Payment webhook guard** — Public Paystack keys (`pk_…`) are rejected before HMAC verification; only secret keys (`sk_…`) can sign webhooks.
+3. **Next.js production build fixed** — Added required Suspense boundaries around query-string pages (`/kyc`, `/payment/verify`, `/wallet`); production build now completes all 101 pages.
+4. **Replit preview stability** — Development uses Next.js Webpack instead of Turbopack because the inferred multi-lockfile root caused recurring React Client Manifest and missing-module failures after restarts. The remaining root warning is cosmetic.
+5. **Runtime verification** — `/`, `/cart`, `/kyc`, `/payment/verify`, and `/api/webhooks/notify` return 200; unsigned Paystack webhook requests are rejected; payment health returns the expected 503 while payment secrets are empty.
+
+### rc8 Secret State (verified without reading secret values)
+- `PAYSTACK_LSK` — registered but empty; live NGN payment initialization is blocked
+- `PAYSTACK_WEBHOOK_SECRET` — registered but empty; Paystack webhook signing is blocked
+- `CLOUDINARY_API_SECRET` — registered but empty; signed image uploads are blocked
+- `CLOUDINARY_CLOUD_NAME` and `CLOUDINARY_API_KEY` — configured
+- `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` — registered but not configured with usable values; USD payments remain optional
+
+> **Required operator action:** Add the actual Paystack secret key, Paystack webhook secret, and Cloudinary API secret in Replit Secrets. Values must be entered through the secure Secrets UI; never commit them to GitHub or place them in chat.
 
 ---
 

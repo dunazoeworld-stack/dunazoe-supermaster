@@ -9,13 +9,13 @@
  * 2. Shows success/failure UI
  * 3. Redirects to the order page on success
  */
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import PageShell from "../../../components/PageShell";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "/api";
 
-export default function PaymentVerifyPage() {
+function PaymentVerifyContent() {
   const searchParams = useSearchParams();
   const router       = useRouter();
   const [status, setStatus] = useState("verifying"); // verifying | success | failed
@@ -122,5 +122,13 @@ export default function PaymentVerifyPage() {
         )}
       </div>
     </PageShell>
+  );
+}
+
+export default function PaymentVerifyPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: "40px", textAlign: "center" }}>Verifying payment…</div>}>
+      <PaymentVerifyContent />
+    </Suspense>
   );
 }

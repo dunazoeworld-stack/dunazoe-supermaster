@@ -7,7 +7,7 @@
  * - ID document submission (Level 2 — manual review)
  * - Bank account management for withdrawals
  */
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import PageShell from "../../components/PageShell";
@@ -30,7 +30,7 @@ const LEVELS = [
   { level: 3, name: "Full KYC",    color: "#00C896", bg: "rgba(0,200,150,0.1)",   limits: "Unlimited — international transfers enabled" },
 ];
 
-export default function KYCPage() {
+function KYCContent() {
   const searchParams = useSearchParams();
 
   const [kyc,          setKyc]          = useState(null);
@@ -485,5 +485,13 @@ export default function KYCPage() {
         )
       )}
     </PageShell>
+  );
+}
+
+export default function KYCPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: "40px", textAlign: "center" }}>Loading KYC…</div>}>
+      <KYCContent />
+    </Suspense>
   );
 }
