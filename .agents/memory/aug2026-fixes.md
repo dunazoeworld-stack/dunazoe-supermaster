@@ -124,3 +124,7 @@ description: Key bugs fixed in August 2026 — cart JSX, navbar theme, mobile CS
 ## Delivery Registration Error
 - When gateway unreachable: now saves registration data to `localStorage.dunazoe_pending_delivery_reg`
 - Shows descriptive message instead of generic "Connection error. Please try again."
+
+## GitHub push authorization
+- A GitHub PAT saved as a Replit Secret does not satisfy Replit's managed `gitPush` source-control credential check.
+- **Why:** Managed pushes require the Replit GitHub source-control OAuth connection; repeatedly retrying with a shell PAT is unsafe and does not resolve `NO_CREDENTIALS`.
