@@ -81,11 +81,20 @@ async function callXAI(imageUrl, apiKey) {
 
 // ── Google Gemini 1.5 Flash Vision ───────────────────────────────────────────
 async function callGemini(imageUrl, apiKey) {
-  const imgRes = await fetch(imageUrl, { signal: AbortSignal.timeout(10_000) });
-  if (!imgRes.ok) throw new Error(`Image fetch failed: ${imgRes.status}`);
-  const imgBuf = await imgRes.arrayBuffer();
-  const b64    = Buffer.from(imgBuf).toString("base64");
-  const mime   = (imgRes.headers.get("content-type") || "image/jpeg").split(";")[0];
+  let b64;
+  let mime = "image/jpeg";
+  if (imageUrl.startsWith("data:")) {
+    const match = imageUrl.match(/^data:([^;,]+);base64,(.+)$/s);
+    if (!match) throw new Error("Invalid image data URL");
+    mime = match[1];
+    b64 = match[2];
+  } else {
+    const imgRes = await fetch(imageUrl, { signal: AbortSignal.timeout(10_000) });
+    if (!imgRes.ok) throw new Error(`Image fetch failed: ${imgRes.status}`);
+    const imgBuf = await imgRes.arrayBuffer();
+    b64 = Buffer.from(imgBuf).toString("base64");
+    mime = (imgRes.headers.get("content-type") || "image/jpeg").split(";")[0];
+  }
 
   const r = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,

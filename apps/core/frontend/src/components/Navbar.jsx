@@ -69,18 +69,18 @@ export default function Navbar() {
             ))}
           </div>
 
-          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+          <div className="navbar-actions" style={{ display: "flex", gap: "6px", alignItems: "center", minWidth: 0 }}>
             {/* Theme toggle */}
-            <ThemeToggle compact />
+            <span className="navbar-theme-toggle"><ThemeToggle compact /></span>
 
             {/* Cart */}
             <Link href="/cart" style={{ position: "relative", display: "flex", alignItems: "center", padding: "7px", borderRadius: "9px", color: "var(--text-secondary)", textDecoration: "none", fontSize: "1.1rem" }} aria-label="Cart">🛒</Link>
 
             {/* Notification Bell (logged in only) */}
-            <NotificationBell />
+            <span className="navbar-notifications"><NotificationBell /></span>
 
             {user ? (
-              <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+              <div className="navbar-user-desktop" style={{ display: "flex", gap: "6px", alignItems: "center" }}>
                 <Link href="/dashboard" style={{ padding: "7px 14px", borderRadius: "9px", fontSize: "0.85rem", fontWeight: 600, color: "var(--text-secondary)", textDecoration: "none" }}>
                   {user.name?.split(" ")[0]}
                 </Link>
@@ -180,6 +180,16 @@ export default function Navbar() {
         @media (max-width: 768px) {
           .desktop-nav { display: none !important; }
           .hamburger-btn { display: flex !important; }
+          .navbar-user-desktop, .navbar-notifications { display: none !important; }
+          .navbar-actions { flex-shrink: 0; }
+          .dz-logo { min-width: 0; }
+          .dz-logo-text { white-space: nowrap; }
+        }
+        @media (max-width: 360px) {
+          .navbar-actions { gap: 2px !important; }
+          .navbar-theme-toggle button { padding-left: 6px !important; padding-right: 6px !important; }
+          .dz-logo { gap: 6px; }
+          .dz-logo-text { font-size: 0.98rem; }
         }
         .mobile-menu-drawer {
           background: var(--bg);

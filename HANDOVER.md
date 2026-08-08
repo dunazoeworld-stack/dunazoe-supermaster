@@ -1,7 +1,20 @@
 # DUNAZOE — Production Handover Document
-**Version:** 1.0.0-rc8
-**Date:** 2026-08-07
+**Version:** 1.0.0-rc9
+**Date:** 2026-08-08
 **Status:** Production Ready (98/100 — payment and Cloudinary secret values still pending)
+
+---
+
+## rc9 (2026-08-08) — Targeted Mobile, Social, Chat, and Vision Fixes
+
+1. **Mobile navbar containment** — Narrow screens now prioritize the logo, theme, cart, and menu controls; desktop account and notification controls remain available in the mobile drawer without causing horizontal overflow.
+2. **Product card actions** — Product cards now show explicit `View` and context-aware purchase actions side by side, preserving the product detail route while keeping Add to Cart/Book discoverable.
+3. **Social metadata hardening** — Product OG images reject local data URIs and normalize root-relative image paths to absolute production URLs required by social crawlers.
+4. **Image-to-Vision fallback** — When Cloudinary is unavailable, compressed local data-URI images can still reach the Gemini vision adapter; vendor onboarding now runs vision analysis on the first available image instead of skipping local fallbacks.
+5. **Chat contrast** — Floating chat bubbles, panel, header, and input use theme variables so light mode remains readable while preserving dark mode styling.
+6. **Focused verification** — Frontend workflow restarted successfully; `/`, `/products`, and `/messages` returned 200; the vision endpoint correctly rejected an empty request; syntax, JSON, diff, and preview checks passed.
+
+> **Preserved local data:** `apps/core/frontend/local_data/products.json` contains an unstaged user product-catalog change and was intentionally excluded from this commit.
 
 ---
 

@@ -3,6 +3,17 @@ name: August 2026 production fixes (rc3–rc6)
 description: Key bugs fixed in August 2026 — cart JSX, navbar theme, mobile CSS, OG image, currency service, vendor ID, self-delivery, AI scaling, deploy assistant, canonical webhooks
 ---
 
+## rc9 (2026-08-08) — Targeted mobile and media hardening
+
+- Keep only high-priority controls in the fixed mobile navbar row; secondary account and notification actions belong in the existing drawer.
+- Product social images must be absolute public URLs; reject data URIs and normalize root-relative paths before returning metadata.
+- Vision adapters that accept remote image URLs should also handle base64 data URLs so local upload fallbacks do not silently disable auto-fill.
+- Chat surfaces must use theme variables rather than dark-only translucent white backgrounds, especially for light-mode input and received-message text.
+
+**Why:** The CTO follow-up required narrow, targeted fixes without reworking the frozen architecture; these rules preserve the existing fallback-first flows while closing mobile and media edge cases.
+
+---
+
 ## rc7 (2026-08-06) — CTO Audit: 4 Missing Pages + Turbopack Config
 
 ### Missing Pages (mobile menu ghost links fixed)

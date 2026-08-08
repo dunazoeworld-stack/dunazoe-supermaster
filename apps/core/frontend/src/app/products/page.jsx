@@ -208,9 +208,20 @@ function ProductsContent() {
                     )}
                   </div>
                 </Link>
-                <div style={{ padding: "0 14px 14px", marginTop: "auto" }}>
-                  <button onClick={() => addToCart(p)} className="btn btn-primary btn-sm" style={{ width: "100%" }}>
-                    {isDigital ? "💾 Buy & Download" : isService ? "🗓️ Book" : "🛒 Add to Cart"}
+                <div style={{ padding: "0 14px 14px", marginTop: "auto", display: "grid", gridTemplateColumns: "1fr 1.35fr", gap: "6px" }}>
+                  <Link
+                    href={`/products/${p.id}`}
+                    className="btn btn-outline btn-sm"
+                    style={{ width: "100%", justifyContent: "center", paddingLeft: "5px", paddingRight: "5px", fontSize: "0.75rem" }}
+                  >
+                    View
+                  </Link>
+                  <button
+                    onClick={() => addToCart(p)}
+                    className="btn btn-primary btn-sm"
+                    style={{ width: "100%", justifyContent: "center", paddingLeft: "5px", paddingRight: "5px", fontSize: "0.75rem" }}
+                  >
+                    {isDigital ? "Buy" : isService ? "Book" : "Add to Cart"}
                   </button>
                 </div>
               </div>

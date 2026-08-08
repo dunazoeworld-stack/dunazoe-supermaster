@@ -60,8 +60,13 @@ export async function generateMetadata({ params }) {
     product.image_url ||
     product.image ||
     FALLBACK_IMAGE;
-  // Strip any data-URI blobs (not valid OG images); fall back to default
-  const ogImage = rawImage.startsWith("data:") ? FALLBACK_IMAGE : rawImage;
+  // Social crawlers require a public absolute URL; local data URIs are not valid OG images.
+  const imageString = typeof rawImage === "string" ? rawImage.trim() : "";
+  const ogImage = !imageString || imageString.startsWith("data:")
+    ? FALLBACK_IMAGE
+    : imageString.startsWith("/")
+      ? `${SITE_URL}${imageString}`
+      : imageString;
 
   const price    = parseFloat(product.price || 0);
   const currency = "NGN";

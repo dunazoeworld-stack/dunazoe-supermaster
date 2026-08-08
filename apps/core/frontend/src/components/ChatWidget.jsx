@@ -17,11 +17,11 @@ function Bubble({ msg, myId }) {
       <div style={{
         maxWidth: "75%", padding: "9px 13px",
         borderRadius: isOwn ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
-        background: isOwn ? "var(--dz-gradient)" : "rgba(255,255,255,0.08)",
-        color: "#fff", fontSize: "0.85rem", lineHeight: 1.5,
+         background: isOwn ? "var(--dz-gradient)" : "var(--elevated)",
+         color: isOwn ? "#fff" : "var(--text)", fontSize: "0.85rem", lineHeight: 1.5,
       }}>
         <p>{msg.message}</p>
-        <p style={{ fontSize: "0.65rem", color: isOwn ? "rgba(255,255,255,0.6)" : "var(--text-muted)", marginTop: "3px", textAlign: "right" }}>{t}</p>
+         <p style={{ fontSize: "0.65rem", color: isOwn ? "rgba(255,255,255,0.7)" : "var(--text-muted)", marginTop: "3px", textAlign: "right" }}>{t}</p>
       </div>
     </div>
   );
@@ -165,7 +165,7 @@ export default function ChatWidget() {
         <div style={{
           position: "fixed", bottom: "92px", right: "24px", zIndex: 9000,
           width: "340px", height: "480px", borderRadius: "20px",
-          background: "rgba(6,13,31,0.97)", border: "1px solid var(--border)",
+           background: "var(--bg)", border: "1px solid var(--border)",
           backdropFilter: "blur(24px)", display: "flex", flexDirection: "column",
           boxShadow: "0 8px 40px rgba(0,0,0,0.6)", overflow: "hidden",
         }}>
@@ -174,7 +174,7 @@ export default function ChatWidget() {
           <div style={{
             padding: "14px 16px", borderBottom: "1px solid var(--border)",
             display: "flex", alignItems: "center", gap: "10px",
-            background: "rgba(0,163,255,0.06)",
+             background: "var(--surface)",
           }}>
             {active ? (
               <>
@@ -248,7 +248,7 @@ export default function ChatWidget() {
                   disabled={sending}
                   style={{
                     flex: 1, padding: "9px 12px", borderRadius: "12px",
-                    background: "rgba(255,255,255,0.07)", border: "1px solid var(--border)",
+                     background: "var(--surface)", border: "1px solid var(--border)",
                     color: "var(--text)", fontSize: "0.85rem", outline: "none",
                   }}
                 />

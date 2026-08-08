@@ -221,7 +221,7 @@ export default function VendorOnboardPage() {
 
   // ── Vision AI — image analysis → auto-fill product fields ────────────────
   async function runVisionAI(imageUrl) {
-    if (!imageUrl || imageUrl.startsWith("data:")) return; // data URIs not accepted by vision API
+    if (!imageUrl) return;
     setAiVisionLoading(true);
     try {
       const token = localStorage.getItem("dunazoe_token");
@@ -420,10 +420,10 @@ export default function VendorOnboardPage() {
 
     // Auto-run AI analysis after successful image upload
     if (newImages.length > 0) {
-      const allUrls = [...images, ...newImages].map(i => i.url).filter(u => u && !u.startsWith("data:"));
+      const allUrls = [...images, ...newImages].map(i => i.url).filter(Boolean);
       if (allUrls.length > 0) {
         runAI(allUrls);
-        // Run vision AI on the first cloud-hosted image to auto-fill product fields
+        // Run vision AI on the first image, including compressed local fallback images.
         runVisionAI(allUrls[0]);
       }
     }
