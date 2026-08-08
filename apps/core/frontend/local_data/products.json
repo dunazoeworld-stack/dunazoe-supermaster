@@ -1,6 +1,6 @@
 [
   {
-    "id": "local_1785907060744_j0vuk",
+    "id": "local_1786081793564_14thn",
     "name": "DC solar bulb ",
     "description": "",
     "price": 1000,
@@ -18,50 +18,7 @@
     "brand": null,
     "stock_quantity": null,
     "status": "published",
-    "created_at": "2026-08-05T05:17:40.745Z",
-    "vendor_id": "local"
-  },
-  {
-    "id": "local_2",
-    "name": "iPhone 15 Pro Max Case",
-    "description": "Shockproof military-grade case for iPhone 15 Pro Max. Precise cutouts, raised camera lip.",
-    "price": 3500,
-    "category": "phones_tablets",
-    "type": "physical",
-    "product_type": "physical",
-    "images": [],
-    "sizes": [],
-    "colors": [
-      "Clear",
-      "Black",
-      "Navy Blue"
-    ],
-    "ajo_enabled": false,
-    "ajo_weeks": 0,
-    "business_name": "DUNAZOE Store",
-    "status": "published",
-    "created_at": "2026-07-23T00:00:00.000Z",
-    "vendor_id": "local"
-  },
-  {
-    "id": "local_6",
-    "name": "Natural Hair Growth Oil",
-    "description": "Blend of castor oil, biotin & African black seed. Promotes growth in 4 weeks.",
-    "price": 4500,
-    "category": "beauty_health",
-    "type": "physical",
-    "product_type": "physical",
-    "images": [],
-    "sizes": [
-      "100ml",
-      "250ml"
-    ],
-    "colors": [],
-    "ajo_enabled": false,
-    "ajo_weeks": 0,
-    "business_name": "DUNAZOE Store",
-    "status": "published",
-    "created_at": "2026-07-23T00:00:00.000Z",
+    "created_at": "2026-08-07T05:49:53.565Z",
     "vendor_id": "local"
   },
   {
