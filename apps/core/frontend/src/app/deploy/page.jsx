@@ -51,6 +51,10 @@ export default function DeployPage() {
   const [activeCenter, setActiveCenter] = useState(null); // null | "fix" | "payment" | "ai" | "delivery"
   const [payHealth, setPayHealth]   = useState(null);
   const [centerLoading, setCenterLoading] = useState(false);
+  const [command, setCommand] = useState("");
+  const [commandType, setCommandType] = useState("idea");
+  const [commandResult, setCommandResult] = useState(null);
+  const [commandLoading, setCommandLoading] = useState(false);
 
   useEffect(() => {
     const t = localStorage.getItem("dunazoe_token");
@@ -120,6 +124,22 @@ export default function DeployPage() {
     finally { setDeployLoading(false); }
   }
 
+  async function analyzeCommand() {
+    if (!command.trim()) return;
+    setCommandLoading(true); setCommandResult(null); setError("");
+    try {
+      const res = await fetch(`${API}/deployment/studio/analyze`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ content: command, type: commandType }),
+      });
+      const d = await res.json();
+      if (!d.success) throw new Error(d.error || "Analysis failed");
+      setCommandResult(d.analysis);
+    } catch (e) { setError(e.message || "Command analysis failed."); }
+    finally { setCommandLoading(false); }
+  }
+
   const approved = auditResult?.approved;
   const scores = auditResult?.scores || {};
   const inp = { width: "100%", padding: "12px 14px", background: "rgba(255,255,255,0.05)", border: "1.5px solid rgba(255,107,0,0.2)", borderRadius: "10px", color: "#fff", fontSize: "0.95rem", outline: "none", boxSizing: "border-box" };
@@ -153,6 +173,33 @@ export default function DeployPage() {
           <p style={{ fontSize: "0.72rem", color: "#3D4F6E", margin: 0 }}>v{version} — One-tap deploy from phone</p>
         </div>
         <div style={{ marginLeft: "auto", fontSize: "0.7rem", color: "#FF6B00", background: "rgba(255,107,0,0.08)", padding: "4px 10px", borderRadius: "20px", border: "1px solid rgba(255,107,0,0.2)" }}>🟠 ADMIN</div>
+      </div>
+
+      {/* APPROVED OPERATOR COMMAND CENTER */}
+      <div style={{ background: "rgba(13,21,37,0.9)", border: "1px solid rgba(0,163,255,0.2)", borderRadius: "14px", padding: "16px", marginBottom: "16px" }}>
+        <p style={{ fontSize: "0.72rem", color: "#00A3FF", margin: "0 0 4px", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>🤖 Operator Command Center</p>
+        <p style={{ color: "#8A9AB5", fontSize: "0.78rem", margin: "0 0 12px" }}>Describe an idea, paste code, or request a bug fix. Deployment AI explains the impact and prepares a safe patch plan; it never bypasses audit.</p>
+        <div style={{ display: "flex", gap: "8px", marginBottom: "8px" }}>
+          <select value={commandType} onChange={e => setCommandType(e.target.value)} style={{ ...sel, width: "132px", flexShrink: 0 }}>
+            <option value="idea">Idea / Feature</option>
+            <option value="code">Code / Bug fix</option>
+            <option value="improvement">Improvement</option>
+          </select>
+          <button onClick={() => window.location.href = "/deploy/assistant"} style={{ flex: 1, padding: "10px 12px", borderRadius: "10px", border: "1px solid rgba(0,163,255,0.25)", background: "rgba(0,163,255,0.08)", color: "#00A3FF", fontWeight: 700, cursor: "pointer" }}>Open approved operations →</button>
+        </div>
+        <textarea value={command} onChange={e => setCommand(e.target.value)} rows={4} placeholder="Example: Fix product sharing previews for WhatsApp and preserve Cloudinary HTTPS images…" style={{ ...inp, resize: "vertical", minHeight: "96px" }} />
+        <button onClick={analyzeCommand} disabled={commandLoading || !command.trim()} style={{ width: "100%", marginTop: "8px", padding: "12px", borderRadius: "10px", border: "none", background: commandLoading ? "rgba(0,163,255,0.25)" : "linear-gradient(135deg,#00A3FF,#0066FF)", color: "#fff", fontWeight: 800, cursor: commandLoading ? "wait" : "pointer" }}>
+          {commandLoading ? "⏳ Analyzing safely…" : "🔎 Analyze & prepare patch plan"}
+        </button>
+        {commandResult && (
+          <div style={{ marginTop: "12px", padding: "12px", borderRadius: "10px", background: "rgba(0,163,255,0.06)", border: "1px solid rgba(0,163,255,0.2)" }}>
+            <p style={{ color: "#00CC88", fontWeight: 700, fontSize: "0.82rem", marginBottom: "6px" }}>{commandResult.summary}</p>
+            <p style={{ color: "#8A9AB5", fontSize: "0.76rem", marginBottom: "8px" }}>Architecture: {commandResult.architecture}</p>
+            <p style={{ color: "#F5A623", fontSize: "0.76rem", fontWeight: 700, marginBottom: "4px" }}>Risk checks</p>
+            {commandResult.risks?.map((risk, i) => <p key={i} style={{ color: "#cdd5e0", fontSize: "0.75rem", margin: "2px 0" }}>• {risk}</p>)}
+            <p style={{ color: "#8A9AB5", fontSize: "0.75rem", marginTop: "8px" }}>Recovery: review the patch, run the audit, and use rollback if an approved deploy is unhealthy.</p>
+          </div>
+        )}
       </div>
 
       {/* LAST DEPLOY STATUS */}

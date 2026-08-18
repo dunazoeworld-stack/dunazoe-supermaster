@@ -8,8 +8,9 @@
  *   2. Gateway down / no pay URL   → call Paystack directly via /api/payments/initialize
  *   3. Paystack also fails         → queue order locally, show retry option
  *
- * Service charge: 5% of product subtotal, collected from buyer as a line item.
- * Vendor payout:  product subtotal (full price) — platform deducts 5% at payout time.
+ * Service charge: 5% is included in product final_price at listing time.
+ * Checkout must not add a second buyer line item; vendor payout keeps the
+ * existing 24-hour 5% payout accounting rule for compatibility.
  */
 import { NextResponse } from "next/server";
 
@@ -110,7 +111,7 @@ export async function POST(req) {
             payment_type,
             delivery_address,
             dest_city:           city || "",
-            service_charge_pct:  SYSTEM_CHARGE_PCT,
+             service_charge_pct:  SYSTEM_CHARGE_PCT,
             notes:               notesBase,
             ai_assisted:         true,
           }),

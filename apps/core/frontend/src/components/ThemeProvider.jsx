@@ -16,6 +16,13 @@ function getSystemTheme() {
   return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
 }
 
+function getAutomaticTheme() {
+  if (typeof window === "undefined") return "dark";
+  const hour = new Date().getHours();
+  if (hour >= 6 && hour < 18) return "light";
+  return "dark";
+}
+
 export function ThemeProvider({ children }) {
   const [theme, setThemeState] = useState("system"); // "light" | "dark" | "system"
   const [resolved, setResolved] = useState("dark");
@@ -24,7 +31,7 @@ export function ThemeProvider({ children }) {
   useEffect(() => {
     const stored = localStorage.getItem("dunazoe_theme") || "system";
     setThemeState(stored);
-    const r = stored === "system" ? getSystemTheme() : stored;
+    const r = stored === "system" ? getAutomaticTheme() : stored;
     setResolved(r);
     document.documentElement.setAttribute("data-theme", r);
   }, []);
@@ -34,18 +41,22 @@ export function ThemeProvider({ children }) {
     if (theme !== "system") return;
     const mq = window.matchMedia("(prefers-color-scheme: light)");
     const handler = (e) => {
-      const r = e.matches ? "light" : "dark";
+      const r = getAutomaticTheme();
       setResolved(r);
       document.documentElement.setAttribute("data-theme", r);
     };
     mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
+    const clock = window.setInterval(handler, 60 * 1000);
+    return () => {
+      mq.removeEventListener("change", handler);
+      window.clearInterval(clock);
+    };
   }, [theme]);
 
   const setTheme = useCallback((next) => {
     setThemeState(next);
     localStorage.setItem("dunazoe_theme", next);
-    const r = next === "system" ? getSystemTheme() : next;
+    const r = next === "system" ? getAutomaticTheme() : next;
     setResolved(r);
     document.documentElement.setAttribute("data-theme", r);
   }, []);

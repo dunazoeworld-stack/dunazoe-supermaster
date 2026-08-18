@@ -10,7 +10,7 @@ import path from "path";
 const GATEWAY   = process.env.GATEWAY_URL || "http://localhost:3000";
 const STORE_PATH = path.join(process.cwd(), "local_data", "products.json");
 
-const SERVICE_CHARGE_PCT = 0.05; // 5% service charge added to product price
+const SERVICE_CHARGE_PCT = 0.05;
 
 // ── Local store helpers ─────────────────────────────────────────────────────
 function readStore() {
@@ -87,18 +87,25 @@ export async function GET(request) {
   }
 }
 
-// ── POST — create product (auto-applies service charge to price) ─────────────
+// ── POST — create product (price is finalized at listing time) ────────────────
 export async function POST(request) {
   const token = request.headers.get("Authorization") || "";
   let body = {};
   try { body = await request.json(); } catch (_) {}
 
-  // Store the vendor's price as-is. The 5% platform service charge is deducted
-  // from the vendor's PAYOUT (not added to the buyer's price at listing time).
-  // Checkout transparently shows the 5% line item on the order summary.
-  if (body.price) {
-    const basePrice = parseFloat(body.price);
-    body = { ...body, price: Math.round(basePrice), base_price: basePrice };
+  if (body.price || body.base_price) {
+    const basePrice = Number.isFinite(parseFloat(body.base_price))
+      ? parseFloat(body.base_price)
+      : parseFloat(body.price);
+    const systemCharge = Math.round(basePrice * SERVICE_CHARGE_PCT * 100) / 100;
+    const finalPrice = Math.round(basePrice + systemCharge);
+    body = {
+      ...body,
+      base_price: basePrice,
+      system_charge: Math.round((finalPrice - basePrice) * 100) / 100,
+      final_price: finalPrice,
+      price: finalPrice,
+    };
   }
 
   // 1. Try live gateway
@@ -145,7 +152,9 @@ function saveToLocal(body, id) {
     name:          body.name         || "Unnamed Product",
     description:   body.description  || "",
     price:         parseFloat(body.price) || 0,
-    base_price:    body.base_price ? parseFloat(body.base_price) : null,
+    base_price:    body.base_price ? parseFloat(body.base_price) : parseFloat(body.price) || 0,
+    system_charge: body.system_charge ? parseFloat(body.system_charge) : 0,
+    final_price:   body.final_price ? parseFloat(body.final_price) : parseFloat(body.price) || 0,
     category:      body.category      || "general",
     type:          body.type          || body.product_type || "physical",
     product_type:  body.type          || body.product_type || "physical",

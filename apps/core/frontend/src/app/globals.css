@@ -355,6 +355,18 @@ body {
   .grid-auto { grid-template-columns: 1fr 1fr; }
   .btn-sm { padding: 6px 10px; font-size: 0.78rem; }
   .page-title { font-size: 1.15rem; }
+  .product-card-actions { display: flex !important; flex-direction: column; }
+  .product-card-actions .btn { width: 100% !important; min-width: 0; }
+}
+
+@media (max-width: 520px) {
+  .chat-widget-panel {
+    right: 10px !important;
+    bottom: 82px !important;
+    width: calc(100vw - 20px) !important;
+    max-width: 360px;
+    height: min(540px, calc(100vh - 112px)) !important;
+  }
 }
 
 /* ── FOCUS & ACCESSIBILITY ── */

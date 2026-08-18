@@ -1,7 +1,32 @@
 # FINAL HANDOVER
 **Project:** DUNAZOE Supermaster  
 **Version:** v1.0.0-rc1  
-**Date:** 2026-06-30 (Connection bug fixed)
+**Date:** 2026-08-17 (CTO production stabilization batch)
+
+## CTO Production Stabilization — 2026-08-17
+
+This batch preserved the frozen v1.0.0-rc1 architecture and made targeted changes only:
+
+- Product listing now calculates and persists `base_price`, the rounded 5% `system_charge`, and rounded `final_price`; the vendor UI shows the breakdown before submission.
+- Product cards and product detail pages use the finalized selling price and retain a narrow-mobile action layout.
+- Product metadata normalizes HTTP image URLs to HTTPS, rejects data URLs for social previews, and exposes a canonical URL.
+- System theme fallback is light from 06:00–18:00 and dark from 18:00–06:00; explicit light/dark choices remain persisted and take priority.
+- Chat now has authenticated conversations/messages endpoints, attachment upload with Cloudinary plus an explicit small local development fallback, read receipts, typing state, voice-note recording/playback, and WebRTC-ready voice/video controls.
+- Deployment AI now has an operator command center for ideas, code, bug fixes, and improvement requests, with architecture/risk/recovery guidance before the existing audit and approved-operation flow.
+
+Required detail documents:
+
+- `DEPLOYMENT_AI_GUIDE.md`
+- `PRODUCT_SYSTEM_UPDATE.md`
+- `CHAT_SYSTEM_UPDATE.md`
+
+Verification status: focused source checks are complete; the frontend build and workflow preview must pass before any publish action. Publishing was intentionally not performed.
+
+## Git handover state
+
+- Local commit created: `fix: complete CTO production stabilization`.
+- Push was attempted against the configured GitHub `origin` remote and was blocked because the Replit askpass flow had no usable GitHub credential.
+- No credential was printed or stored in the repository. Complete the push from `/deploy/github` or the Replit Git pane after authorizing the GitHub connection, then verify `main` is synchronized.
 
 ---
 

@@ -56,7 +56,8 @@ app.get("/health", (req, res) => {
 app.post("/products", requireAuth, asyncHandler(async (req, res) => {
   const {
     name, description, type, category,
-    price, cost, ajo_enabled, ajo_weeks, images
+    price, base_price, system_charge, final_price,
+    cost, ajo_enabled, ajo_weeks, images
   } = req.body;
 
   if (!name || !price) {
@@ -79,7 +80,10 @@ app.post("/products", requireAuth, asyncHandler(async (req, res) => {
   const vendor_id = vendor_res.rows[0].id;
 
   const safe_type    = ["physical","digital","service"].includes(type) ? type : "physical";
-  const num_price    = parseFloat(price);
+  const num_base     = Number.isFinite(parseFloat(base_price)) ? parseFloat(base_price) : parseFloat(price);
+  const num_charge   = Math.round(num_base * 0.05 * 100) / 100;
+  const num_final    = Math.round(num_base + num_charge);
+  const num_price    = num_final;
   const num_cost     = parseFloat(cost || 0);
   const num_ajo_wks  = parseInt(ajo_weeks || 0);
   const ajo_on       = Boolean(ajo_enabled) && num_price >= THRIFT_MIN_PRICE;
@@ -103,14 +107,14 @@ app.post("/products", requireAuth, asyncHandler(async (req, res) => {
   const result = await pool.query(
     `INSERT INTO products(
        vendor_id, name, description, type, category,
-       price, cost, ai_suggested_price,
+       price, base_price, system_charge, final_price, cost, ai_suggested_price,
        ajo_enabled, ajo_weeks, ajo_surcharge_pct,
        images, demand_score, ai_badge, ai_cta, shareable_link
-     ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+      ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
      RETURNING *`,
     [
       vendor_id, name, description || null, safe_type, category || null,
-      num_price, num_cost, ai_price,
+      num_price, num_base, num_charge, num_final, num_cost, ai_price,
       ajo_on, num_ajo_wks, ajo_surcharge_pct,
       images || null, demand, ai_badge, ai_cta,
       "dunazoe.com/p/temp"
@@ -127,6 +131,9 @@ app.post("/products", requireAuth, asyncHandler(async (req, res) => {
     product_id:      product.id,
     name:            product.name,
     type:            product.type,
+    base_price:      num_base,
+    system_charge:   num_charge,
+    final_price:     num_final,
     price:           num_price,
     ai_suggested_price: ai_price,
     ajo_enabled:     ajo_on,
@@ -277,7 +284,12 @@ app.post("/products/copy", requireAuth, asyncHandler(async (req, res) => {
 // ── UPDATE PRODUCT ────────────────────────────────────────────
 app.put("/products/:id", requireAuth, asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { name, description, price, cost, stock, ajo_enabled, ajo_weeks, images } = req.body;
+  const { name, description, price, base_price, cost, stock, ajo_enabled, ajo_weeks, images } = req.body;
+  const updateBase = Number.isFinite(parseFloat(base_price))
+    ? parseFloat(base_price)
+    : Number.isFinite(parseFloat(price)) ? parseFloat(price) : null;
+  const updateCharge = updateBase == null ? null : Math.round(updateBase * 0.05 * 100) / 100;
+  const updateFinal = updateBase == null ? null : Math.round(updateBase + updateCharge);
 
   const prod = await pool.query(
     "SELECT p.*,v.user_id FROM products p JOIN vendors v ON p.vendor_id=v.id WHERE p.id=$1",
@@ -295,13 +307,16 @@ app.put("/products/:id", requireAuth, asyncHandler(async (req, res) => {
        name        = COALESCE($1, name),
        description = COALESCE($2, description),
        price       = COALESCE($3, price),
-       cost        = COALESCE($4, cost),
-       ajo_enabled = COALESCE($5, ajo_enabled),
-       ajo_weeks   = COALESCE($6, ajo_weeks),
-       images      = COALESCE($7, images),
+       base_price  = COALESCE($4, base_price),
+       system_charge = COALESCE($5, system_charge),
+       final_price = COALESCE($6, final_price),
+       cost        = COALESCE($7, cost),
+       ajo_enabled = COALESCE($8, ajo_enabled),
+       ajo_weeks   = COALESCE($9, ajo_weeks),
+       images      = COALESCE($10, images),
        updated_at  = NOW()
-     WHERE id=$8 RETURNING id, name, price, updated_at`,
-    [name, description, price, cost, ajo_enabled, ajo_weeks, images, id]
+      WHERE id=$11 RETURNING id, name, price, base_price, system_charge, final_price, updated_at`,
+     [name, description, updateFinal, updateBase, updateCharge, updateFinal, cost, ajo_enabled, ajo_weeks, images, id]
   );
 
   return res.json({ success: true, product: result.rows[0] });
@@ -377,6 +392,13 @@ app.post("/products/ai/assist", requireAuth, asyncHandler(async (req, res) => {
 
 // ── ERROR HANDLER ─────────────────────────────────────────────
 app.use(errorHandler);
+
+pool.query(`
+  ALTER TABLE products
+    ADD COLUMN IF NOT EXISTS base_price NUMERIC(12,2),
+    ADD COLUMN IF NOT EXISTS system_charge NUMERIC(12,2) DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS final_price NUMERIC(12,2)
+`).catch(err => console.warn("[Product] pricing columns migration skipped:", err.message));
 
 app.listen(PORT, () => console.log(`✅ Product Service running on port ${PORT}`));
 module.exports = app;

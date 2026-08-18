@@ -108,6 +108,23 @@ export async function PUT(request, { params }) {
 
   const isAdmin      = ADMIN_ROLES.includes(payload.role);
   const isSoftDelete = body.status === "deleted";
+  let updateBody = { ...body };
+  if (!isSoftDelete && (body.price !== undefined || body.base_price !== undefined)) {
+    // Edits from older clients send the customer-facing price. Treat that as
+    // final_price and derive the stored vendor base price to avoid a second 5%.
+    const basePrice = Number.isFinite(parseFloat(body.base_price))
+      ? parseFloat(body.base_price)
+      : parseFloat(body.price) / 1.05;
+    const systemCharge = Math.round(basePrice * 0.05 * 100) / 100;
+    const finalPrice = Math.round(basePrice + systemCharge);
+    updateBody = {
+      ...body,
+      base_price: basePrice,
+      system_charge: Math.round((finalPrice - basePrice) * 100) / 100,
+      final_price: finalPrice,
+      price: finalPrice,
+    };
+  }
 
   // ── 1. Try gateway first ────────────────────────────────────────────────────
   try {
@@ -117,7 +134,7 @@ export async function PUT(request, { params }) {
     const res   = await fetch(`${GATEWAY}/products/${id}`, {
       method:  "PUT",
       headers: { "Content-Type": "application/json", Authorization: token },
-      body:    JSON.stringify(body),
+      body:    JSON.stringify(updateBody),
       signal:  ctrl.signal,
     });
     clearTimeout(timer);
@@ -167,17 +184,26 @@ export async function PUT(request, { params }) {
           );
           console.log(`[products] Soft-deleted product ${numId} by user ${payload.id}`);
         } else {
-          // Edit — only update fields that were provided
+        // Edit — only update fields that were provided
           const sets = [];
           const vals = [];
           let $i = 1;
-          if (body.name        !== undefined) { sets.push(`name=$${$i++}`);        vals.push(body.name); }
-          if (body.description !== undefined) { sets.push(`description=$${$i++}`); vals.push(body.description); }
-          if (body.price       !== undefined) { sets.push(`price=$${$i++}`);       vals.push(parseFloat(body.price)); }
-          if (body.stock       !== undefined) { sets.push(`stock=$${$i++}`);       vals.push(parseInt(body.stock)); }
-          if (body.category    !== undefined) { sets.push(`category=$${$i++}`);    vals.push(body.category); }
-          if (body.weight      !== undefined) { sets.push(`weight=$${$i++}`);      vals.push(parseFloat(body.weight)); }
-          if (body.dimensions  !== undefined) { sets.push(`dimensions=$${$i++}`);  vals.push(body.dimensions); }
+        await pool.query(`
+          ALTER TABLE products
+            ADD COLUMN IF NOT EXISTS base_price NUMERIC(12,2),
+            ADD COLUMN IF NOT EXISTS system_charge NUMERIC(12,2) DEFAULT 0,
+            ADD COLUMN IF NOT EXISTS final_price NUMERIC(12,2)
+        `);
+        if (updateBody.name        !== undefined) { sets.push(`name=$${$i++}`);        vals.push(updateBody.name); }
+        if (updateBody.description !== undefined) { sets.push(`description=$${$i++}`); vals.push(updateBody.description); }
+        if (updateBody.price       !== undefined) { sets.push(`price=$${$i++}`);       vals.push(parseFloat(updateBody.price)); }
+        if (updateBody.base_price  !== undefined) { sets.push(`base_price=$${$i++}`);  vals.push(parseFloat(updateBody.base_price)); }
+        if (updateBody.system_charge !== undefined) { sets.push(`system_charge=$${$i++}`); vals.push(parseFloat(updateBody.system_charge)); }
+        if (updateBody.final_price !== undefined) { sets.push(`final_price=$${$i++}`); vals.push(parseFloat(updateBody.final_price)); }
+        if (updateBody.stock       !== undefined) { sets.push(`stock=$${$i++}`);       vals.push(parseInt(updateBody.stock)); }
+        if (updateBody.category    !== undefined) { sets.push(`category=$${$i++}`);    vals.push(updateBody.category); }
+        if (updateBody.weight      !== undefined) { sets.push(`weight=$${$i++}`);      vals.push(parseFloat(updateBody.weight)); }
+        if (updateBody.dimensions  !== undefined) { sets.push(`dimensions=$${$i++}`);  vals.push(updateBody.dimensions); }
           if (sets.length > 0) {
             sets.push(`updated_at=NOW()`);
             vals.push(numId);
@@ -185,7 +211,7 @@ export async function PUT(request, { params }) {
           }
         }
 
-        _mirrorToLocalStore(id, body, isSoftDelete);
+        _mirrorToLocalStore(id, updateBody, isSoftDelete);
         return NextResponse.json({
           success: true,
           message: isSoftDelete ? "Product removed." : "Product updated.",
@@ -198,7 +224,7 @@ export async function PUT(request, { params }) {
   }
 
   // ── 3. Local store only (no DB) ─────────────────────────────────────────────
-  const updated = _mirrorToLocalStore(id, body, isSoftDelete);
+  const updated = _mirrorToLocalStore(id, updateBody, isSoftDelete);
   if (updated) {
     return NextResponse.json({ success: true, message: isSoftDelete ? "Product removed." : "Product updated." });
   }
@@ -215,7 +241,7 @@ function _mirrorToLocalStore(id, body, isSoftDelete) {
     if (isSoftDelete) {
       store.splice(idx, 1); // remove from local listing
     } else {
-      const allowed = ["name", "description", "price", "stock", "category", "weight", "dimensions"];
+      const allowed = ["name", "description", "price", "base_price", "system_charge", "final_price", "stock", "category", "weight", "dimensions"];
       allowed.forEach(k => { if (body[k] !== undefined) store[idx][k] = body[k]; });
     }
     writeStore(store);

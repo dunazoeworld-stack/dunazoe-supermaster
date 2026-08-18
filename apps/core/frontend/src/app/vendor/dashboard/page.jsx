@@ -119,7 +119,7 @@ export default function VendorDashboardPage() {
     setEditForm({
       name:        p.name        || "",
       description: p.description || "",
-      price:       p.price       || "",
+      price:       p.base_price ?? (p.price ? parseFloat(p.price) / 1.05 : ""),
       stock:       p.stock       ?? "",
       category:    p.category    || "",
       weight:      p.weight      || "",
@@ -139,7 +139,8 @@ export default function VendorDashboardPage() {
         body: JSON.stringify({
           name:        editForm.name,
           description: editForm.description,
-          price:       parseFloat(editForm.price),
+          price:       Math.round(parseFloat(editForm.price) * 1.05),
+          base_price:  parseFloat(editForm.price),
           stock:       editForm.stock !== "" ? parseInt(editForm.stock) : undefined,
           category:    editForm.category,
           weight:      editForm.weight !== "" ? parseFloat(editForm.weight) : undefined,
@@ -147,7 +148,9 @@ export default function VendorDashboardPage() {
       });
       const d = await res.json();
       if (d.success || res.ok) {
-        setProducts(prev => prev.map(p => p.id === editProduct.id ? { ...p, ...editForm, price: parseFloat(editForm.price) } : p));
+        const basePrice = parseFloat(editForm.price);
+        const finalPrice = Math.round(basePrice * 1.05);
+        setProducts(prev => prev.map(p => p.id === editProduct.id ? { ...p, ...editForm, base_price: basePrice, system_charge: finalPrice - basePrice, final_price: finalPrice, price: finalPrice } : p));
         setEditMsg({ type: "success", text: "Product updated successfully." });
         setTimeout(() => setEditProduct(null), 1200);
       } else {
@@ -481,7 +484,7 @@ export default function VendorDashboardPage() {
               <form onSubmit={handleEditSave} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
                 {[
                   { key: "name",        label: "Product Name *",    type: "text",   required: true },
-                  { key: "price",       label: "Price (₦) *",       type: "number", required: true, min: "0", step: "0.01" },
+                  { key: "price",       label: "Base price before 5% DUNAZOE charge (₦) *", type: "number", required: true, min: "0", step: "0.01" },
                   { key: "stock",       label: "Stock / Quantity",  type: "number", min: "0", step: "1" },
                   { key: "category",    label: "Category",          type: "text" },
                   { key: "weight",      label: "Weight (kg)",       type: "number", min: "0", step: "0.01" },

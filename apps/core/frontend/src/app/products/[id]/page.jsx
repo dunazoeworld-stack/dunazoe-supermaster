@@ -233,7 +233,7 @@ export default function ProductDetailPage({ params }) {
                 {/* Price */}
                 <div style={{ display: "flex", alignItems: "baseline", gap: "12px", flexWrap: "wrap" }}>
                   <span style={{ fontSize: "2.2rem", fontWeight: 900 }} className="text-gradient">
-                    ₦{parseFloat(product.price || 0).toLocaleString("en-NG")}
+                    ₦{parseFloat(product.final_price ?? product.price ?? 0).toLocaleString("en-NG")}
                   </span>
                   {product.old_price > product.price && (
                     <span style={{ fontSize: "1rem", color: "var(--text-muted)", textDecoration: "line-through" }}>

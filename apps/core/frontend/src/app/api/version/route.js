@@ -26,7 +26,7 @@ export async function GET() {
       "Paystack Webhook (charge.success + transfer.success/failed)",
       "Ops Cockpit: Services tab (all 34 microservices)",
       "Ops Cockpit: Accounts tab (activate/deactivate any account)",
-      "Service charge 5% (buyer line item, vendor deducted at payout)",
+      "Service charge 5% included at listing time; no checkout double-charge",
       "Stripe USD payments (requires STRIPE_SECRET_KEY secret)",
       "Cloudinary image upload (requires CLOUDINARY_API_SECRET secret)",
     ],

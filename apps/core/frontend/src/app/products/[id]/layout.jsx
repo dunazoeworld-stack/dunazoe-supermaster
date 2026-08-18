@@ -62,11 +62,14 @@ export async function generateMetadata({ params }) {
     FALLBACK_IMAGE;
   // Social crawlers require a public absolute URL; local data URIs are not valid OG images.
   const imageString = typeof rawImage === "string" ? rawImage.trim() : "";
-  const ogImage = !imageString || imageString.startsWith("data:")
+  const normalizedImage = imageString.startsWith("http://")
+    ? `https://${imageString.slice("http://".length)}`
+    : imageString;
+  const ogImage = !normalizedImage || normalizedImage.startsWith("data:")
     ? FALLBACK_IMAGE
-    : imageString.startsWith("/")
-      ? `${SITE_URL}${imageString}`
-      : imageString;
+    : normalizedImage.startsWith("/")
+      ? `${SITE_URL}${normalizedImage}`
+      : normalizedImage;
 
   const price    = parseFloat(product.price || 0);
   const currency = "NGN";
@@ -103,6 +106,7 @@ export async function generateMetadata({ params }) {
       images:      [ogImage],
       site:        "@dunazoe",
     },
+    alternates: { canonical: productUrl },
     // Product-specific structured metadata
     other: {
       "og:type":                 "product",

@@ -199,7 +199,7 @@ function ProductsContent() {
                     )}
 
                     <span style={{ fontSize: "1.1rem", fontWeight: 900, background: "var(--dz-gradient)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
-                      ₦{parseFloat(p.price || 0).toLocaleString("en-NG")}
+                      ₦{parseFloat(p.final_price ?? p.price ?? 0).toLocaleString("en-NG")}
                     </span>
                     {p.ajo_enabled && p.price > 0 && (
                       <span style={{ fontSize: "0.68rem", color: "#00C8E0", marginLeft: "6px", fontWeight: 600 }}>
@@ -208,7 +208,7 @@ function ProductsContent() {
                     )}
                   </div>
                 </Link>
-                <div style={{ padding: "0 14px 14px", marginTop: "auto", display: "grid", gridTemplateColumns: "1fr 1.35fr", gap: "6px" }}>
+                <div className="product-card-actions" style={{ padding: "0 14px 14px", marginTop: "auto", display: "grid", gridTemplateColumns: "1fr 1.35fr", gap: "6px" }}>
                   <Link
                     href={`/products/${p.id}`}
                     className="btn btn-outline btn-sm"

@@ -23,3 +23,11 @@ Next.js 16 dev server (Turbopack) crashes with OOM (`FATAL ERROR: Ineffective ma
 **Why:** Replit mounts the workspace on a network filesystem. Next.js writes frequent small cache files during dev. On a network drive this is ~10-50× slower than local, causing both the warning and compounding the OOM problem.
 
 **How to apply:** Every Next.js project on Replit needs these three settings applied before the dev server goes live.
+
+## Production build note
+
+When this repository's `.replit` environment exports `NODE_ENV=development`, a plain `next build` can compile successfully but fail during prerender with a React hook error. Running the frontend build with `NODE_ENV=production` and the configured webpack builder completes all routes.
+
+**Why:** The app's development `distDir` and Next.js 16 build/runtime mode are intentionally different from the production output path; the development mode can make the build worker resolve the client React runtime inconsistently.
+
+**How to apply:** Keep the dev workflow unchanged, but use `NODE_ENV=production npm run build -- --webpack` as the release validation command. Do not “fix” this by changing the frozen dev workflow.

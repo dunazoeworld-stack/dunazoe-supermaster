@@ -489,7 +489,8 @@ export default function VendorOnboardPage() {
         name:         product.name,
         description:  product.description,
         category:     product.category,
-        price:        parseFloat(product.price),
+         price:        Math.round(parseFloat(product.price) * 1.05),
+         base_price:   parseFloat(product.price),
         cost:         product.cost ? parseFloat(product.cost) : undefined,
         type:         product.product_type,
         product_type: product.product_type,
@@ -511,7 +512,10 @@ export default function VendorOnboardPage() {
             id:           pData.product_id || `local_${Date.now()}`,
             name:         payload.name,
             description:  payload.description || "",
-            price:        payload.price,
+             price:        payload.price,
+             base_price:   payload.base_price,
+             system_charge: Math.round((payload.price - payload.base_price) * 100) / 100,
+             final_price: payload.price,
             category:     payload.category,
             type:         payload.product_type,
             product_type: payload.product_type,
@@ -838,15 +842,21 @@ export default function VendorOnboardPage() {
                     </select>
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Your Price (₦) *</label>
+                    <label className="form-label">Product price before DUNAZOE charge (₦) *</label>
                     <input className="form-input" type="number" min="1" required value={product.price} onChange={e => P("price", e.target.value)} placeholder="e.g. 5000" />
                     {product.price && parseFloat(product.price) > 0 && (
-                      <p style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: "4px" }}>
-                        Buyer pays: <strong style={{ color: "var(--dz-blue)" }}>₦{parseFloat(product.price).toLocaleString("en-NG")}</strong>
-                        <span style={{ color: "var(--text-muted)" }}> · You receive: </span>
-                        <strong style={{ color: "var(--success)" }}>₦{Math.round(parseFloat(product.price) * 0.95).toLocaleString("en-NG")}</strong>
-                        <span style={{ color: "var(--text-muted)" }}> (after 5% platform fee)</span>
-                      </p>
+                      (() => {
+                        const base = parseFloat(product.price);
+                        const charge = Math.round(base * 0.05 * 100) / 100;
+                        const final = Math.round(base + charge);
+                        return (
+                          <div style={{ fontSize: "0.76rem", color: "var(--text-muted)", marginTop: "8px", padding: "10px 12px", borderRadius: "10px", background: "var(--surface)", border: "1px solid var(--border)" }}>
+                            <div>Product price: <strong style={{ color: "var(--text)" }}>₦{base.toLocaleString("en-NG")}</strong></div>
+                            <div>DUNAZOE service charge (5%): <strong style={{ color: "var(--warning)" }}>₦{charge.toLocaleString("en-NG")}</strong></div>
+                            <div>Selling price: <strong style={{ color: "var(--dz-blue)" }}>₦{final.toLocaleString("en-NG")}</strong></div>
+                          </div>
+                        );
+                      })()
                     )}
                   </div>
                 </div>

@@ -267,11 +267,12 @@ export default function CheckoutPage() {
     return () => clearTimeout(quoteDebounce.current);
   }, [form.city, form.state, fetchQuotes]);
 
-  const SYSTEM_CHARGE_PCT = 0.05; // 5% system charge on product subtotal
   const subtotal      = cart.reduce((s, i) => s + parseFloat(i.price || 0) * (i.qty || 1), 0);
   const shippingFee   = selectedShip?.cost_ngn || 0;
-  const serviceCharge = parseFloat((subtotal * SYSTEM_CHARGE_PCT).toFixed(2)); // 5% of product value
-  const total         = subtotal + shippingFee + serviceCharge;
+  // The 5% DUNAZOE system charge is already included in each product's
+  // listing-time final_price. Do not collect it a second time at checkout.
+  const serviceCharge = 0;
+  const total         = subtotal + shippingFee;
 
   async function handleCheckout(e) {
     e.preventDefault();
@@ -293,7 +294,7 @@ export default function CheckoutPage() {
           payment_method:   payMethod,
           total,
           subtotal,
-          shipping_fee:     shippingFee + serviceCharge,
+           shipping_fee:     shippingFee,
           service_charge:   serviceCharge,
           shipping_method:  selectedShip?.id || "standard",
           shipping_courier: selectedShip?.courier_id || selectedShip?.type || null,
@@ -527,13 +528,9 @@ export default function CheckoutPage() {
               </span>
             </div>
 
-            {/* 5% service charge on product subtotal */}
-            {subtotal > 0 && (
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.84rem", marginBottom: "4px", color: "var(--text-secondary)" }}>
-                <span>Service charge <span style={{ fontSize: "0.75rem", opacity: 0.75 }}>(5% of items)</span></span>
-                <span>{formatNGN(serviceCharge)}</span>
-              </div>
-            )}
+             <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", margin: "8px 0 0" }}>
+               DUNAZOE's 5% system charge is already included in listed product prices.
+             </p>
 
             <div className="glow-divider" style={{ margin: "10px 0" }} />
             <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800 }}>
