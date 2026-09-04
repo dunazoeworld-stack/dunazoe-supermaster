@@ -93,6 +93,16 @@ export async function POST(request) {
   let body = {};
   try { body = await request.json(); } catch (_) {}
 
+  const submittedImages = Array.isArray(body.images)
+    ? body.images
+    : (typeof body.images === "string" ? [body.images] : []);
+  if (process.env.NODE_ENV === "production" && submittedImages.some(image => String(image).startsWith("data:"))) {
+    return NextResponse.json({
+      success: false,
+      error: "Images must be uploaded to the configured image service before publishing in production.",
+    }, { status: 422 });
+  }
+
   if (body.price || body.base_price) {
     const basePrice = Number.isFinite(parseFloat(body.base_price))
       ? parseFloat(body.base_price)

@@ -1,6 +1,6 @@
 # DUNAZOE Product System Update
 
-**Updated:** 2026-08-17  
+**Updated:** 2026-09-04
 **Scope:** production-safe listing and marketplace display patch
 
 ## Pricing contract
@@ -33,6 +33,8 @@ The calculation is applied in the vendor UI, the Next.js API fallback, and the p
 ## Compatibility and verification
 
 - Gateway-first behavior and the existing local product store are preserved.
-- Checkout now treats each cart item's `price` as the listing-time `final_price`; it does not add a second 5% buyer charge. The existing 24-hour payout accounting rule remains compatible.
+- Checkout now treats each cart item's `price` as the listing-time `final_price`; it does not add a second 5% buyer charge. The existing 24-hour payout accounting entry reconciles the final customer price back to the vendor's stored base price; it is not a second buyer charge.
 - A product image that is a data URL is not advertised as a social preview; the public fallback is used instead.
+- New products receive collision-safe indexed short slugs such as `/p/product-name-abc-123`; legacy `/products/:id` URLs remain valid.
+- Production listing rejects data-URI images so browser-only image bytes are not persisted.
 - Before publishing, inspect the rendered `<meta property="og:image">` and response headers from the actual public product URL using a crawler-style request.

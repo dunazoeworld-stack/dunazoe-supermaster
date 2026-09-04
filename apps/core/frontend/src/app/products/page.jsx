@@ -145,7 +145,7 @@ function ProductsContent() {
 
             return (
               <div key={p.id} className="card" style={{ overflow: "hidden", display: "flex", flexDirection: "column" }}>
-                <Link href={`/products/${p.id}`} style={{ textDecoration: "none", display: "block" }}>
+                <Link href={p.short_slug ? `/p/${p.short_slug}` : `/products/${p.id}`} style={{ textDecoration: "none", display: "block" }}>
                   {/* Image / hero */}
                   <div style={{ width: "100%", height: "180px", background: imgSrc ? `url(${imgSrc}) center/cover no-repeat` : "var(--bg-3)", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", flexShrink: 0 }}>
                     {!imgSrc && <span style={{ fontSize: "2.4rem", opacity: 0.22 }}>{typeIcon}</span>}
@@ -154,7 +154,7 @@ function ProductsContent() {
                       {typeIcon} {isDigital ? "Digital" : isService ? "Service" : "Physical"}
                     </span>
                     {p.ajo_enabled && (
-                      <span className="badge badge-info" style={{ position: "absolute", top: "8px", right: "8px", fontSize: "0.68rem" }}>⬡ Ajo</span>
+                      <span className="badge badge-info" style={{ position: "absolute", top: "8px", right: "8px", fontSize: "0.68rem" }}>⬡ Personal Savings</span>
                     )}
                     {p.weight && !isDigital && !isService && (
                       <span style={{ position: "absolute", bottom: "8px", left: "8px", padding: "2px 7px", borderRadius: "10px", fontSize: "0.65rem", fontWeight: 600, background: "rgba(0,0,0,0.5)", color: "#ccc" }}>

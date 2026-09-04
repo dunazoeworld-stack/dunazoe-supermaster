@@ -12,6 +12,7 @@ require("dotenv").config();
 const express  = require("express");
 const cors     = require("cors");
 const { Pool } = require("pg");
+const crypto   = require("crypto");
 const { requireAuth, requireRole } = require("../../shared/middleware/auth");
 const { errorHandler, asyncHandler } = require("../../shared/middleware/errorHandler");
 
@@ -40,6 +41,26 @@ const AJO_SURCHARGE    = parseFloat(process.env.AJO_SURCHARGE    || "0.10");
 const AJO_WEEKS_LIMIT  = parseInt(process.env.AJO_WEEKS_LIMIT    || "2");
 const COPY_MARKUP      = parseFloat(process.env.COPY_MARKUP      || "0.06"); // 6% as per ChatGPT v6
 const THRIFT_MIN_PRICE = parseFloat(process.env.THRIFT_MIN_PRICE || "10000");
+
+function slugPrefix(value) {
+  return String(value || "product")
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 28) || "product";
+}
+
+async function createShortSlug(name, id) {
+  const prefix = slugPrefix(name);
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const candidate = `${prefix}-${Number(id).toString(36)}-${crypto.randomBytes(3).toString("hex")}`;
+    const exists = await pool.query("SELECT 1 FROM products WHERE short_slug=$1 LIMIT 1", [candidate]);
+    if (!exists.rows.length) return candidate;
+  }
+  throw new Error("Could not allocate a unique product link");
+}
 
 // ── HEALTH ────────────────────────────────────────────────────
 app.get("/health", (req, res) => {
@@ -121,10 +142,14 @@ app.post("/products", requireAuth, asyncHandler(async (req, res) => {
     ]
   );
 
-  const product   = result.rows[0];
-  const real_link = `dunazoe.com/p/${product.id}`;
-  await pool.query("UPDATE products SET shareable_link=$1 WHERE id=$2",
-    [real_link, product.id]);
+  const product = result.rows[0];
+  let short_slug = `p-${Number(product.id).toString(36)}`;
+  try { short_slug = await createShortSlug(product.name, product.id); } catch (e) {
+    console.warn("[Product] short slug fallback:", e.message);
+  }
+  const real_link = `dunazoe.com/p/${short_slug}`;
+  await pool.query("UPDATE products SET shareable_link=$1, short_slug=$2 WHERE id=$3",
+    [real_link, short_slug, product.id]);
 
   return res.status(201).json({
     success:         true,
@@ -142,9 +167,10 @@ app.post("/products", requireAuth, asyncHandler(async (req, res) => {
     ai_badge,
     demand_score:    demand,
     shareable_link:  real_link,
+    short_slug,
     share_message:   `Check out '${name}' on DUNAZOE: ${real_link}`,
     note:            ajo_surcharge_pct > 0
-      ? `Ajo schedule >2 weeks: buyer pays +₦${Math.round(num_price*AJO_SURCHARGE).toLocaleString()} surcharge. You keep full price.`
+      ? `Personal Savings schedule >2 weeks: buyer pays +₦${Math.round(num_price*AJO_SURCHARGE).toLocaleString()} surcharge. You keep full price.`
       : null,
   });
 }));
@@ -186,6 +212,20 @@ app.get("/products", asyncHandler(async (req, res) => {
     count:    result.rows.length,
     page:     parseInt(page),
   });
+}));
+
+// ── GET SINGLE PRODUCT BY SHORT SLUG ───────────────────────────
+app.get("/products/slug/:slug", asyncHandler(async (req, res) => {
+  const { slug } = req.params;
+  const result = await pool.query(
+    `SELECT p.*, v.business_name, v.city, v.state, v.rating
+     FROM products p JOIN vendors v ON p.vendor_id=v.id
+     WHERE p.is_active=TRUE
+       AND (p.short_slug=$1 OR p.shareable_link=$2)`,
+    [slug, `dunazoe.com/p/${slug}`]
+  );
+  if (!result.rows.length) return res.status(404).json({ success: false, error: "Product not found" });
+  return res.json({ success: true, product: result.rows[0] });
 }));
 
 // ── GET SINGLE PRODUCT ────────────────────────────────────────
@@ -264,9 +304,14 @@ app.post("/products/copy", requireAuth, asyncHandler(async (req, res) => {
       orig.demand_score, orig.ai_badge, orig.ai_cta, link
     ]
   );
-  const copy      = copy_res.rows[0];
-  const real_link = `dunazoe.com/p/${copy.id}`;
-  await pool.query("UPDATE products SET shareable_link=$1 WHERE id=$2", [real_link, copy.id]);
+  const copy = copy_res.rows[0];
+  let short_slug = `p-${Number(copy.id).toString(36)}`;
+  try { short_slug = await createShortSlug(copy.name, copy.id); } catch (e) {
+    console.warn("[Product] copy short slug fallback:", e.message);
+  }
+  const real_link = `dunazoe.com/p/${short_slug}`;
+  await pool.query("UPDATE products SET shareable_link=$1, short_slug=$2 WHERE id=$3",
+    [real_link, short_slug, copy.id]);
 
   return res.status(201).json({
     success:              true,
@@ -277,6 +322,7 @@ app.post("/products/copy", requireAuth, asyncHandler(async (req, res) => {
     copy_price,
     markup_pct:           COPY_MARKUP * 100 + "%",
     shareable_link:       real_link,
+    short_slug,
     share_message:        `Get '${orig.name}' on DUNAZOE: ${real_link}`,
   });
 }));
@@ -361,7 +407,7 @@ app.get("/products/vendor/:vendor_id", asyncHandler(async (req, res) => {
  * Returns: suggested price, badge, tips, Ajo surcharge info
  */
 app.post("/products/ai/assist", requireAuth, asyncHandler(async (req, res) => {
-  const { name, cost, category, ajo_weeks = 0, description = "" } = req.body;
+  const { name, cost, category, ajo_weeks = 0, description = "", image_urls = [] } = req.body;
   const num_cost = parseFloat(cost || 0);
   const demand   = DEMAND_SCORES[category] || 0.60;
   const sp       = num_cost > 0
@@ -374,7 +420,7 @@ app.post("/products/ai/assist", requireAuth, asyncHandler(async (req, res) => {
   if (!description)             tips.push("Add a description to improve search ranking");
 
   const surcharge_note = parseInt(ajo_weeks) > AJO_WEEKS_LIMIT
-    ? `Ajo schedule >2 weeks: +10% surcharge auto-applied. Buyer pays; you keep full price.`
+    ? `Personal Savings schedule >2 weeks: +10% surcharge auto-applied. Buyer pays; you keep full price.`
     : null;
 
   return res.json({
@@ -387,6 +433,7 @@ app.post("/products/ai/assist", requireAuth, asyncHandler(async (req, res) => {
     title_tips:        tips,
     listing_score:     Math.round(demand * 10 * 10) / 10,
     share_tip:         "Share your listing link on WhatsApp and Instagram for direct sales.",
+    image_count:       Array.isArray(image_urls) ? image_urls.filter(Boolean).length : 0,
   });
 }));
 
@@ -397,8 +444,11 @@ pool.query(`
   ALTER TABLE products
     ADD COLUMN IF NOT EXISTS base_price NUMERIC(12,2),
     ADD COLUMN IF NOT EXISTS system_charge NUMERIC(12,2) DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS final_price NUMERIC(12,2)
+    ADD COLUMN IF NOT EXISTS final_price NUMERIC(12,2),
+    ADD COLUMN IF NOT EXISTS short_slug TEXT
 `).catch(err => console.warn("[Product] pricing columns migration skipped:", err.message));
+pool.query("CREATE UNIQUE INDEX IF NOT EXISTS idx_products_short_slug ON products(short_slug) WHERE short_slug IS NOT NULL")
+  .catch(err => console.warn("[Product] short slug index migration skipped:", err.message));
 
 app.listen(PORT, () => console.log(`✅ Product Service running on port ${PORT}`));
 module.exports = app;

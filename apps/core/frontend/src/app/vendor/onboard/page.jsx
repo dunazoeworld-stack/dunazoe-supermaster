@@ -485,12 +485,13 @@ export default function VendorOnboardPage() {
         self_delivery_zones:    product.self_delivery_zones,
       };
 
-      const payload = {
+       const payload = {
         name:         product.name,
         description:  product.description,
         category:     product.category,
-         price:        Math.round(parseFloat(product.price) * 1.05),
-         base_price:   parseFloat(product.price),
+          // The API is the only pricing authority; send the vendor's base price.
+          price:        parseFloat(product.price),
+          base_price:   parseFloat(product.price),
         cost:         product.cost ? parseFloat(product.cost) : undefined,
         type:         product.product_type,
         product_type: product.product_type,
@@ -512,10 +513,10 @@ export default function VendorOnboardPage() {
             id:           pData.product_id || `local_${Date.now()}`,
             name:         payload.name,
             description:  payload.description || "",
-             price:        payload.price,
-             base_price:   payload.base_price,
-             system_charge: Math.round((payload.price - payload.base_price) * 100) / 100,
-             final_price: payload.price,
+             price:        pData.final_price || pData.price || payload.price,
+             base_price:   pData.base_price || payload.base_price,
+             system_charge: pData.system_charge || Math.round((parseFloat(pData.final_price || pData.price || payload.price) - parseFloat(pData.base_price || payload.base_price)) * 100) / 100,
+             final_price: pData.final_price || pData.price || payload.price,
             category:     payload.category,
             type:         payload.product_type,
             product_type: payload.product_type,
@@ -973,15 +974,15 @@ export default function VendorOnboardPage() {
                     </div>
                   </div>
 
-                  {/* Ajo */}
+                  {/* Personal Savings (backend keeps ajo_* compatibility fields) */}
                   <div style={{ padding: "12px", background: "var(--surface)", borderRadius: "10px" }}>
                     <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
                       <input type="checkbox" checked={product.ajo_enabled} onChange={e => P("ajo_enabled", e.target.checked)} style={{ accentColor: "var(--dz-blue)", width: "16px", height: "16px" }} />
-                      <span style={{ fontWeight: 600, fontSize: "0.88rem" }}>⬡ Enable Ajo (installment) buying</span>
+                      <span style={{ fontWeight: 600, fontSize: "0.88rem" }}>⬡ Enable Personal Savings (installment) buying</span>
                     </label>
                     {product.ajo_enabled && (
                       <div className="form-group" style={{ marginTop: "10px" }}>
-                        <label className="form-label">Ajo Duration (weeks)</label>
+                        <label className="form-label">Personal Savings Duration (weeks)</label>
                         <input className="form-input" type="number" min="4" max="52" value={product.ajo_weeks} onChange={e => P("ajo_weeks", e.target.value)} placeholder="e.g. 12" />
                       </div>
                     )}

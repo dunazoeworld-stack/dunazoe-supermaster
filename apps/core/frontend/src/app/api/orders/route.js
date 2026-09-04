@@ -9,8 +9,9 @@
  *   3. Paystack also fails         → queue order locally, show retry option
  *
  * Service charge: 5% is included in product final_price at listing time.
- * Checkout must not add a second buyer line item; vendor payout keeps the
- * existing 24-hour 5% payout accounting rule for compatibility.
+ * Checkout must not add a second buyer line item. The existing 24-hour
+ * payout accounting rule reconciles the final customer price back to the
+ * vendor's base price; it is not an additional checkout charge.
  */
 import { NextResponse } from "next/server";
 

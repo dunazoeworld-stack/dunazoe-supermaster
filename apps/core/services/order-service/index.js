@@ -426,7 +426,10 @@ app.put("/orders/:id/status", requireAuth, asyncHandler(async (req, res) => {
         order_ref:  `ORD-${id}`,
       }).catch(() => {});
 
-      // ── SCHEDULE 5% service charge deduction from vendor payout (24h delay) ──
+      // ── RECONCILE LISTING CHARGE IN VENDOR PAYOUT (24h delay) ──
+      // The buyer already paid this charge at listing time. Keeping this
+      // accounting entry makes the vendor's net payout match the stored
+      // base price instead of charging the buyer twice.
       // The 5% is on the product amount (order.amount), not delivery fee.
       const SERVICE_CHARGE_PCT = parseFloat(process.env.SERVICE_CHARGE_PCT || "0.05");
       const service_charge_amt = parseFloat((order.amount * SERVICE_CHARGE_PCT).toFixed(2));

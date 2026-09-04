@@ -27,7 +27,7 @@ export default function DashboardPage() {
     { href: "/products",       icon: "🛒", label: "Shop",      desc: "Browse" },
     { href: "/wallet",         icon: "💳", label: "Wallet",    desc: "Funds" },
     { href: "/wallet/deposit", icon: "⬆️", label: "Deposit",   desc: "Add funds" },
-    { href: "/thrift",         icon: "⬡",  label: "Ajo",       desc: "Savings" },
+    { href: "/thrift",         icon: "⬡",  label: "Personal Savings", desc: "Savings" },
     { href: "/orders",         icon: "📦", label: "Orders",    desc: "My orders" },
     { href: "/track",          icon: "📍", label: "Track",     desc: "Track order" },
     { href: "/disputes",       icon: "⚖️", label: "Disputes",  desc: "Issues" },

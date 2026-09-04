@@ -37,7 +37,7 @@ export default function HomePage() {
               <span style={{display:"block",fontSize:"clamp(2.5rem,7vw,4.5rem)",fontWeight:900,letterSpacing:"0.08em",background:"linear-gradient(135deg,#00A3FF,#0066FF)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>DUNAZOE</span>
               <span style={{fontSize:"clamp(1rem,3vw,1.5rem)",fontWeight:400,color:"#8A9AB5"}}>Buy Anything · Sell Everything · Ship Worldwide</span>
             </h1>
-            <p style={{fontSize:"1.05rem",color:"#8A9AB5",marginBottom:"40px",lineHeight:1.7,maxWidth:"600px",margin:"0 auto 40px"}}>Nigeria's AI-powered super marketplace with built-in <span style={{color:"#00A3FF",fontWeight:600}}>Ajo savings</span>, escrow protection, and intelligent shipping.</p>
+            <p style={{fontSize:"1.05rem",color:"#8A9AB5",marginBottom:"40px",lineHeight:1.7,maxWidth:"600px",margin:"0 auto 40px"}}>Nigeria's AI-powered super marketplace with built-in <span style={{color:"#00A3FF",fontWeight:600}}>Personal Savings</span>, escrow protection, and intelligent shipping.</p>
             <div style={{display:"flex",gap:"16px",justifyContent:"center",flexWrap:"wrap"}}>
               <Link href="/products" style={{padding:"16px 40px",borderRadius:"14px",fontSize:"1rem",fontWeight:700,color:"#fff",background:"linear-gradient(135deg,#00A3FF,#0066FF)",textDecoration:"none",boxShadow:"0 0 30px rgba(0,163,255,0.4)"}}>🛒 Start Shopping</Link>
               <Link href="/register?role=vendor" style={{padding:"16px 40px",borderRadius:"14px",fontSize:"1rem",fontWeight:700,color:"#00A3FF",border:"2px solid rgba(0,163,255,0.35)",textDecoration:"none",background:"rgba(0,163,255,0.06)"}}>🏪 Sell on DUNAZOE</Link>
@@ -70,7 +70,7 @@ export default function HomePage() {
                 <Link key={p.id} href={`/products/${p.id}`} data-testid="product-card" style={{display:"block",background:"linear-gradient(145deg,#0D1525,#12203A)",border:"1px solid rgba(0,163,255,0.12)",borderRadius:"16px",overflow:"hidden",textDecoration:"none",transition:"all 0.25s"}}>
                   <div style={{width:"100%",height:"180px",background:p.images?`url(${p.images}) center/cover`:"#0D1525",display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
                     {!p.images&&<Image src="/assets/dunazoe-logo.jpg" alt="" width={48} height={48} style={{borderRadius:"10px",opacity:0.3}}/>}
-                    {p.ajo_enabled&&<span style={{position:"absolute",top:"10px",right:"10px",background:"rgba(0,102,255,0.85)",borderRadius:"6px",padding:"3px 8px",fontSize:"0.7rem",fontWeight:600,color:"#fff"}}>⬡ Ajo</span>}
+                    {p.ajo_enabled&&<span style={{position:"absolute",top:"10px",right:"10px",background:"rgba(0,102,255,0.85)",borderRadius:"6px",padding:"3px 8px",fontSize:"0.7rem",fontWeight:600,color:"#fff"}}>⬡ Personal Savings</span>}
                   </div>
                   <div style={{padding:"14px"}}>
                     <p style={{fontSize:"0.88rem",fontWeight:600,color:"#fff",marginBottom:"6px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</p>
@@ -91,9 +91,9 @@ export default function HomePage() {
         <section style={{background:"linear-gradient(135deg,rgba(0,103,255,0.12),rgba(0,163,255,0.06))",borderTop:"1px solid rgba(0,163,255,0.15)",padding:"80px 24px",textAlign:"center"}}>
           <div style={{maxWidth:"600px",margin:"0 auto"}}>
             <div style={{fontSize:"3rem",marginBottom:"16px"}}>⬡</div>
-            <h2 style={{marginBottom:"16px",background:"linear-gradient(135deg,#00A3FF,#0066FF)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>Save with Ajo Instalments</h2>
-            <p style={{color:"#8A9AB5",lineHeight:1.7,marginBottom:"32px"}}>Open a free Ajo savings account. Save daily, weekly, or monthly. Use savings to buy anything on DUNAZOE.</p>
-            <Link href="/thrift" style={{padding:"16px 40px",borderRadius:"14px",fontSize:"1rem",fontWeight:700,color:"#fff",background:"linear-gradient(135deg,#00A3FF,#0066FF)",textDecoration:"none",boxShadow:"0 0 30px rgba(0,163,255,0.4)"}}>⬡ Open Ajo Account Free</Link>
+            <h2 style={{marginBottom:"16px",background:"linear-gradient(135deg,#00A3FF,#0066FF)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>Save with Personal Savings Instalments</h2>
+            <p style={{color:"#8A9AB5",lineHeight:1.7,marginBottom:"32px"}}>Open a free Personal Savings account. Save daily, weekly, or monthly. Use savings to buy anything on DUNAZOE.</p>
+            <Link href="/thrift" style={{padding:"16px 40px",borderRadius:"14px",fontSize:"1rem",fontWeight:700,color:"#fff",background:"linear-gradient(135deg,#00A3FF,#0066FF)",textDecoration:"none",boxShadow:"0 0 30px rgba(0,163,255,0.4)"}}>⬡ Open Personal Savings Free</Link>
           </div>
         </section>
         {/* GET THE APP */}

@@ -7,7 +7,7 @@ const FAQS = [
   { q: "How does payment work?",            a: "We support Paystack for NGN payments and Stripe for card payments. Funds are held in escrow until your order is delivered and confirmed." },
   { q: "How do I become a vendor?",         a: 'Click "Sell on DUNAZOE" on the homepage, complete vendor onboarding, and verify your identity via KYC. Your store is live within minutes.' },
   { q: "How are vendors paid?",             a: "Vendor payouts are processed 24 hours after order delivery confirmation. A 5% service charge applies. Payouts go to your DUNAZOE wallet." },
-  { q: "What is Ajo savings?",              a: "Ajo is a group savings feature. Join or create a savings group, contribute regularly, and each member gets a lump sum in rotation." },
+  { q: "What is Personal Savings?",         a: "Personal Savings is DUNAZOE's group savings feature. Join or create a savings group, contribute regularly, and each member gets a lump sum in rotation." },
   { q: "How does delivery work?",           a: "We support courier partners and vendor self-delivery. At checkout, available delivery options are shown based on your location." },
   { q: "Can I track my order?",             a: 'Yes — go to Orders and click your order to see real-time status. You\'ll also get in-app and push notifications at each stage.' },
   { q: "How do I request a refund?",        a: "Contact us via this support page with your order ID. Refunds are processed within 3–5 business days for eligible orders." },
@@ -26,8 +26,9 @@ export default function SupportPage() {
     e.preventDefault();
     if (!subject.trim() || !message.trim()) return;
     setSending(true);
-    // Simulate ticket submission (extend to real API when email service is live)
-    await new Promise(r => setTimeout(r, 900));
+    const mailSubject = encodeURIComponent(`[DUNAZOE Support] ${subject}`);
+    const mailBody = encodeURIComponent(message.trim());
+    window.location.href = `mailto:support@dunazoe.com?subject=${mailSubject}&body=${mailBody}`;
     setSent(true);
     setSending(false);
   }
@@ -97,7 +98,7 @@ export default function SupportPage() {
               <div style={{ padding: "28px", borderRadius: "16px", border: "1px solid rgba(0,220,100,0.25)", background: "rgba(0,220,100,0.06)", textAlign: "center" }}>
                 <div style={{ fontSize: "2.5rem", marginBottom: "12px" }}>✅</div>
                 <p style={{ fontWeight: 700, marginBottom: "6px" }}>Ticket received!</p>
-                <p style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>We'll respond to your email within 24 hours.</p>
+                 <p style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>Your email app was opened with the support request. Send it there and we'll respond within 24 hours.</p>
                 <button onClick={() => { setSent(false); setSubject(""); setMessage(""); }} style={{ marginTop: "16px", padding: "8px 20px", borderRadius: "10px", background: "var(--dz-blue)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 600 }}>
                   Submit another
                 </button>
@@ -125,7 +126,7 @@ export default function SupportPage() {
                   {sending ? "Sending…" : "Send Message"}
                 </button>
                 <p style={{ margin: 0, fontSize: "0.75rem", color: "var(--text-muted)", textAlign: "center" }}>
-                  Or email us directly at <a href="mailto:support@dunazoe.com" style={{ color: "var(--dz-blue)" }}>support@dunazoe.com</a>
+                   This opens your email app; the form does not submit to a hidden ticket system. Or email <a href="mailto:support@dunazoe.com" style={{ color: "var(--dz-blue)" }}>support@dunazoe.com</a>
                 </p>
               </form>
             )}
@@ -133,8 +134,8 @@ export default function SupportPage() {
             {/* Social / direct contact */}
             <div style={{ marginTop: "16px", padding: "16px", borderRadius: "12px", border: "1px solid var(--border)", background: "var(--surface)", fontSize: "0.84rem", color: "var(--text-secondary)" }}>
               <p style={{ margin: "0 0 8px", fontWeight: 700, color: "var(--text)" }}>Also reach us on</p>
-              <p style={{ margin: "0 0 4px" }}>📱 WhatsApp: <a href="https://wa.me/2348000000000" target="_blank" rel="noreferrer" style={{ color: "var(--dz-blue)" }}>+234 800 000 0000</a></p>
-              <p style={{ margin: "0 0 4px" }}>🐦 Twitter/X: <a href="https://twitter.com/dunazoe" target="_blank" rel="noreferrer" style={{ color: "var(--dz-blue)" }}>@dunazoe</a></p>
+               <p style={{ margin: "0 0 4px" }}>📱 WhatsApp: <a href="https://wa.me/2347056916999" target="_blank" rel="noreferrer" style={{ color: "var(--dz-blue)" }}>07056916999</a></p>
+               <p style={{ margin: "0 0 4px" }}>🐦 Twitter/X: <a href="https://x.com/DunazoeWorld" target="_blank" rel="noreferrer" style={{ color: "var(--dz-blue)" }}>@DunazoeWorld</a></p>
               <p style={{ margin: 0 }}>🕐 Hours: Mon–Sat, 8am–8pm WAT</p>
             </div>
           </div>

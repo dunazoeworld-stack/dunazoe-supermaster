@@ -25,8 +25,9 @@ function SpecRow({ icon, label, value }) {
 
 const TYPE_ICONS = { physical: "📦", digital: "💾", service: "🛠️" };
 
-export default function ProductDetailPage({ params }) {
-  const { id } = use(params);
+export default function ProductDetailPage({ params, resolvedId }) {
+  const routeParams = params ? use(params) : null;
+  const id = resolvedId || routeParams?.id;
   const [product, setProduct]   = useState(null);
   const [loading, setLoading]   = useState(true);
   const [qty, setQty]           = useState(1);
@@ -109,7 +110,10 @@ export default function ProductDetailPage({ params }) {
   }
 
   function getShareLink(p) {
-    return p.shareable_link ? `https://${p.shareable_link}` : `${typeof window !== "undefined" ? window.location.origin : "https://dunazoe.com"}/products/${p.id}`;
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://dunazoe.com";
+    if (p.short_slug) return `${origin}/p/${p.short_slug}`;
+    if (p.shareable_link) return p.shareable_link.startsWith("http") ? p.shareable_link : `https://${p.shareable_link}`;
+    return `${origin}/products/${p.id}`;
   }
 
   function handleShare(p) {
@@ -183,7 +187,7 @@ export default function ProductDetailPage({ params }) {
                   </div>
                   {product.ajo_enabled && (
                     <div style={{ position: "absolute", top: "12px", right: "12px" }}>
-                      <Badge label="⬡ Ajo" color="#00C8E0" bg="rgba(0,200,224,0.12)" />
+                      <Badge label="⬡ Personal Savings" color="#00C8E0" bg="rgba(0,200,224,0.12)" />
                     </div>
                   )}
                 </div>
@@ -219,7 +223,7 @@ export default function ProductDetailPage({ params }) {
                 <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
                   {product.category && <Badge label={product.category} />}
                   {product.is_active !== false && <Badge label="✓ In Stock" color="var(--success)" bg="rgba(0,204,136,0.1)" />}
-                  {product.ajo_enabled && <Badge label="⬡ Ajo Available" color="#00C8E0" bg="rgba(0,200,224,0.1)" />}
+                  {product.ajo_enabled && <Badge label="⬡ Personal Savings Available" color="#00C8E0" bg="rgba(0,200,224,0.1)" />}
                   {product.is_verified && <Badge label="✔ Verified" color="#9B5DE5" bg="rgba(155,93,229,0.1)" />}
                   {tags.slice(0, 3).map(t => <Badge key={t} label={t} color="var(--text-secondary)" bg="var(--surface)" />)}
                 </div>
@@ -242,7 +246,7 @@ export default function ProductDetailPage({ params }) {
                   )}
                   {product.ajo_enabled && product.price > 0 && (
                     <span style={{ fontSize: "0.82rem", color: "#00C8E0", fontWeight: 700 }}>
-                      or ₦{Math.ceil(product.price * 1.05 / 6).toLocaleString("en-NG")}/mo Ajo
+                      or ₦{Math.ceil(product.price * 1.05 / 6).toLocaleString("en-NG")}/mo Personal Savings
                     </span>
                   )}
                 </div>
@@ -352,10 +356,10 @@ export default function ProductDetailPage({ params }) {
                   )}
                 </div>
 
-                {/* Ajo info */}
+                {/* Personal Savings info */}
                 {product.ajo_enabled && (
                   <div className="alert alert-info" style={{ marginTop: "4px" }}>
-                    ⬡ <strong>Ajo payment:</strong> Spread over {product.ajo_weeks || "6"} weeks.{" "}
+                    ⬡ <strong>Personal Savings payment:</strong> Spread over {product.ajo_weeks || "6"} weeks.{" "}
                     <Link href="/thrift" style={{ color: "var(--dz-blue)", fontWeight: 700 }}>Learn more →</Link>
                   </div>
                 )}

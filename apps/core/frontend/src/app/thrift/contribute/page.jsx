@@ -119,7 +119,7 @@ export default function ThriftContributePage() {
   return (
     <PageShell title="New Savings Plan" icon="⬡" authRequired={true}
       subtitle="Set a personal savings goal — up to 12 months"
-      breadcrumb={[{ href: "/thrift", label: "Ajo Savings" }, { label: "New Plan" }]}>
+      breadcrumb={[{ href: "/thrift", label: "Personal Savings" }, { label: "New Plan" }]}>
 
       {offline && <div className="alert alert-error" style={{ marginBottom: "20px" }}>📡 Offline — a live connection is required.</div>}
       {error   && <div className="alert alert-error" style={{ marginBottom: "20px" }}>⚠️ {error}</div>}

@@ -105,6 +105,20 @@ Verification status: focused source checks are complete; the frontend build and 
 6. Push to GitHub: go to `/deploy/github` → Push tab
 7. Set GITHUB_TOKEN in Replit Secrets
 
+## CTO Audit Addendum — 2026-09-04
+
+- Added indexed collision-safe product short links at `/p/:slug`; existing ID URLs remain supported.
+- Product metadata and share actions prefer the short URL, with HTTPS/public-image safeguards.
+- Vendor listing now sends the base price only; the server remains authoritative for the 5% listing-time calculation.
+- Stripe conversion now happens before gateway calls, records explicit source/target currency metadata, uses the shared DB pool, and sends idempotency keys.
+- Added the singular `/api/payment/health` compatibility alias, authenticated/rate-limited product vision analysis, production data-URI rejection, self-delivery checkout selection, and a chat emoji picker.
+- User-facing savings wording is now “Personal Savings”; support links use WhatsApp `07056916999` and X `@DunazoeWorld`.
+- The 5% payout entry is retained as vendor-base-price reconciliation, not a second buyer charge.
+
+### Remaining environment verification
+
+The production build is the required validation path. Full live short-link metadata, public image HTTP status, and DB-backed checkout verification still require a workflow with the production database/gateway variables injected.
+
 ---
 
 ## What's NOT Built (By Design)

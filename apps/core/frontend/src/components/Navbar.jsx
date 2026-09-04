@@ -56,7 +56,7 @@ export default function Navbar() {
             {[
               { href: "/products", label: "Shop" },
               { href: "/vendors", label: "Vendors" },
-              { href: "/thrift", label: "Ajo" },
+              { href: "/thrift", label: "Personal Savings" },
               { href: "/services", label: "Services" },
             ].map(({ href, label }) => (
               <Link key={href} href={href} style={{
@@ -117,7 +117,7 @@ export default function Navbar() {
               {[
                 { href: "/products", label: "🛒 Shop" },
                 { href: "/vendors",  label: "🏪 Vendors" },
-                { href: "/thrift",   label: "⬡ Ajo Savings" },
+                { href: "/thrift",   label: "⬡ Personal Savings" },
                 { href: "/services", label: "⚡ Services" },
                 { href: "/cart",     label: "🛒 Cart" },
                 { href: "/orders",   label: "📦 Orders" },

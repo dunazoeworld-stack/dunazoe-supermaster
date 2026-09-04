@@ -25,7 +25,7 @@ const DEFAULT_FEATURES = [
   { id:"search",        name:"Search Engine",        icon:"🔍", desc:"Product search & filters",              area:"Core",        status:"active" },
   { id:"chat",          name:"Live Chat",            icon:"💬", desc:"Vendor-buyer real-time chat",           area:"Social",      status:"beta" },
   { id:"social",        name:"Social Media",         icon:"📱", desc:"Vendor social posts & sharing",         area:"Social",      status:"beta" },
-  { id:"thrift",        name:"Thrift / Ajo Savings", icon:"🏦", desc:"Group savings (loan ledger fix pending)",area:"Fintech",    status:"maintenance" },
+  { id:"thrift",        name:"Personal Savings", icon:"🏦", desc:"Group savings (loan ledger fix pending)",area:"Fintech",    status:"maintenance" },
   { id:"loans",         name:"Loans",                icon:"💸", desc:"Disabled: CBN compliance review needed",area:"Fintech",     status:"hidden" },
   { id:"shareholder",   name:"Shareholder System",   icon:"📊", desc:"Coming Q2 2027",                        area:"Fintech",     status:"hidden" },
   { id:"admin",         name:"Admin Override",       icon:"🛡️", desc:"Super-admin controls & kill-switches",  area:"Admin",       status:"active" },

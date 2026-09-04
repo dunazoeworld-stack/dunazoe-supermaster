@@ -78,7 +78,9 @@ export async function generateMetadata({ params }) {
     ? product.description.slice(0, 200)
     : `Buy ${product.name} on DUNAZOE. Secure payment · Fast delivery · Escrow protected.`;
 
-  const productUrl = `${SITE_URL}/products/${id}`;
+  const productUrl = product.short_slug
+    ? `${SITE_URL}/p/${product.short_slug}`
+    : `${SITE_URL}/products/${id}`;
 
   return {
     title,

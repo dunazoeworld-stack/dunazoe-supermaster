@@ -58,7 +58,7 @@ export default function LoanApplyPage() {
           <div style={{ fontSize: "4rem", marginBottom: "16px" }}>✅</div>
           <h2 style={{ fontSize: "1.4rem", fontWeight: 800, marginBottom: "8px" }} className="text-gradient">Application Submitted!</h2>
           <p style={{ color: "var(--text-secondary)", marginBottom: "8px" }}>Your loan application is under review. You'll be notified within 24 hours.</p>
-          <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", marginBottom: "24px" }}>Loan decisions are based on your trust score, Ajo history, and order record.</p>
+          <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", marginBottom: "24px" }}>Loan decisions are based on your trust score, Personal Savings history, and order record.</p>
           <Link href="/wallet" className="btn btn-primary">← Back to Wallet</Link>
         </div>
       ) : (

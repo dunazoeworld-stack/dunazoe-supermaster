@@ -5,7 +5,7 @@ import { ThemeProvider } from "../components/ThemeProvider";
 
 export const metadata = {
   title: "DUNAZOE — Buy Anything · Sell Everything · Ship Worldwide",
-  description: "Nigeria's AI-powered super e-commerce + fintech platform. Shop, sell, save with Ajo, and ship worldwide.",
+  description: "Nigeria's AI-powered super e-commerce + fintech platform. Shop, sell, save with Personal Savings, and ship worldwide.",
   keywords: "ecommerce, Nigeria, marketplace, fintech, ajo, savings, shipping",
   authors: [{ name: "DUNAZOE" }],
   creator: "DUNAZOE",
@@ -16,7 +16,7 @@ export const metadata = {
   },
   openGraph: {
     title: "DUNAZOE — Buy Anything · Sell Everything · Ship Worldwide",
-    description: "Nigeria's AI-powered super marketplace with built-in Ajo savings, escrow protection, and intelligent shipping.",
+    description: "Nigeria's AI-powered super marketplace with built-in Personal Savings, escrow protection, and intelligent shipping.",
     type: "website",
     locale: "en_NG",
   },

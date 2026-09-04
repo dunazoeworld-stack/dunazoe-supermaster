@@ -38,7 +38,7 @@ function stateMatch(buyerState, zone) {
 }
 
 // ── Self-Delivery Banner ──────────────────────────────────────────────────────
-function SelfDeliveryPanel({ vendors, buyerState }) {
+function SelfDeliveryPanel({ vendors, buyerState, selected, onSelect }) {
   if (!vendors.length) return null;
   return (
     <div className="card" style={{ border: "1.5px solid rgba(0,200,150,0.4)", background: "rgba(0,200,150,0.04)" }}>
@@ -58,38 +58,49 @@ function SelfDeliveryPanel({ vendors, buyerState }) {
             padding: "12px 14px", borderRadius: "12px", marginBottom: "8px",
             background: "var(--surface)", border: "1px solid var(--border)",
           }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
-              <div>
-                <p style={{ fontWeight: 600, fontSize: "0.88rem" }}>{v.productName}</p>
-                <p style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{v.vendorName || "Vendor"}</p>
+            <div style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
+              <input
+                type="radio"
+                name="self-delivery"
+                checked={selected?.productName === v.productName && selected?.vendorId === v.vendorId}
+                onChange={() => onSelect(v)}
+                style={{ accentColor: "var(--success)", marginTop: "3px" }}
+              />
+              <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
+                  <div>
+                    <p style={{ fontWeight: 600, fontSize: "0.88rem" }}>{v.productName}</p>
+                    <p style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{v.vendorName || "Vendor"}</p>
+                  </div>
+                  <span style={{ fontWeight: 800, fontSize: "0.88rem", color: "var(--success)" }}>
+                    {v.deliveryFee ? `₦${parseInt(v.deliveryFee).toLocaleString("en-NG")}` : "Contact vendor"}
+                  </span>
+                </div>
+
+                {!v.deliveryFee ? (
+                  <p style={{ fontSize: "0.75rem", color: "var(--warning)", marginBottom: "8px" }}>
+                    ⚠️ This vendor hasn't set a delivery fee. Confirm the fee via chat or WhatsApp before paying.
+                  </p>
+                ) : null}
+
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                  {v.whatsapp && (
+                    <a
+                      href={`https://wa.me/${v.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`Hi, I'd like to confirm delivery details for "${v.productName}" on DUNAZOE.`)}`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="btn btn-sm"
+                      style={{ background: "#25D366", color: "#fff", border: "none", fontSize: "0.75rem" }}
+                    >
+                      💬 WhatsApp Vendor
+                    </a>
+                  )}
+                  {v.vendorId && (
+                    <a href={`/messages?vendor=${v.vendorId}`} className="btn btn-ghost btn-sm" style={{ fontSize: "0.75rem" }}>
+                      💬 Chat on DUNAZOE
+                    </a>
+                  )}
+                </div>
               </div>
-              <span style={{ fontWeight: 800, fontSize: "0.88rem", color: "var(--success)" }}>
-                {v.deliveryFee ? `₦${parseInt(v.deliveryFee).toLocaleString("en-NG")}` : "Contact vendor"}
-              </span>
-            </div>
-
-            {!v.deliveryFee ? (
-              <p style={{ fontSize: "0.75rem", color: "var(--warning)", marginBottom: "8px" }}>
-                ⚠️ This vendor hasn't set a delivery fee. Confirm the fee via chat or WhatsApp before paying.
-              </p>
-            ) : null}
-
-            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-              {v.whatsapp && (
-                <a
-                  href={`https://wa.me/${v.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`Hi, I'd like to confirm delivery details for "${v.productName}" on DUNAZOE.`)}`}
-                  target="_blank" rel="noopener noreferrer"
-                  className="btn btn-sm"
-                  style={{ background: "#25D366", color: "#fff", border: "none", fontSize: "0.75rem" }}
-                >
-                  💬 WhatsApp Vendor
-                </a>
-              )}
-              {v.vendorId && (
-                <a href={`/messages?vendor=${v.vendorId}`} className="btn btn-ghost btn-sm" style={{ fontSize: "0.75rem" }}>
-                  💬 Chat on DUNAZOE
-                </a>
-              )}
             </div>
           </div>
         ))}
@@ -159,6 +170,7 @@ export default function CheckoutPage() {
 
   // ── Self-delivery zone matching ─────────────────────────────────────────────
   const [selfDeliveryVendors, setSelfDeliveryVendors] = useState([]);
+  const [selectedSelfDelivery, setSelectedSelfDelivery] = useState(null);
 
   useEffect(() => {
     if (!form.state) { setSelfDeliveryVendors([]); return; }
@@ -181,6 +193,9 @@ export default function CheckoutPage() {
       }
     });
     setSelfDeliveryVendors(matches);
+    setSelectedSelfDelivery(current => current && matches.some(v =>
+      v.productName === current.productName && v.vendorId === current.vendorId
+    ) ? current : null);
   }, [form.state, cart]);
 
   // ── Logistics ───────────────────────────────────────────────────────────────
@@ -247,7 +262,7 @@ export default function CheckoutPage() {
         setQuotes(data.quotes);
         setAiNote(data.ai_note || "");
         // Auto-select best option only if nothing is selected yet
-        if (!selectedShipRef.current) setSelectedShip(data.quotes[0]);
+         if (!selectedShipRef.current && !selectedSelfDelivery) setSelectedShip(data.quotes[0]);
       } else {
         setQuotesError("Could not load shipping options. Standard rates apply.");
       }
@@ -256,7 +271,7 @@ export default function CheckoutPage() {
     } finally {
       setQuotesLoading(false);
     }
-  }, [cart]); // removed selectedShip from deps — fixes re-render loop
+  }, [cart, selectedSelfDelivery]); // selected self-delivery should not be replaced by a courier quote
 
   // Debounce city/state changes by 600ms
   useEffect(() => {
@@ -268,7 +283,9 @@ export default function CheckoutPage() {
   }, [form.city, form.state, fetchQuotes]);
 
   const subtotal      = cart.reduce((s, i) => s + parseFloat(i.price || 0) * (i.qty || 1), 0);
-  const shippingFee   = selectedShip?.cost_ngn || 0;
+  const shippingFee   = selectedSelfDelivery
+    ? (parseFloat(selectedSelfDelivery.deliveryFee) || 0)
+    : (selectedShip?.cost_ngn || 0);
   // The 5% DUNAZOE system charge is already included in each product's
   // listing-time final_price. Do not collect it a second time at checkout.
   const serviceCharge = 0;
@@ -279,7 +296,9 @@ export default function CheckoutPage() {
     if (offline) { setError("You are offline. Please reconnect to make a payment."); return; }
     if (!navigator.onLine) { setError("No internet connection. Payments require a live connection."); return; }
     if (cart.length === 0) { setError("Your cart is empty."); return; }
-    if (!selectedShip && quotes.length > 0) { setError("Please select a delivery option."); return; }
+    if (!selectedShip && !selectedSelfDelivery && (quotes.length > 0 || selfDeliveryVendors.length > 0)) {
+      setError("Please select a delivery option."); return;
+    }
     setLoading(true); setError("");
     try {
       const token = localStorage.getItem("dunazoe_token");
@@ -296,8 +315,9 @@ export default function CheckoutPage() {
           subtotal,
            shipping_fee:     shippingFee,
           service_charge:   serviceCharge,
-          shipping_method:  selectedShip?.id || "standard",
-          shipping_courier: selectedShip?.courier_id || selectedShip?.type || null,
+           shipping_method:  selectedSelfDelivery ? "self_delivery" : (selectedShip?.id || "standard"),
+           shipping_courier: selectedSelfDelivery ? "vendor_self_delivery" : (selectedShip?.courier_id || selectedShip?.type || null),
+           self_delivery_vendor_id: selectedSelfDelivery?.vendorId || null,
         }),
       });
       const data = await res.json();
@@ -418,7 +438,12 @@ export default function CheckoutPage() {
 
           {/* ── Self-Delivery Panel ─────────────────────────────────────────── */}
           {selfDeliveryVendors.length > 0 && (
-            <SelfDeliveryPanel vendors={selfDeliveryVendors} buyerState={form.state} />
+             <SelfDeliveryPanel
+               vendors={selfDeliveryVendors}
+               buyerState={form.state}
+               selected={selectedSelfDelivery}
+               onSelect={vendor => { setSelectedSelfDelivery(vendor); setSelectedShip(null); }}
+             />
           )}
 
           {/* ── AI Shipping Options ─────────────────────────────────────────── */}
@@ -448,7 +473,12 @@ export default function CheckoutPage() {
             {quotes.length > 0 && (
               <>
                 {quotes.map(q => (
-                  <ShippingCard key={q.id} quote={q} selected={selectedShip?.id === q.id} onSelect={setSelectedShip} />
+                  <ShippingCard
+                    key={q.id}
+                    quote={q}
+                    selected={!selectedSelfDelivery && selectedShip?.id === q.id}
+                    onSelect={quote => { setSelectedShip(quote); setSelectedSelfDelivery(null); }}
+                  />
                 ))}
                 {aiNote && (
                   <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "6px" }}>
@@ -522,9 +552,9 @@ export default function CheckoutPage() {
 
             {/* Shipping */}
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.84rem", marginBottom: "4px", color: "var(--text-secondary)" }}>
-              <span>Shipping{selectedShip ? ` · ${selectedShip.name}` : ""}</span>
-              <span style={{ color: shippingFee === 0 && selectedShip ? "#10B981" : "var(--text-secondary)" }}>
-                {selectedShip ? formatNGN(shippingFee) : (quotesLoading ? "…" : "TBD")}
+              <span>Shipping{selectedSelfDelivery ? " · Vendor self-delivery" : selectedShip ? ` · ${selectedShip.name}` : ""}</span>
+              <span style={{ color: shippingFee === 0 && (selectedShip || selectedSelfDelivery) ? "#10B981" : "var(--text-secondary)" }}>
+                {selectedShip || selectedSelfDelivery ? formatNGN(shippingFee) : (quotesLoading ? "…" : "TBD")}
               </span>
             </div>
 

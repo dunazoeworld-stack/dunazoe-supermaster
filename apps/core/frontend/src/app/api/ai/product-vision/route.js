@@ -1,4 +1,36 @@
 import { NextResponse } from "next/server";
+import jwt from "jsonwebtoken";
+
+const RATE_WINDOW_MS = 60 * 1000;
+const RATE_LIMIT = 10;
+const requestLog = new Map();
+
+function authorizeAndRateLimit(req) {
+  const token = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "").trim();
+  const secret = process.env.JWT_SECRET || process.env.SESSION_SECRET || "";
+  if (!token || !secret) return { ok: false, status: 401, error: "Authentication required." };
+  let identity;
+  try { identity = jwt.verify(token, secret); }
+  catch { return { ok: false, status: 401, error: "Invalid or expired token." }; }
+
+  const forwarded = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  const key = `${identity.id || identity.user_id || "user"}:${forwarded || "unknown"}`;
+  const now = Date.now();
+  const recent = (requestLog.get(key) || []).filter(timestamp => now - timestamp < RATE_WINDOW_MS);
+  if (recent.length >= RATE_LIMIT) {
+    requestLog.set(key, recent);
+    return { ok: false, status: 429, error: "Vision analysis limit reached. Please try again in a minute." };
+  }
+  recent.push(now);
+  requestLog.set(key, recent);
+  return { ok: true };
+}
+
+function validImageInput(value) {
+  if (typeof value !== "string" || value.length === 0 || value.length > 12 * 1024 * 1024) return false;
+  if (/^https?:\/\//i.test(value)) return true;
+  return /^data:image\/(?:jpeg|jpg|png|webp|gif);base64,[a-z0-9+/=\s]+$/i.test(value);
+}
 
 // ──────────────────────────────────────────────────────────────────────────────
 // DUNAZOE — Product Vision AI  (server-side)
@@ -207,9 +239,12 @@ function selfDependentAnalysis(imageUrl, product_type = "physical") {
 // ── Main handler ─────────────────────────────────────────────────────────────
 export async function POST(req) {
   try {
+    const auth = authorizeAndRateLimit(req);
+    if (!auth.ok) return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
+
     const { image_url, product_type = "physical" } = await req.json();
-    if (!image_url) {
-      return NextResponse.json({ success: false, error: "image_url required" }, { status: 400 });
+    if (!validImageInput(image_url)) {
+      return NextResponse.json({ success: false, error: "A valid public image URL or image data is required." }, { status: 400 });
     }
 
     const errors = [];

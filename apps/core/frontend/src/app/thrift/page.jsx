@@ -21,7 +21,7 @@ export default function ThriftPage() {
   const totalSaved = savings.reduce((s, a) => s + parseFloat(a.balance || a.amount_saved || 0), 0);
 
   return (
-    <PageShell title="Ajo Savings" icon="⬡" authRequired={true}
+    <PageShell title="Personal Savings" icon="⬡" authRequired={true}
       subtitle="Personal savings — set a goal, save at your pace, earn 5% p.a. interest"
       actions={
         <Link href="/thrift/contribute" className="btn btn-primary btn-sm">+ New Savings Plan</Link>

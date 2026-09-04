@@ -5,18 +5,12 @@
  * USD → Stripe (international).
  */
 import { NextResponse } from "next/server";
-import { Pool } from "pg";
+import crypto from "crypto";
+import pool from "../../../../lib/db.js";
+import { convertNGNtoUSD } from "../../../../lib/currency.js";
 
 const PAYSTACK_BASE = "https://api.paystack.co";
 const GATEWAY = process.env.GATEWAY_URL || "http://localhost:3000";
-
-// Prefer explicit connection string; fall back to PGHOST/PGPORT/PGDATABASE/PGUSER/PGPASSWORD
-// which Replit built-in Postgres exports automatically (DATABASE_URL may be empty).
-const _connStr = process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL || undefined;
-const pool = new Pool({
-  connectionString: _connStr,
-  ssl: _connStr?.includes("sslmode=require") ? { rejectUnauthorized: false } : false,
-});
 
 export async function POST(request) {
   const PAYSTACK_SECRET = process.env.PAYSTACK_LSK || process.env.PAYSTACK_SECRET_KEY || "";
@@ -34,6 +28,15 @@ export async function POST(request) {
     customer_name = "",
     callback_url,
   } = body;
+  const requestedCurrency = String(currency || "NGN").toUpperCase();
+  const sourceCurrency = String(body.source_currency || (requestedCurrency === "USD" ? "NGN" : "NGN")).toUpperCase();
+  const idempotencyHeader = request.headers.get("Idempotency-Key") || "";
+  const idempotencyKey = idempotencyHeader || (order_id
+    ? `dunazoe-order-${order_id}-${requestedCurrency}-${String(amount)}`
+    : "");
+  const idempotencyHash = idempotencyKey
+    ? crypto.createHash("sha256").update(idempotencyKey).digest("hex")
+    : "";
 
   if (!amount || !email) {
     return NextResponse.json(
@@ -43,12 +46,35 @@ export async function POST(request) {
   }
 
   // ── USD / Stripe ─────────────────────────────────────────────────────────
-  if (currency.toUpperCase() === "USD") {
+  if (requestedCurrency === "USD") {
     if (!STRIPE_SECRET) {
       return NextResponse.json(
         { success: false, error: "Stripe not configured for USD payments." },
         { status: 503 }
       );
+    }
+
+    if (!["NGN", "USD"].includes(sourceCurrency)) {
+      return NextResponse.json({ success: false, error: "Unsupported source currency for Stripe." }, { status: 400 });
+    }
+
+    // Convert before any gateway call so every provider receives an explicit USD amount.
+    let amountUsd = parseFloat(amount);
+    let rateUsed = 1;
+    let ngnAmount = null;
+    let rateSource = "explicit_usd";
+    if (sourceCurrency === "NGN") {
+      const conversion = await convertNGNtoUSD(parseFloat(amount));
+      if (!Number.isFinite(conversion.usd) || !Number.isFinite(conversion.rate) || conversion.rate <= 0) {
+        return NextResponse.json({ success: false, error: "A valid exchange rate is unavailable. Please try again." }, { status: 503 });
+      }
+      amountUsd = conversion.usd;
+      rateUsed = conversion.rate;
+      ngnAmount = parseFloat(amount);
+      rateSource = conversion.source;
+    }
+    if (!Number.isFinite(amountUsd) || amountUsd <= 0) {
+      return NextResponse.json({ success: false, error: "Payment amount must be positive." }, { status: 400 });
     }
 
     // Try gateway first (in case payment-service handles Stripe)
@@ -58,7 +84,11 @@ export async function POST(request) {
       const res = await fetch(`${GATEWAY}/payments/initialize`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ order_id, currency: "USD", email, amount }),
+        body: JSON.stringify({
+          order_id, currency: "USD", source_currency: sourceCurrency, email,
+          amount: amountUsd, amount_source: ngnAmount || amount,
+          exchange_rate: ngnAmount ? rateUsed : null, exchange_rate_source: rateSource,
+        }),
         signal: ctrl.signal,
       });
       clearTimeout(timer);
@@ -66,45 +96,14 @@ export async function POST(request) {
       if (d.payment_url) return NextResponse.json({ ...d, provider: "stripe" });
     } catch (_) {}
 
-    // ── NGN → USD conversion ──────────────────────────────────────────────
-    // If amount looks like NGN (> 500) convert to USD using live rate.
-    // Supports both explicit NGN-to-USD and already-USD amounts.
-    let amountUsd = parseFloat(amount);
-    let rateUsed  = 1;
-    let ngnAmount = null;
-    if (amountUsd > 500 && body.currency_hint !== "USD_EXACT") {
-      // Treat amount as NGN — fetch live exchange rate
-      try {
-        const rateRes = await fetch(
-          "https://open.er-api.com/v6/latest/USD",
-          { signal: AbortSignal.timeout(4000) }
-        );
-        if (rateRes.ok) {
-          const rateData = await rateRes.json();
-          const ngnRate  = rateData?.rates?.NGN;
-          if (ngnRate && ngnRate > 0) {
-            rateUsed  = ngnRate;
-            ngnAmount = amountUsd;
-            amountUsd = parseFloat((amountUsd / ngnRate).toFixed(2));
-          }
-        }
-      } catch (_) {
-        // Fallback: use static rate if API unavailable
-        const FALLBACK_RATE = 1600; // approximate NGN/USD
-        rateUsed  = FALLBACK_RATE;
-        ngnAmount = amountUsd;
-        amountUsd = parseFloat((amountUsd / FALLBACK_RATE).toFixed(2));
-      }
-
-      // Save conversion record to DB (non-blocking)
-      if (process.env.DATABASE_URL && ngnAmount) {
-        pool.query(
-          `INSERT INTO payment_conversions (ngn_amount, usd_amount, rate_used, order_ref, created_at)
-           VALUES ($1, $2, $3, $4, NOW())
-           ON CONFLICT DO NOTHING`,
-          [ngnAmount, amountUsd, rateUsed, order_id || null]
-        ).catch(() => {}); // table may not exist yet — non-fatal
-      }
+    // Save conversion record to DB (non-blocking).
+    if (ngnAmount) {
+      pool.query(
+        `INSERT INTO payment_conversions (ngn_amount, usd_amount, rate_used, order_ref, created_at)
+         VALUES ($1, $2, $3, $4, NOW())
+         ON CONFLICT DO NOTHING`,
+        [ngnAmount, amountUsd, rateUsed, order_id || null]
+      ).catch(() => {});
     }
 
     // Direct Stripe Checkout Session via REST API (no npm SDK required)
@@ -126,12 +125,16 @@ export async function POST(request) {
       if (order_id) body.append("metadata[order_id]",                 String(order_id));
       body.append("metadata[platform]",                               "DUNAZOE");
       body.append("metadata[currency]",                               "USD");
+      body.append("metadata[source_currency]",                        sourceCurrency);
+      body.append("metadata[exchange_rate]",                          String(rateUsed));
+      body.append("metadata[exchange_rate_source]",                   rateSource);
 
       const stripeRes = await fetch("https://api.stripe.com/v1/checkout/sessions", {
         method:  "POST",
         headers: {
           Authorization:  `Basic ${Buffer.from(STRIPE_SECRET + ":").toString("base64")}`,
           "Content-Type": "application/x-www-form-urlencoded",
+          ...(idempotencyHash ? { "Idempotency-Key": idempotencyHash } : {}),
         },
         body: body.toString(),
       });
@@ -154,6 +157,7 @@ export async function POST(request) {
         amount_usd:   amountUsd,
         amount_ngn:   ngnAmount || null,
         rate_used:    ngnAmount ? rateUsed : null,
+        rate_source:  rateSource,
       });
     } catch (err) {
       console.error("[Payments/Stripe] Fatal:", err.message);
@@ -170,7 +174,9 @@ export async function POST(request) {
   }
 
   const amountKobo  = Math.round(parseFloat(amount) * 100);
-  const reference   = `DZ-${order_id || "CART"}-${Date.now()}`;
+  const reference   = idempotencyHash
+    ? `DZ-${idempotencyHash.slice(0, 24)}`
+    : `DZ-${order_id || "CART"}-${Date.now()}`;
   const appUrl      = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL || "";
   const callbackUrl = callback_url || `${appUrl}/payment/verify?ref=${reference}`;
 

@@ -53,9 +53,9 @@ const PLATFORM_MARGIN = parseFloat(process.env.PLATFORM_MARGIN || "0.15");
 // Marketing copy templates
 const MARKETING_TEMPLATES = {
   thrift_seeker: {
-    hook:   "💰 Pay in easy instalments with DUNAZOE Ajo",
+    hook:   "💰 Pay in easy instalments with DUNAZOE Personal Savings",
     cta:    "Start with just ₦{first_payment}",
-    badge:  "⬡ Ajo Available",
+    badge:  "⬡ Personal Savings Available",
     tone:   "savings-focused",
   },
   champion: {

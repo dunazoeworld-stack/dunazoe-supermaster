@@ -187,7 +187,7 @@ function WalletContent() {
           { href: "/wallet/deposit", icon: "⬆️", label: "Deposit",  desc: "Fund wallet" },
           { href: "/checkout",        icon: "💳", label: "Pay",       desc: "Make a payment" },
           { href: "/loans/apply",     icon: "💰", label: "Loan",      desc: "Apply for funds" },
-          { href: "/thrift",          icon: "⬡",  label: "Ajo",       desc: "Group savings" },
+          { href: "/thrift",          icon: "⬡",  label: "Personal Savings", desc: "Group savings" },
         ].map(({ href, icon, label, desc }) => (
           <Link key={href} href={href} className="card" style={{ textDecoration: "none", display: "block" }}>
             <div className="card-body" style={{ textAlign: "center" }}>

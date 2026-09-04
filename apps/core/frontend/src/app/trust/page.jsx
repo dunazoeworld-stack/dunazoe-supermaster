@@ -23,7 +23,7 @@ export default function TrustPage() {
   const tierColor = { Platinum: "#A0C4FF", Gold: "#FFD700", Silver: "#C0C0C0", Bronze: "#CD7F32" };
 
   const FACTORS = [
-    { icon: "⬡", label: "Ajo Consistency", desc: "Regular Ajo contributions boost your score" },
+    { icon: "⬡", label: "Personal Savings Consistency", desc: "Regular Personal Savings contributions boost your score" },
     { icon: "📦", label: "Order History", desc: "Completed orders increase trust" },
     { icon: "⭐", label: "Vendor Ratings", desc: "Positive reviews you've given and received" },
     { icon: "✅", label: "KYC Verified", desc: "Identity verification adds significant points" },
@@ -70,7 +70,7 @@ export default function TrustPage() {
             ))}
           </div>
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-            <Link href="/thrift" className="btn btn-primary btn-sm">⬡ Join Ajo Group</Link>
+    <Link href="/thrift" className="btn btn-primary btn-sm">⬡ Join Personal Savings</Link>
             <Link href="/products" className="btn btn-outline btn-sm">🛒 Make a Purchase</Link>
           </div>
         </>

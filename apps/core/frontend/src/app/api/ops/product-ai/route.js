@@ -32,7 +32,7 @@ const LOCATION_POWER = {
 };
 
 const MARKETING_TEMPLATES = {
-  thrift_seeker:   { hook: "💰 Pay in easy instalments with DUNAZOE Ajo",          badge: "⬡ Ajo Available",   tone: "savings-focused"  },
+  thrift_seeker:   { hook: "💰 Pay in easy instalments with DUNAZOE Personal Savings", badge: "⬡ Personal Savings Available", tone: "savings-focused" },
   champion:        { hook: "✨ Exclusively curated for our top buyers",              badge: "⭐ Top Pick",        tone: "exclusive"        },
   loyal:           { hook: "💛 A special thank-you for your loyalty",               badge: "🎖️ Member Offer",   tone: "appreciative"     },
   at_risk:         { hook: "👋 We've missed you! Here's something special",          badge: "🎁 Welcome Back",   tone: "re-engagement"    },
@@ -50,7 +50,7 @@ const SITE_ROUTES = [
   { path: "/wallet",            label: "Wallet"            },
   { path: "/track",             label: "Track"             },
   { path: "/vendors",           label: "Vendors"           },
-  { path: "/thrift",            label: "Ajo/Thrift"        },
+  { path: "/thrift",            label: "Personal Savings"  },
   { path: "/ops",               label: "Ops Panel"         },
   { path: "/api/ops/status",    label: "Ops API"           },
   { path: "/api/stae",          label: "STAE API"          },
@@ -87,7 +87,7 @@ function optimizePrice({ cost_price = 0, category = "fashion", city = "lagos", n
   const suggested_price   = +(cost_price * (1 + margin) * loc).toFixed(2);
   const ajo_price         = +(suggested_price * 1.05).toFixed(2);
   const ajo_installment_6 = +(ajo_price / 6).toFixed(2);
-  const whatsapp_tip = `📦 ${name || category} @ ₦${suggested_price.toLocaleString()} — Ajo from ₦${ajo_installment_6.toLocaleString()}/mo`;
+  const whatsapp_tip = `📦 ${name || category} @ ₦${suggested_price.toLocaleString()} — Personal Savings from ₦${ajo_installment_6.toLocaleString()}/mo`;
   return { cost_price, suggested_price, ajo_price, ajo_installment_6, margin_pct: +(margin * 100).toFixed(1), demand_index: demand, location_power: loc, whatsapp_tip };
 }
 
@@ -111,7 +111,7 @@ function marketingCopy({ segment = "new_user", product_name = "", price = 0 }) {
   const t = MARKETING_TEMPLATES[segment] ?? MARKETING_TEMPLATES.new_user;
   const first_payment = Math.ceil(price * 1.05 / 6);
   const sms  = `[DUNAZOE] ${t.hook}. ${product_name ? `Get ${product_name} now.` : ""} ${t.badge}`;
-  const wa   = `*${t.badge}* ${t.hook}\n\n${product_name ? `📦 *${product_name}*` : ""}\n💰 ₦${price.toLocaleString()}\n💳 Ajo from ₦${first_payment.toLocaleString()}/mo\n\nShop now 👉 dunazoe-supermaster-1--dunazoeworld.replit.app/products`;
+  const wa   = `*${t.badge}* ${t.hook}\n\n${product_name ? `📦 *${product_name}*` : ""}\n💰 ₦${price.toLocaleString()}\n💳 Personal Savings from ₦${first_payment.toLocaleString()}/mo\n\nShop now 👉 dunazoe-supermaster-1--dunazoeworld.replit.app/products`;
   return { segment, tone: t.tone, hook: t.hook, badge: t.badge, sms_copy: sms, whatsapp_copy: wa };
 }
 

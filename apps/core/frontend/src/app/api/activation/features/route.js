@@ -8,7 +8,7 @@ import { NextResponse } from "next/server";
 const ACT_URL = process.env.ACTIVATION_ENGINE_URL || "http://localhost:4033";
 
 const MOCK_FEATURES = [
-  { name: "ajo_savings",          state: "ON",   description: "Rotating credit/savings groups (Ajo)" },
+  { name: "ajo_savings",          state: "ON",   description: "Rotating credit/savings groups (Personal Savings)" },
   { name: "chat_widget",          state: "ON",   description: "In-app vendor–buyer chat (REST polling)" },
   { name: "notification_bell",    state: "ON",   description: "Real-time notification bell + badge" },
   { name: "marketing_ai",         state: "ON",   description: "AI-generated promo copy for vendors" },

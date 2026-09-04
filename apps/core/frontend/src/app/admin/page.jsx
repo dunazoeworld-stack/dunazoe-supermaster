@@ -230,7 +230,7 @@ export default function SuperuserPage() {
               <StatCard icon="📦" label="Total Orders"     value={fmtN(stats?.total_orders)} />
               <StatCard icon="₦"  label="Platform Revenue" value={fmtNg(stats?.total_revenue)} />
               <StatCard icon="⚖️" label="Open Disputes"    value={fmtN(stats?.open_disputes)} color={stats?.open_disputes > 0 ? "var(--warning)" : undefined} />
-              <StatCard icon="⬡"  label="Active Ajo Groups" value={fmtN(stats?.active_thrift)} />
+              <StatCard icon="⬡"  label="Active Personal Savings Groups" value={fmtN(stats?.active_thrift)} />
             </div>
           )}
 

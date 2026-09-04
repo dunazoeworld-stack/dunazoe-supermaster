@@ -127,7 +127,7 @@ export default function PageShell({ title, icon, authRequired = true, children, 
 
             <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
               {[
-                ["/products","Shop"],["/thrift","Ajo"],["/wallet","Wallet"],
+                ["/products","Shop"],["/thrift","Personal Savings"],["/wallet","Wallet"],
                 ["/orders","Orders"],["/disputes","Disputes"],["/track","Track"],
               ].map(([href, label]) => (
                 <Link key={href} href={href} style={{ fontSize: "0.82rem", color: "var(--text-muted)", textDecoration: "none" }}>
