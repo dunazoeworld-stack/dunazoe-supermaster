@@ -26,7 +26,7 @@ Verification status: the production frontend build, focused source checks, workf
 
 - Local implementation commit created: `fix: complete production sharing and operations hardening`.
 - The shell askpass credential was rejected by GitHub; the GitHub Replit connection was then authorized for a secure API-based repository update.
-- No credential was printed, committed, or stored in the repository. The final remote commit and `main` synchronization are recorded below after the connector push.
+- No credential was printed, committed, or stored in the repository. The source synchronization commit is on GitHub `main` at `944a0d9b1d377c693b06833a28ad61b98a358fc4`; the handover update follows as a separate documentation commit.
 
 ---
 
