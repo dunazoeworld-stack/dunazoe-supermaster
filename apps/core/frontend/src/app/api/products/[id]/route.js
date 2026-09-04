@@ -8,8 +8,10 @@
 import { NextResponse } from "next/server";
 import fs   from "fs";
 import path from "path";
+import crypto from "crypto";
 import pool from "../../../../lib/db.js";
 import jwt  from "jsonwebtoken";
+import { getPublicSiteUrl } from "../../../../lib/public-url.js";
 
 const GATEWAY    = process.env.GATEWAY_URL  || "http://localhost:3000";
 const STORE_PATH = path.join(process.cwd(), "local_data", "products.json");
@@ -30,6 +32,13 @@ function writeStore(arr) {
     fs.mkdirSync(path.dirname(STORE_PATH), { recursive: true });
     fs.writeFileSync(STORE_PATH, JSON.stringify(arr, null, 2), "utf8");
   } catch (e) { console.error("[products/[id]] store write failed:", e.message); }
+}
+
+function localSlug(product) {
+  if (product.short_slug || product.product_slug) return product.short_slug || product.product_slug;
+  const prefix = String(product.name || "product").toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 28) || "product";
+  return `${prefix}-${crypto.createHash("sha256").update(String(product.id || product.name)).digest("hex").slice(0, 10)}`;
 }
 
 // ── JWT helper ────────────────────────────────────────────────────────────────
@@ -63,7 +72,15 @@ export async function GET(request, { params }) {
   const local = readStore();
   const found = local.find(p => String(p.id) === String(id));
   if (found) {
-    return NextResponse.json({ ...found, source: "local_store" }, { status: 200 });
+    const shortSlug = localSlug(found);
+    return NextResponse.json({
+      ...found,
+      short_slug: shortSlug,
+      product_slug: found.product_slug || shortSlug,
+      canonical_url: found.canonical_url || `${getPublicSiteUrl()}/p/${shortSlug}`,
+      shareable_link: found.shareable_link || `${getPublicSiteUrl()}/p/${shortSlug}`,
+      source: "local_store",
+    }, { status: 200 });
   }
 
   // 3 ── Try database directly ───────────────────────────────────────────────────
@@ -192,7 +209,11 @@ export async function PUT(request, { params }) {
           ALTER TABLE products
             ADD COLUMN IF NOT EXISTS base_price NUMERIC(12,2),
             ADD COLUMN IF NOT EXISTS system_charge NUMERIC(12,2) DEFAULT 0,
-            ADD COLUMN IF NOT EXISTS final_price NUMERIC(12,2)
+            ADD COLUMN IF NOT EXISTS final_price NUMERIC(12,2),
+            ADD COLUMN IF NOT EXISTS share_image_url TEXT,
+            ADD COLUMN IF NOT EXISTS canonical_url TEXT,
+            ADD COLUMN IF NOT EXISTS product_slug TEXT,
+            ADD COLUMN IF NOT EXISTS share_token TEXT
         `);
         if (updateBody.name        !== undefined) { sets.push(`name=$${$i++}`);        vals.push(updateBody.name); }
         if (updateBody.description !== undefined) { sets.push(`description=$${$i++}`); vals.push(updateBody.description); }
@@ -204,6 +225,7 @@ export async function PUT(request, { params }) {
         if (updateBody.category    !== undefined) { sets.push(`category=$${$i++}`);    vals.push(updateBody.category); }
         if (updateBody.weight      !== undefined) { sets.push(`weight=$${$i++}`);      vals.push(parseFloat(updateBody.weight)); }
         if (updateBody.dimensions  !== undefined) { sets.push(`dimensions=$${$i++}`);  vals.push(updateBody.dimensions); }
+        if (updateBody.share_image_url !== undefined) { sets.push(`share_image_url=$${$i++}`); vals.push(updateBody.share_image_url); }
           if (sets.length > 0) {
             sets.push(`updated_at=NOW()`);
             vals.push(numId);
@@ -241,7 +263,7 @@ function _mirrorToLocalStore(id, body, isSoftDelete) {
     if (isSoftDelete) {
       store.splice(idx, 1); // remove from local listing
     } else {
-      const allowed = ["name", "description", "price", "base_price", "system_charge", "final_price", "stock", "category", "weight", "dimensions"];
+      const allowed = ["name", "description", "price", "base_price", "system_charge", "final_price", "stock", "category", "weight", "dimensions", "share_image_url"];
       allowed.forEach(k => { if (body[k] !== undefined) store[idx][k] = body[k]; });
     }
     writeStore(store);

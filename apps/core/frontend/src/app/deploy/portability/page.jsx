@@ -43,7 +43,7 @@ PAYSTACK_PUBLIC_KEY=pk_live_REPLACE
 STRIPE_SECRET_KEY=sk_live_REPLACE
 
 # ===== AI =====
-OPENAI_API_KEY=sk-REPLACE
+OPENAI_API_KEY=<set in Replit Secrets>
 
 # ===== MEDIA =====
 CLOUDINARY_CLOUD_NAME=dunazoe

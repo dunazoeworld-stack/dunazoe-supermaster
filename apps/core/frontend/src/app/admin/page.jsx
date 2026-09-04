@@ -55,6 +55,65 @@ function StatCard({ icon, label, value, sub, color }) {
   );
 }
 
+function OperatorGuide({ stats }) {
+  const guide = [
+    {
+      icon: "💳", title: "Payments", status: stats ? "Monitor" : "Waiting",
+      explanation: "Confirm payment webhooks and investigate failed or pending transactions.",
+      steps: "1. Open Payments · 2. Filter failed/pending · 3. Verify the provider webhook · 4. Reconcile the order.",
+      action: "Review Payments",
+    },
+    {
+      icon: "🚚", title: "Delivery issues", status: stats?.open_disputes > 0 ? "Needs review" : "Ready",
+      explanation: "Delivery delays and order disputes need an owner and a customer update.",
+      steps: "1. Open Orders or Disputes · 2. Check the latest status · 3. Contact the vendor/agent · 4. Record the resolution.",
+      action: "Open Disputes",
+    },
+    {
+      icon: "🩺", title: "API & server health", status: "Live review",
+      explanation: "Use the operator cockpit to check service availability, missing configuration, and webhook readiness.",
+      steps: "1. Open Operator Cockpit · 2. Check Services · 3. Fix critical missing configuration · 4. Re-run the site tests.",
+      action: "Open Cockpit",
+    },
+    {
+      icon: "🛡️", title: "Vendors, complaints & security", status: "Review queue",
+      explanation: "Vendor verification, customer complaints, and security warnings should be handled before release.",
+      steps: "1. Review Vendors and Users · 2. Verify evidence · 3. Suspend only with a documented reason · 4. Escalate unresolved risk.",
+      action: "Review Queues",
+    },
+  ];
+  return (
+    <div className="card" style={{ border: "1px solid rgba(0,163,255,0.22)", background: "linear-gradient(135deg,rgba(0,163,255,0.07),rgba(155,93,229,0.05))" }}>
+      <div className="card-body">
+        <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", alignItems: "flex-start", flexWrap: "wrap", marginBottom: "16px" }}>
+          <div>
+            <h3 style={{ fontWeight: 800, marginBottom: "4px" }}>🤖 AI SuperMaster Operator Guide</h3>
+            <p style={{ fontSize: "0.78rem", color: "var(--text-secondary)", maxWidth: "700px" }}>
+              A beginner-friendly review queue for failed payments, delivery issues, API failures, server health, vendor problems, customer complaints, and security warnings.
+            </p>
+          </div>
+          <span className="badge badge-info">Status-aware</span>
+        </div>
+        <div className="grid-2">
+          {guide.map(item => (
+            <div key={item.title} style={{ padding: "12px", borderRadius: "12px", background: "var(--surface)", border: "1px solid var(--border)" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: "6px" }}>
+                <p style={{ fontWeight: 700, fontSize: "0.85rem" }}>{item.icon} {item.title}</p>
+                <span className="badge badge-warning">{item.status}</span>
+              </div>
+              <p style={{ fontSize: "0.74rem", color: "var(--text-secondary)", lineHeight: 1.5, marginBottom: "7px" }}>{item.explanation}</p>
+              <p style={{ fontSize: "0.7rem", color: "var(--text-muted)", lineHeight: 1.5, marginBottom: "9px" }}>{item.steps}</p>
+              <button type="button" onClick={() => setTab(item.title === "Payments" ? "payments" : item.title === "Delivery issues" ? "disputes" : "overview")} className="btn btn-outline btn-sm" style={{ fontSize: "0.7rem" }}>
+                Recommended: {item.action} →
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function SuperuserPage() {
   const [user,   setUser]   = useState(null);
   const [tab,    setTab]    = useState("overview");
@@ -254,6 +313,8 @@ export default function SuperuserPage() {
               </Link>
             ))}
           </div>
+
+          <OperatorGuide stats={stats} />
 
           {/* RBAC Role Matrix */}
           <div className="card">

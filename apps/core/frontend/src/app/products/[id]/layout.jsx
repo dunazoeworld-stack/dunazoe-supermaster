@@ -7,14 +7,17 @@
 
 // Use relative URL for server-side fetch within the same Next.js process,
 // or fall back to the configured API URL (never hardcode localhost).
-const SITE_URL_ENV = process.env.NEXT_PUBLIC_SITE_URL || "";
+const SITE_URL_ENV = process.env.NEXT_PUBLIC_SITE_URL || "https://dunazoe.com";
 const VERCEL_URL_ENV = process.env.VERCEL_URL || "";
 const _origin = SITE_URL_ENV
   ? SITE_URL_ENV
   : VERCEL_URL_ENV
     ? `https://${VERCEL_URL_ENV}`
-    : "http://localhost:5000";
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || `${_origin}/api`;
+    : `http://127.0.0.1:${process.env.PORT || 5000}`;
+const configuredApi = process.env.NEXT_PUBLIC_API_URL;
+const API_BASE = configuredApi && /^https?:\/\//i.test(configuredApi)
+  ? configuredApi
+  : `http://127.0.0.1:${process.env.PORT || 5000}/api`;
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://dunazoe.com";
 const FALLBACK_IMAGE = `${SITE_URL}/og-default.png`;
 
@@ -65,8 +68,9 @@ export async function generateMetadata({ params }) {
   const normalizedImage = imageString.startsWith("http://")
     ? `https://${imageString.slice("http://".length)}`
     : imageString;
-  const ogImage = !normalizedImage || normalizedImage.startsWith("data:")
-    ? FALLBACK_IMAGE
+  const ogImage = product.share_image_url && !String(product.share_image_url).startsWith("data:")
+    ? product.share_image_url
+    : !normalizedImage || normalizedImage.startsWith("data:") ? FALLBACK_IMAGE
     : normalizedImage.startsWith("/")
       ? `${SITE_URL}${normalizedImage}`
       : normalizedImage;

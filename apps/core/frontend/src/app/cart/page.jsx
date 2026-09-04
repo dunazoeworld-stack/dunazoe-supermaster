@@ -92,6 +92,9 @@ export default function CartPage() {
                     <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: "10px" }}>
                       ₦{parseFloat(item.price || 0).toLocaleString("en-NG")} each
                     </p>
+                     <p style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginBottom: "10px" }}>
+                       Vendor: {item.business_name || item.vendor_name || "DUNAZOE Store"}
+                     </p>
 
                     {/* Quantity controls */}
                     <div className="cart-qty-row">

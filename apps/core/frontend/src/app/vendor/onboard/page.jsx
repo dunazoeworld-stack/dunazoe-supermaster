@@ -186,6 +186,7 @@ export default function VendorOnboardPage() {
   // ── product fields ───────────────────────────────────────────
   const [product, setProduct] = useState({
     name: "", description: "", category: "", price: "", cost: "",
+    features: "", search_keywords: "",
     product_type: "physical",
     ajo_enabled: false, ajo_weeks: "",
     // physical
@@ -258,7 +259,12 @@ export default function VendorOnboardPage() {
         }
         if (d.weight_kg   && !product.weight)      { P("weight",      String(d.weight_kg)); filled.weight = true; }
         if (d.dimensions  && !product.dimensions)  { P("dimensions",  d.dimensions);        filled.dimensions = true; }
+        if (d.brand       && !product.brand)       { P("brand",       d.brand);              filled.brand = true; }
+        if (d.material    && !product.material)   { P("material",    d.material);          filled.material = true; }
         if (d.colors?.length && colors.length === 0) { d.colors.forEach(c => setColors(prev => prev.includes(c) ? prev : [...prev, c])); filled.colors = true; }
+        if (d.sizes?.length && sizes.length === 0) { d.sizes.forEach(s => setSizes(prev => prev.includes(s) ? prev : [...prev, s])); filled.sizes = true; }
+        if (d.features?.length && !product.features) { P("features", d.features.join(", ")); filled.features = true; }
+        if (d.tags?.length && !product.search_keywords) { P("search_keywords", d.tags.join(", ")); filled.search_keywords = true; }
         setAiApplied(filled);
       }
     } catch (_) {}
@@ -457,7 +463,8 @@ export default function VendorOnboardPage() {
       const meta = {
         sizes:   sizes,
         colors:  colors,
-        tags:    [],
+        tags:    product.search_keywords ? product.search_keywords.split(",").map(v => v.trim()).filter(Boolean) : [],
+        features: product.features || null,
         weight:  product.weight || null,
         dimensions:         product.dimensions || null,
         brand:              product.brand || null,
@@ -539,7 +546,7 @@ export default function VendorOnboardPage() {
 
   // ── Success screen ────────────────────────────────────────────
   if (success) {
-    const shareUrl = success.shareable_link ? `https://${success.shareable_link}` : "";
+    const shareUrl = success.canonical_url || success.shareable_link || (success.short_slug ? `https://dunazoe.com/p/${success.short_slug}` : "");
     return (
       <PageShell title="Product Published!" icon="✅" authRequired={true}>
         <div style={{ textAlign: "center", padding: "60px 24px" }}>
@@ -832,6 +839,16 @@ export default function VendorOnboardPage() {
                   <label className="form-label">Description</label>
                   <textarea className="form-input" rows={4} value={product.description} onChange={e => P("description", e.target.value)} placeholder="Describe your product, its features, and why buyers will love it…" style={{ resize: "vertical" }} />
                 </div>
+                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                   <div className="form-group">
+                     <label className="form-label">✨ Features</label>
+                     <textarea className="form-input" rows={3} value={product.features} onChange={e => P("features", e.target.value)} placeholder="e.g. Durable, lightweight, rechargeable" />
+                   </div>
+                   <div className="form-group">
+                     <label className="form-label">🔎 Search keywords</label>
+                     <textarea className="form-input" rows={3} value={product.search_keywords} onChange={e => P("search_keywords", e.target.value)} placeholder="e.g. solar lamp, rechargeable light" />
+                   </div>
+                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                   <div className="form-group">
                     <label className="form-label">Category *</label>

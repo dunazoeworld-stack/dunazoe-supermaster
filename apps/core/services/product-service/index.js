@@ -52,10 +52,14 @@ function slugPrefix(value) {
     .slice(0, 28) || "product";
 }
 
+function fallbackShortSlug(name) {
+  return `${slugPrefix(name)}-${crypto.randomBytes(5).toString("hex")}`;
+}
+
 async function createShortSlug(name, id) {
   const prefix = slugPrefix(name);
   for (let attempt = 0; attempt < 5; attempt++) {
-    const candidate = `${prefix}-${Number(id).toString(36)}-${crypto.randomBytes(3).toString("hex")}`;
+    const candidate = `${prefix}-${crypto.randomBytes(5).toString("hex")}`;
     const exists = await pool.query("SELECT 1 FROM products WHERE short_slug=$1 LIMIT 1", [candidate]);
     if (!exists.rows.length) return candidate;
   }
@@ -130,25 +134,26 @@ app.post("/products", requireAuth, asyncHandler(async (req, res) => {
        vendor_id, name, description, type, category,
        price, base_price, system_charge, final_price, cost, ai_suggested_price,
        ajo_enabled, ajo_weeks, ajo_surcharge_pct,
-       images, demand_score, ai_badge, ai_cta, shareable_link
-      ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
+        images, demand_score, ai_badge, ai_cta, shareable_link,
+        product_slug, share_token, canonical_url
+       ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
      RETURNING *`,
     [
       vendor_id, name, description || null, safe_type, category || null,
       num_price, num_base, num_charge, num_final, num_cost, ai_price,
       ajo_on, num_ajo_wks, ajo_surcharge_pct,
       images || null, demand, ai_badge, ai_cta,
-      "dunazoe.com/p/temp"
+       "dunazoe.com/p/temp", null, crypto.randomBytes(12).toString("hex"), null
     ]
   );
 
   const product = result.rows[0];
-  let short_slug = `p-${Number(product.id).toString(36)}`;
+  let short_slug = fallbackShortSlug(product.name);
   try { short_slug = await createShortSlug(product.name, product.id); } catch (e) {
     console.warn("[Product] short slug fallback:", e.message);
   }
-  const real_link = `dunazoe.com/p/${short_slug}`;
-  await pool.query("UPDATE products SET shareable_link=$1, short_slug=$2 WHERE id=$3",
+  const real_link = `https://dunazoe.com/p/${short_slug}`;
+  await pool.query("UPDATE products SET shareable_link=$1, short_slug=$2, product_slug=$2, canonical_url=$1 WHERE id=$3",
     [real_link, short_slug, product.id]);
 
   return res.status(201).json({
@@ -168,6 +173,9 @@ app.post("/products", requireAuth, asyncHandler(async (req, res) => {
     demand_score:    demand,
     shareable_link:  real_link,
     short_slug,
+    product_slug:    short_slug,
+    canonical_url:   real_link,
+    share_image_url: product.share_image_url || null,
     share_message:   `Check out '${name}' on DUNAZOE: ${real_link}`,
     note:            ajo_surcharge_pct > 0
       ? `Personal Savings schedule >2 weeks: buyer pays +₦${Math.round(num_price*AJO_SURCHARGE).toLocaleString()} surcharge. You keep full price.`
@@ -221,8 +229,8 @@ app.get("/products/slug/:slug", asyncHandler(async (req, res) => {
     `SELECT p.*, v.business_name, v.city, v.state, v.rating
      FROM products p JOIN vendors v ON p.vendor_id=v.id
      WHERE p.is_active=TRUE
-       AND (p.short_slug=$1 OR p.shareable_link=$2)`,
-    [slug, `dunazoe.com/p/${slug}`]
+       AND (p.short_slug=$1 OR p.product_slug=$1 OR p.shareable_link=$2 OR p.canonical_url=$2)`,
+    [slug, `https://dunazoe.com/p/${slug}`]
   );
   if (!result.rows.length) return res.status(404).json({ success: false, error: "Product not found" });
   return res.json({ success: true, product: result.rows[0] });
@@ -305,12 +313,12 @@ app.post("/products/copy", requireAuth, asyncHandler(async (req, res) => {
     ]
   );
   const copy = copy_res.rows[0];
-  let short_slug = `p-${Number(copy.id).toString(36)}`;
+  let short_slug = fallbackShortSlug(copy.name);
   try { short_slug = await createShortSlug(copy.name, copy.id); } catch (e) {
     console.warn("[Product] copy short slug fallback:", e.message);
   }
-  const real_link = `dunazoe.com/p/${short_slug}`;
-  await pool.query("UPDATE products SET shareable_link=$1, short_slug=$2 WHERE id=$3",
+  const real_link = `https://dunazoe.com/p/${short_slug}`;
+  await pool.query("UPDATE products SET shareable_link=$1, short_slug=$2, product_slug=$2, canonical_url=$1 WHERE id=$3",
     [real_link, short_slug, copy.id]);
 
   return res.status(201).json({
@@ -330,7 +338,7 @@ app.post("/products/copy", requireAuth, asyncHandler(async (req, res) => {
 // ── UPDATE PRODUCT ────────────────────────────────────────────
 app.put("/products/:id", requireAuth, asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { name, description, price, base_price, cost, stock, ajo_enabled, ajo_weeks, images } = req.body;
+  const { name, description, price, base_price, cost, stock, ajo_enabled, ajo_weeks, images, share_image_url } = req.body;
   const updateBase = Number.isFinite(parseFloat(base_price))
     ? parseFloat(base_price)
     : Number.isFinite(parseFloat(price)) ? parseFloat(price) : null;
@@ -360,9 +368,10 @@ app.put("/products/:id", requireAuth, asyncHandler(async (req, res) => {
        ajo_enabled = COALESCE($8, ajo_enabled),
        ajo_weeks   = COALESCE($9, ajo_weeks),
        images      = COALESCE($10, images),
+       share_image_url = COALESCE($11, share_image_url),
        updated_at  = NOW()
-      WHERE id=$11 RETURNING id, name, price, base_price, system_charge, final_price, updated_at`,
-     [name, description, updateFinal, updateBase, updateCharge, updateFinal, cost, ajo_enabled, ajo_weeks, images, id]
+       WHERE id=$12 RETURNING id, name, price, base_price, system_charge, final_price, share_image_url, updated_at`,
+      [name, description, updateFinal, updateBase, updateCharge, updateFinal, cost, ajo_enabled, ajo_weeks, images, share_image_url, id]
   );
 
   return res.json({ success: true, product: result.rows[0] });
@@ -445,7 +454,11 @@ pool.query(`
     ADD COLUMN IF NOT EXISTS base_price NUMERIC(12,2),
     ADD COLUMN IF NOT EXISTS system_charge NUMERIC(12,2) DEFAULT 0,
     ADD COLUMN IF NOT EXISTS final_price NUMERIC(12,2),
-    ADD COLUMN IF NOT EXISTS short_slug TEXT
+    ADD COLUMN IF NOT EXISTS short_slug TEXT,
+    ADD COLUMN IF NOT EXISTS product_slug TEXT,
+    ADD COLUMN IF NOT EXISTS share_token TEXT,
+    ADD COLUMN IF NOT EXISTS canonical_url TEXT,
+    ADD COLUMN IF NOT EXISTS share_image_url TEXT
 `).catch(err => console.warn("[Product] pricing columns migration skipped:", err.message));
 pool.query("CREATE UNIQUE INDEX IF NOT EXISTS idx_products_short_slug ON products(short_slug) WHERE short_slug IS NOT NULL")
   .catch(err => console.warn("[Product] short slug index migration skipped:", err.message));

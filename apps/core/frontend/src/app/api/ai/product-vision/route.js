@@ -51,6 +51,8 @@ Return ONLY a valid JSON object — no markdown, no explanation, no code fences.
   "material": "Primary material, e.g. Cotton, Leather, Stainless Steel. Use null if unclear.",
   "brand": "Brand name if clearly visible on the product or packaging. Use null if not visible.",
   "colors": ["list", "of", "visible", "colors"],
+  "sizes": ["visible size or variant options, or [] if not shown"],
+  "features": ["3 to 6 concise product features inferred from the image"],
   "tags": ["5 to 7 relevant search keywords buyers would type to find this product"],
   "confidence": 0.85
 }
@@ -229,6 +231,8 @@ function selfDependentAnalysis(imageUrl, product_type = "physical") {
     material:   null,
     brand:      null,
     colors:     [],
+    sizes:      [],
+    features:   [],
     tags:       TAG_MAP[category] || ["quality product", "buy online Nigeria", "fast delivery"],
     confidence: 0.45,
     source:     "self_dependent_heuristic",

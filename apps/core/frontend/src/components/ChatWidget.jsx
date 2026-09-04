@@ -9,10 +9,11 @@ function formatTime(value) {
   return value ? new Date(value).toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit" }) : "";
 }
 
-function Bubble({ msg, myId }) {
+function Bubble({ msg, myId, onReply, onForward, onDelete }) {
   const own = String(msg.sender_id) === String(myId);
   const isImage = msg.attachment_type?.startsWith("image/");
   const isAudio = msg.attachment_type?.startsWith("audio/");
+  const deleted = Boolean(msg.deleted_at);
   return (
     <div style={{ display: "flex", justifyContent: own ? "flex-end" : "flex-start", marginBottom: "8px" }}>
       <div style={{
@@ -20,14 +21,19 @@ function Bubble({ msg, myId }) {
         background: own ? "var(--dz-gradient)" : "var(--elevated)", color: own ? "#fff" : "var(--text)",
         fontSize: "0.85rem", lineHeight: 1.5,
       }}>
-        {isImage && msg.attachment_url && <img src={msg.attachment_url} alt={msg.attachment_name || "Shared image"} style={{ maxWidth: "220px", maxHeight: "180px", borderRadius: "8px", display: "block", marginBottom: msg.message ? "6px" : 0 }} />}
-        {isAudio && msg.attachment_url && <audio controls src={msg.attachment_url} style={{ maxWidth: "220px" }} />}
-        {!isImage && !isAudio && msg.attachment_url && (
+        {!deleted && isImage && msg.attachment_url && <img src={msg.attachment_url} alt={msg.attachment_name || "Shared image"} style={{ maxWidth: "220px", maxHeight: "180px", borderRadius: "8px", display: "block", marginBottom: msg.message ? "6px" : 0 }} />}
+        {!deleted && isAudio && msg.attachment_url && <audio controls src={msg.attachment_url} style={{ maxWidth: "220px" }} />}
+        {!deleted && !isImage && !isAudio && msg.attachment_url && (
           <a href={msg.attachment_url} target="_blank" rel="noreferrer" style={{ color: own ? "#fff" : "var(--dz-blue)", display: "block", marginBottom: msg.message ? "5px" : 0 }}>
             📎 {msg.attachment_name || "Open attachment"}
           </a>
         )}
-        {msg.message && <p style={{ whiteSpace: "pre-wrap" }}>{msg.message}</p>}
+        {deleted ? <p style={{ fontStyle: "italic", opacity: 0.7 }}>Message deleted</p> : msg.message && <p style={{ whiteSpace: "pre-wrap" }}>{msg.message}</p>}
+        <div style={{ display: "flex", justifyContent: own ? "flex-end" : "flex-start", gap: "4px", marginTop: "4px" }}>
+          <button type="button" onClick={() => onReply(msg)} style={{ border: "none", background: "transparent", color: own ? "rgba(255,255,255,0.8)" : "var(--text-muted)", fontSize: "0.62rem", cursor: "pointer" }}>Reply</button>
+          <button type="button" onClick={() => onForward(msg)} style={{ border: "none", background: "transparent", color: own ? "rgba(255,255,255,0.8)" : "var(--text-muted)", fontSize: "0.62rem", cursor: "pointer" }}>Forward</button>
+          {own && !deleted && <button type="button" onClick={() => onDelete(msg)} style={{ border: "none", background: "transparent", color: own ? "rgba(255,255,255,0.8)" : "var(--text-muted)", fontSize: "0.62rem", cursor: "pointer" }}>Delete</button>}
+        </div>
         <p style={{ fontSize: "0.65rem", color: own ? "rgba(255,255,255,0.72)" : "var(--text-muted)", marginTop: "3px", textAlign: "right" }}>
           {formatTime(msg.created_at)} {own && <span aria-label={msg.is_read ? "Read" : "Sent"}>{msg.is_read ? "✓✓" : "✓"}</span>}
         </p>
@@ -58,6 +64,8 @@ export default function ChatWidget() {
   const [typing, setTyping] = useState(false);
   const [recording, setRecording] = useState(false);
   const [callStatus, setCallStatus] = useState("");
+  const [callActive, setCallActive] = useState(false);
+  const [replyingTo, setReplyingTo] = useState(null);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const bottomRef = useRef(null);
   const typingTimer = useRef(null);
@@ -191,22 +199,61 @@ export default function ChatWidget() {
       const response = await fetch(`${API}/chat/send`, {
         method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          receiver_id: active.receiver_id, message,
+           receiver_id: active.receiver_id, message,
+           reply_to_id: replyingTo?.id || null,
           msg_type: attachment?.kind === "image" ? "image" : attachment?.kind === "voice" ? "file" : attachment ? "file" : "text",
           attachment_url: attachment?.url, attachment_name: attachment?.name, attachment_type: attachment?.type,
         }),
       });
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(data.error || "Message failed");
+      setReplyingTo(null);
       await loadMsgs(); await loadConvos();
     } catch (error) { setCallStatus(error.message); }
     finally { setSending(false); }
   }
 
-  function startCall(kind) {
-    if (callRef.current) callRef.current.close();
-    callRef.current = createCallSession(kind);
-    setCallStatus(callRef.current ? `${kind === "video" ? "Video" : "Voice"} call ready — signaling provider can connect this session.` : "Calling is not supported by this browser.");
+  async function startCall(kind) {
+    if (callRef.current) endCall();
+    const session = createCallSession(kind);
+    if (!session || !navigator.mediaDevices?.getUserMedia) {
+      setCallStatus("Calling is not supported by this browser.");
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: kind === "video" });
+      stream.getTracks().forEach(track => session.peer.addTrack(track, stream));
+      const offer = await session.peer.createOffer();
+      await session.peer.setLocalDescription(offer);
+      callRef.current = { ...session, stream };
+      setCallActive(true);
+      setCallStatus(`${kind === "video" ? "Video" : "Voice"} call started. Waiting for the recipient to join…`);
+    } catch (error) {
+      session.close();
+      setCallStatus(error.name === "NotAllowedError" ? "Microphone/camera permission was not granted." : "Could not start the call.");
+    }
+  }
+
+  function endCall() {
+    callRef.current?.stream?.getTracks().forEach(track => track.stop());
+    callRef.current?.close();
+    callRef.current = null;
+    setCallActive(false);
+    setCallStatus("");
+  }
+
+  async function deleteMessage(message) {
+    try {
+      const response = await fetch(`${API}/chat/message?id=${encodeURIComponent(message.id)}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+      if (!response.ok) throw new Error("Could not delete message.");
+      await loadMsgs();
+    } catch (error) { setCallStatus(error.message); }
+  }
+
+  function forwardMessage(message) {
+    const text = message.message || message.attachment_name || "attachment";
+    setInput(`Forwarded: ${text}`);
+    setCallStatus("Edit the forwarded message and send it.");
   }
 
   if (!user) return null;
@@ -229,7 +276,7 @@ export default function ChatWidget() {
         <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: "8px", background: "var(--surface)" }}>
           {active ? <button type="button" onClick={() => setActive(null)} style={{ background: "none", border: "none", color: "var(--text-secondary)", cursor: "pointer", fontSize: "1rem" }}>←</button> : <span style={{ fontSize: "1.1rem" }}>💬</span>}
           <div style={{ flex: 1 }}><p style={{ fontWeight: 700, fontSize: "0.9rem" }}>{active ? active.name : "Messages"}</p><p style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>{active ? (typing ? "Typing…" : "Secure chat") : "Vendor · Buyer chats"}</p></div>
-          {active && <><button type="button" onClick={() => startCall("voice")} aria-label="Start voice call" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)", fontSize: "1rem" }}>📞</button><button type="button" onClick={() => startCall("video")} aria-label="Start video call" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)", fontSize: "1rem" }}>🎥</button></>}
+           {active && <>{callActive ? <button type="button" onClick={endCall} aria-label="End call" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--danger)", fontSize: "1rem" }}>⏹️</button> : <><button type="button" onClick={() => startCall("voice")} aria-label="Start voice call" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)", fontSize: "1rem" }}>📞</button><button type="button" onClick={() => startCall("video")} aria-label="Start video call" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)", fontSize: "1rem" }}>🎥</button></>}</>}
           {!active && <button type="button" onClick={loadConvos} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}>↻</button>}
         </div>
 
@@ -244,11 +291,12 @@ export default function ChatWidget() {
         </div> : <>
           <div style={{ flex: 1, overflowY: "auto", padding: "12px" }}>
             {messages.length === 0 && <div style={{ textAlign: "center", padding: "32px 12px", color: "var(--text-muted)", fontSize: "0.82rem" }}>Say hello! 👋</div>}
-            {messages.map((message, index) => <Bubble key={message.id || index} msg={message} myId={user.id || user.user_id} />)}
+             {messages.map((message, index) => <Bubble key={message.id || index} msg={message} myId={user.id || user.user_id} onReply={setReplyingTo} onForward={forwardMessage} onDelete={deleteMessage} />)}
             <div ref={bottomRef} />
           </div>
           {callStatus && <div style={{ padding: "6px 12px", color: "var(--warning)", fontSize: "0.7rem", borderTop: "1px solid var(--border)" }}>{callStatus}</div>}
-          {pendingAttachment && <div style={{ padding: "6px 12px", color: "var(--dz-blue)", fontSize: "0.72rem", borderTop: "1px solid var(--border)" }}>📎 {pendingAttachment.name} <button type="button" onClick={() => setPendingAttachment(null)} style={{ border: "none", background: "none", color: "var(--danger)", cursor: "pointer" }}>remove</button></div>}
+           {replyingTo && <div style={{ padding: "6px 12px", color: "var(--dz-blue)", fontSize: "0.72rem", borderTop: "1px solid var(--border)" }}>↩ Replying to: {replyingTo.message || replyingTo.attachment_name || "attachment"} <button type="button" onClick={() => setReplyingTo(null)} style={{ border: "none", background: "none", color: "var(--danger)", cursor: "pointer" }}>cancel</button></div>}
+           {pendingAttachment && <div style={{ padding: "6px 12px", color: "var(--dz-blue)", fontSize: "0.72rem", borderTop: "1px solid var(--border)" }}>📎 {pendingAttachment.name} <button type="button" onClick={() => setPendingAttachment(null)} style={{ border: "none", background: "none", color: "var(--danger)", cursor: "pointer" }}>remove</button></div>}
            {emojiOpen && <div style={{ padding: "8px 10px", borderTop: "1px solid var(--border)", display: "flex", flexWrap: "wrap", gap: "4px", background: "var(--surface)" }}>
              {EMOJIS.map(emoji => (
                <button key={emoji} type="button" onClick={() => setInput(value => `${value}${emoji}`)} aria-label={`Add ${emoji}`} style={{ border: "none", background: "transparent", cursor: "pointer", fontSize: "1.15rem", padding: "3px" }}>{emoji}</button>

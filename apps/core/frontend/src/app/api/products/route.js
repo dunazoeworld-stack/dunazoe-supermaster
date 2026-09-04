@@ -6,6 +6,9 @@
 import { NextResponse } from "next/server";
 import fs   from "fs";
 import path from "path";
+import crypto from "crypto";
+import { generateProductShareImage } from "../../../lib/shareImageService.js";
+import { getPublicSiteUrl } from "../../../lib/public-url.js";
 
 const GATEWAY   = process.env.GATEWAY_URL || "http://localhost:3000";
 const STORE_PATH = path.join(process.cwd(), "local_data", "products.json");
@@ -26,6 +29,36 @@ function writeStore(arr) {
     fs.mkdirSync(path.dirname(STORE_PATH), { recursive: true });
     fs.writeFileSync(STORE_PATH, JSON.stringify(arr, null, 2), "utf8");
   } catch (e) { console.error("[ProductsStore] write failed:", e.message); }
+}
+
+function slugPrefix(value) {
+  return String(value || "product").toLowerCase().normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "").slice(0, 28) || "product";
+}
+
+function createLocalSlug(name, store) {
+  const existing = new Set(store.map(product => String(product.short_slug || product.product_slug || "")));
+  let slug;
+  do { slug = `${slugPrefix(name)}-${crypto.randomBytes(5).toString("hex")}`; }
+  while (existing.has(slug));
+  return slug;
+}
+
+function localProductSlug(product) {
+  if (product.short_slug || product.product_slug) return product.short_slug || product.product_slug;
+  return `${slugPrefix(product.name)}-${crypto.createHash("sha256").update(String(product.id || product.name)).digest("hex").slice(0, 10)}`;
+}
+
+function enrichLocalProduct(product) {
+  const shortSlug = localProductSlug(product);
+  return {
+    ...product,
+    short_slug: shortSlug,
+    product_slug: product.product_slug || shortSlug,
+    canonical_url: product.canonical_url || `${getPublicSiteUrl()}/p/${shortSlug}`,
+    shareable_link: product.shareable_link || `${getPublicSiteUrl()}/p/${shortSlug}`,
+  };
 }
 
 // Parse ID from formats like PRD-00001, VND-00001 or raw numbers
@@ -69,12 +102,12 @@ export async function GET(request) {
       return NextResponse.json(d, { status: res.status });
     }
     // Gateway online but empty — merge with local store
-    const local    = readStore();
+    const local    = readStore().map(enrichLocalProduct);
     const merged   = mergeProducts(d.products || [], local, params);
     return NextResponse.json({ ...d, products: merged, total: merged.length, offline_merged: local.length > 0 }, { status: res.status });
   } catch (_) {
     // Gateway offline — serve from local store
-    const local    = readStore();
+    const local    = readStore().map(enrichLocalProduct);
     const filtered = filterProducts(local, params);
     return NextResponse.json({
       success:  true,
@@ -132,13 +165,40 @@ export async function POST(request) {
     const d = await res.json();
     // Also save to local store as backup
     if (d.success || d.product_id) {
-      saveToLocal(body, d.product_id || d.id || `gw_${Date.now()}`);
+      const createdId = d.product_id || d.id || d.product?.id || `gw_${Date.now()}`;
+      const createdProduct = { ...body, ...(d.product || d), id: createdId };
+      let shareImageUrl = createdProduct.share_image_url || null;
+      try {
+        shareImageUrl = await generateProductShareImage(createdProduct);
+        if (shareImageUrl && createdId && /^\d+$/.test(String(createdId))) {
+          await fetch(`${GATEWAY}/products/${createdId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json", Authorization: token },
+            body: JSON.stringify({ share_image_url: shareImageUrl }),
+            signal: AbortSignal.timeout(8000),
+          });
+        }
+      } catch (error) {
+        console.warn("[Products] share image generation skipped:", error.message);
+      }
+      saveToLocal({ ...body, ...createdProduct, share_image_url: shareImageUrl }, createdId);
+      if (shareImageUrl) d.share_image_url = shareImageUrl;
+      d.canonical_url = d.canonical_url || d.shareable_link || (d.short_slug ? `${getPublicSiteUrl()}/p/${d.short_slug}` : null);
+      d.product_slug = d.product_slug || d.short_slug || null;
     }
     return NextResponse.json(d, { status: res.status });
   } catch (_) {
     // Gateway offline — save to local store
     const localId = `local_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-    saveToLocal(body, localId);
+    const store = readStore();
+    const shortSlug = createLocalSlug(body.name, store);
+    let shareImageUrl = null;
+    try {
+      shareImageUrl = await generateProductShareImage({ ...body, id: localId, short_slug: shortSlug });
+    } catch (error) {
+      console.warn("[Products] local share image generation skipped:", error.message);
+    }
+    saveToLocal({ ...body, share_image_url: shareImageUrl }, localId, shortSlug);
     return NextResponse.json({
       success:         true,
       product_id:      localId,
@@ -146,7 +206,11 @@ export async function POST(request) {
       status:          "published",
       ai_badge:        body.name ? `✨ ${body.name.slice(0, 20)}` : "📦 New Product",
       demand_score:    0.7,
-      shareable_link:  null,
+      shareable_link:  `${getPublicSiteUrl()}/p/${shortSlug}`,
+      short_slug:      shortSlug,
+      product_slug:    shortSlug,
+      canonical_url:   `${getPublicSiteUrl()}/p/${shortSlug}`,
+      share_image_url: shareImageUrl,
       message:         "Product saved and visible in the marketplace.",
       source:          "local_store",
     }, { status: 201 });
@@ -154,9 +218,11 @@ export async function POST(request) {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-function saveToLocal(body, id) {
+function saveToLocal(body, id, suppliedSlug = null) {
   const store   = readStore();
   const without = store.filter(p => p.id !== id);
+  const shortSlug = suppliedSlug || body.short_slug || body.product_slug || createLocalSlug(body.name, store);
+  const canonicalUrl = body.canonical_url || `${getPublicSiteUrl()}/p/${shortSlug}`;
   const record  = {
     id,
     name:          body.name         || "Unnamed Product",
@@ -178,6 +244,12 @@ function saveToLocal(body, id) {
     status:        "published",
     created_at:    new Date().toISOString(),
     vendor_id:     body.vendor_id     || "local",
+    short_slug:    shortSlug,
+    product_slug:  shortSlug,
+    share_token:    body.share_token || crypto.randomBytes(12).toString("hex"),
+    canonical_url: canonicalUrl,
+    shareable_link: canonicalUrl,
+    share_image_url: body.share_image_url || null,
   };
   writeStore([record, ...without]);
 }
