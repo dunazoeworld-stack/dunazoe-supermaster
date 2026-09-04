@@ -91,6 +91,10 @@ CREATE TABLE IF NOT EXISTS products (
   copy_markup_pct     NUMERIC(5,4) DEFAULT 0.06,
   shareable_link      TEXT,
   short_slug          TEXT,
+  product_slug        TEXT,
+  share_token         TEXT,
+  canonical_url       TEXT,
+  share_image_url     TEXT,
   demand_score        NUMERIC(4,3) DEFAULT 0.60,
   data_quality_score  NUMERIC(4,2) DEFAULT 0,
   annotation_status   TEXT DEFAULT 'pending',
@@ -138,6 +142,8 @@ CREATE INDEX IF NOT EXISTS idx_products_vendor   ON products(vendor_id);
 CREATE INDEX IF NOT EXISTS idx_products_type     ON products(type);
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_products_short_slug ON products(short_slug) WHERE short_slug IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_products_product_slug ON products(product_slug) WHERE product_slug IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_products_share_token ON products(share_token) WHERE share_token IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_inventory_product ON inventory(product_id);
 CREATE INDEX IF NOT EXISTS idx_inv_movements     ON inventory_movements(product_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_token    ON sessions(token);

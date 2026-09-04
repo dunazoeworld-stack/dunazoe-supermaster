@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import Navbar from "../components/Navbar";
+import { productShareUrl } from "../lib/public-url.js";
 
 if (typeof window !== "undefined" && "serviceWorker" in navigator) {
   window.addEventListener("load", () => {
@@ -67,15 +68,15 @@ export default function HomePage() {
           ) : products.length > 0 ? (
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:"16px"}}>
               {products.map(p=>(
-                <Link key={p.id} href={`/products/${p.id}`} data-testid="product-card" style={{display:"block",background:"linear-gradient(145deg,#0D1525,#12203A)",border:"1px solid rgba(0,163,255,0.12)",borderRadius:"16px",overflow:"hidden",textDecoration:"none",transition:"all 0.25s"}}>
-                  <div style={{width:"100%",height:"180px",background:p.images?`url(${p.images}) center/cover`:"#0D1525",display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
-                    {!p.images&&<Image src="/assets/dunazoe-logo.jpg" alt="" width={48} height={48} style={{borderRadius:"10px",opacity:0.3}}/>}
+                 <Link key={p.id} href={p.short_slug || p.product_slug ? productShareUrl(p).replace(/^https:\/\/dunazoe\.com/, "") : `/products/${p.id}`} data-testid="product-card" style={{display:"block",background:"linear-gradient(145deg,#0D1525,#12203A)",border:"1px solid rgba(0,163,255,0.12)",borderRadius:"16px",overflow:"hidden",textDecoration:"none",transition:"all 0.25s"}}>
+                   <div style={{width:"100%",height:"180px",background:Array.isArray(p.images)&&p.images[0]?`url(${p.images[0]}) center/cover`:typeof p.images==="string"&&p.images?`url(${p.images}) center/cover`:"#0D1525",display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
+                     {!p.images&&<Image src="/assets/dunazoe-logo.jpg" alt="" width={48} height={48} style={{borderRadius:"10px",opacity:0.3}}/>}
                     {p.ajo_enabled&&<span style={{position:"absolute",top:"10px",right:"10px",background:"rgba(0,102,255,0.85)",borderRadius:"6px",padding:"3px 8px",fontSize:"0.7rem",fontWeight:600,color:"#fff"}}>⬡ Personal Savings</span>}
                   </div>
                   <div style={{padding:"14px"}}>
                     <p style={{fontSize:"0.88rem",fontWeight:600,color:"#fff",marginBottom:"6px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</p>
                     <p style={{fontSize:"0.75rem",color:"#8A9AB5",marginBottom:"10px"}}>{p.business_name||"DUNAZOE Store"}</p>
-                    <span style={{fontSize:"1.15rem",fontWeight:800,background:"linear-gradient(135deg,#00A3FF,#0066FF)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>₦{parseFloat(p.price).toLocaleString("en-NG")}</span>
+                     <span style={{fontSize:"1.15rem",fontWeight:800,background:"linear-gradient(135deg,#00A3FF,#0066FF)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>₦{parseFloat(p.final_price ?? p.price ?? 0).toLocaleString("en-NG")}</span>
                   </div>
                 </Link>
               ))}

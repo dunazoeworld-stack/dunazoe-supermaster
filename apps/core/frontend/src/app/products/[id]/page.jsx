@@ -2,6 +2,7 @@
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
 import PageShell from "../../../components/PageShell";
+import { productShareUrl } from "../../../lib/public-url.js";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "/api";
 
@@ -110,10 +111,7 @@ export default function ProductDetailPage({ params, resolvedId }) {
   }
 
   function getShareLink(p) {
-    const origin = typeof window !== "undefined" ? window.location.origin : "https://dunazoe.com";
-    if (p.short_slug) return `${origin}/p/${p.short_slug}`;
-    if (p.shareable_link) return p.shareable_link.startsWith("http") ? p.shareable_link : `https://${p.shareable_link}`;
-    return `${origin}/products/${p.id}`;
+    return productShareUrl(p);
   }
 
   function handleShare(p) {
@@ -327,8 +325,8 @@ export default function ProductDetailPage({ params, resolvedId }) {
                   >
                     📤 Share
                   </button>
-                  <a
-                    href={`https://wa.me/?text=${encodeURIComponent(`Check out '${product.name}' on DUNAZOE: ${getShareLink(product)}`)}`}
+                   <a
+                     href={`https://wa.me/?text=${encodeURIComponent(`Check out '${product.name}' on DUNAZOE: ${getShareLink(product)}`)}`}
                     target="_blank" rel="noopener noreferrer"
                     className="btn btn-ghost btn-sm"
                   >

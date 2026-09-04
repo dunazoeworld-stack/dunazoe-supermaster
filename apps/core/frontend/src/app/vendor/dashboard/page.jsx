@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import PageShell from "../../../components/PageShell";
+import { productShareUrl } from "../../../lib/public-url.js";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "/api";
 const SUPERUSERS = ["dunazoeworld@gmail.com", "comfortwins@gmail.com"];
@@ -181,7 +182,7 @@ export default function VendorDashboardPage() {
   }
 
   function copyLink(p) {
-    const link = p.shareable_link ? `https://${p.shareable_link}` : `${window.location.origin}/products/${p.id}`;
+    const link = productShareUrl(p);
     navigator.clipboard?.writeText(link).then(() => {
       setCopiedId(p.id);
       setTimeout(() => setCopiedId(null), 2000);
@@ -189,7 +190,7 @@ export default function VendorDashboardPage() {
   }
 
   function shareProduct(p) {
-    const link = p.shareable_link ? `https://${p.shareable_link}` : `${window.location.origin}/products/${p.id}`;
+    const link = productShareUrl(p);
     const text = `Check out '${p.name}' on DUNAZOE: ${link}`;
     if (navigator.share) {
       navigator.share({ title: p.name, text, url: link }).catch(() => {});
@@ -382,14 +383,14 @@ export default function VendorDashboardPage() {
                     </button>
                   </div>
                   {/* Action buttons row 2: Share / Copy / View */}
-                  <div style={{ display: "flex", gap: "6px" }}>
+                  <div className="vendor-product-actions">
                     <button onClick={() => shareProduct(p)} className="btn btn-ghost btn-sm" style={{ flex: 1, fontSize: "0.68rem", padding: "4px" }}>
                       📤 Share
                     </button>
                     <button onClick={() => copyLink(p)} className="btn btn-ghost btn-sm" style={{ flex: 1, fontSize: "0.68rem", padding: "4px" }}>
                       {copiedId === p.id ? "✅" : "🔗 Copy"}
                     </button>
-                    <Link href={`/products/${p.id}`} className="btn btn-ghost btn-sm" style={{ flex: 1, fontSize: "0.68rem", padding: "4px", textAlign: "center" }}>
+                    <Link href={p.short_slug || p.product_slug ? `/p/${p.short_slug || p.product_slug}` : `/products/${p.id}`} className="btn btn-ghost btn-sm" style={{ flex: 1, fontSize: "0.68rem", padding: "4px", textAlign: "center" }}>
                       👁 View
                     </Link>
                   </div>

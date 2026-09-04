@@ -11,6 +11,8 @@ export default function Navbar() {
   const [user, setUser]         = useState(null);
   const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
+  const isHome = pathname === "/";
+  const menuAllowed = /^\/(dashboard|vendor|admin|ops)(\/|$)/.test(pathname || "");
 
   useEffect(() => {
     try {
@@ -51,8 +53,14 @@ export default function Navbar() {
             <span className="dz-logo-text">DUNAZOE</span>
           </Link>
 
+          {isHome && (
+            <Link href="/products" className="homepage-search" aria-label="Search products">
+              🔍 <span>Search</span>
+            </Link>
+          )}
+
           {/* Desktop nav */}
-          <div style={{ display: "flex", gap: "4px", alignItems: "center" }} className="desktop-nav">
+          {!isHome && <div style={{ display: "flex", gap: "4px", alignItems: "center" }} className="desktop-nav">
             {[
               { href: "/products", label: "Shop" },
               { href: "/vendors", label: "Vendors" },
@@ -67,20 +75,22 @@ export default function Navbar() {
                 transition: "all 0.15s",
               }}>{label}</Link>
             ))}
-          </div>
+          </div>}
 
           <div className="navbar-actions" style={{ display: "flex", gap: "6px", alignItems: "center", minWidth: 0 }}>
             {/* Theme toggle */}
-            <span className="navbar-theme-toggle"><ThemeToggle compact /></span>
+            {!isHome && <span className="navbar-theme-toggle"><ThemeToggle compact /></span>}
 
             {/* Cart */}
             <Link href="/cart" style={{ position: "relative", display: "flex", alignItems: "center", padding: "7px", borderRadius: "9px", color: "var(--text-secondary)", textDecoration: "none", fontSize: "1.1rem" }} aria-label="Cart">🛒</Link>
 
             {/* Notification Bell (logged in only) */}
-            <span className="navbar-notifications"><NotificationBell /></span>
+            {!isHome && <span className="navbar-notifications"><NotificationBell /></span>}
 
             {user ? (
-              <div className="navbar-user-desktop" style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+              isHome ? (
+                <Link href="/dashboard" className="homepage-account" aria-label="Open account">👤 <span>Account</span></Link>
+              ) : <div className="navbar-user-desktop" style={{ display: "flex", gap: "6px", alignItems: "center" }}>
                 <Link href="/dashboard" style={{ padding: "7px 14px", borderRadius: "9px", fontSize: "0.85rem", fontWeight: 600, color: "var(--text-secondary)", textDecoration: "none" }}>
                   {user.name?.split(" ")[0]}
                 </Link>
@@ -93,11 +103,11 @@ export default function Navbar() {
                 <button onClick={handleLogout} className="btn btn-ghost btn-sm">Sign Out</button>
               </div>
             ) : (
-              <Link href="/login" className="btn btn-primary btn-sm">Sign In</Link>
+              <Link href="/login" className={isHome ? "homepage-account" : "btn btn-primary btn-sm"}>{isHome ? "👤 Account" : "Sign In"}</Link>
             )}
 
             {/* Mobile hamburger */}
-            <button
+            {menuAllowed && <button
               onClick={() => setMenuOpen(!menuOpen)}
               aria-label="Toggle menu"
               aria-expanded={menuOpen}
@@ -105,12 +115,12 @@ export default function Navbar() {
               className="hamburger-btn"
             >
               {menuOpen ? "✕" : "☰"}
-            </button>
+            </button>}
           </div>
         </div>
 
         {/* Mobile menu */}
-        {menuOpen && (
+        {menuOpen && menuAllowed && (
           <div className="mobile-menu-drawer">
             {/* Primary nav links */}
             <div className="mobile-menu-section">
@@ -181,6 +191,7 @@ export default function Navbar() {
           .desktop-nav { display: none !important; }
           .hamburger-btn { display: flex !important; }
           .navbar-user-desktop, .navbar-notifications { display: none !important; }
+          .homepage-account { display: inline-flex !important; }
           .navbar-actions { flex-shrink: 0; }
           .dz-logo { min-width: 0; }
           .dz-logo-text { white-space: nowrap; }
@@ -190,6 +201,7 @@ export default function Navbar() {
           .navbar-theme-toggle button { padding-left: 6px !important; padding-right: 6px !important; }
           .dz-logo { gap: 6px; }
           .dz-logo-text { font-size: 0.98rem; }
+          .homepage-search span, .homepage-account span { display: none; }
         }
         .mobile-menu-drawer {
           background: var(--bg);
@@ -201,6 +213,20 @@ export default function Navbar() {
           max-height: calc(100vh - 60px);
           overflow-y: auto;
         }
+        .homepage-search, .homepage-account {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          color: var(--text-secondary);
+          text-decoration: none;
+          font-size: 0.82rem;
+          font-weight: 700;
+          white-space: nowrap;
+          padding: 7px 9px;
+          border: 1px solid var(--border);
+          border-radius: 9px;
+        }
+        .homepage-search { margin-left: auto; margin-right: 4px; }
         .mobile-menu-section {
           display: flex;
           flex-direction: column;

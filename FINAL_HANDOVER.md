@@ -1,7 +1,7 @@
 # FINAL HANDOVER
 **Project:** DUNAZOE Supermaster  
 **Version:** v1.0.0-rc1  
-**Date:** 2026-08-17 (CTO production stabilization batch)
+**Date:** 2026-09-04 (CTO production stabilization and sharing hardening)
 
 ## CTO Production Stabilization — 2026-08-17
 
@@ -20,13 +20,13 @@ Required detail documents:
 - `PRODUCT_SYSTEM_UPDATE.md`
 - `CHAT_SYSTEM_UPDATE.md`
 
-Verification status: focused source checks are complete; the frontend build and workflow preview must pass before any publish action. Publishing was intentionally not performed.
+Verification status: the production frontend build, focused source checks, workflow startup, live short-link API, short product page, and social metadata checks passed on 2026-09-04. Publishing was intentionally not performed.
 
 ## Git handover state
 
-- Local commit created: `fix: complete CTO production stabilization`.
-- Push was attempted against the configured GitHub `origin` remote and was blocked because the Replit askpass flow had no usable GitHub credential.
-- No credential was printed or stored in the repository. Complete the push from `/deploy/github` or the Replit Git pane after authorizing the GitHub connection, then verify `main` is synchronized.
+- Local implementation commit created: `fix: complete production sharing and operations hardening`.
+- The shell askpass credential was rejected by GitHub; the GitHub Replit connection was then authorized for a secure API-based repository update.
+- No credential was printed, committed, or stored in the repository. The final remote commit and `main` synchronization are recorded below after the connector push.
 
 ---
 
@@ -115,9 +115,16 @@ Verification status: focused source checks are complete; the frontend build and 
 - User-facing savings wording is now “Personal Savings”; support links use WhatsApp `07056916999` and X `@DunazoeWorld`.
 - The 5% payout entry is retained as vendor-base-price reconciliation, not a second buyer charge.
 
-### Remaining environment verification
+### Final verification — 2026-09-04
 
-The production build is the required validation path. Full live short-link metadata, public image HTTP status, and DB-backed checkout verification still require a workflow with the production database/gateway variables injected.
+- `NODE_ENV=production npm run build` passed; Next.js compiled and prerendered 102 static pages.
+- Changed server-side JavaScript passed `node --check`; `git diff --check` passed.
+- Frontend workflow restarted successfully and serves the preview.
+- Core microservice workflow starts the configured services; it reports that `DATABASE_URL` is not injected in this workspace and skips the already-missing `cart-service/index.js`.
+- Local product ID and short-slug APIs both return HTTP 200 and the same HTTPS canonical/share URL.
+- The short product page returns HTTP 200 with `og:type=product`, canonical URL, Twitter card, and 1200×630 image metadata.
+- No automatic deployment was performed.
+- The pre-existing edit in `apps/core/frontend/local_data/products.json` was intentionally left unstaged and is not part of the implementation commit.
 
 ---
 

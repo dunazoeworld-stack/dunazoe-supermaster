@@ -23,7 +23,9 @@ async function ensureChatSchema() {
       ALTER TABLE chat_messages
         ADD COLUMN IF NOT EXISTS attachment_url TEXT,
         ADD COLUMN IF NOT EXISTS attachment_name TEXT,
-        ADD COLUMN IF NOT EXISTS attachment_type TEXT
+        ADD COLUMN IF NOT EXISTS attachment_type TEXT,
+        ADD COLUMN IF NOT EXISTS reply_to_id INTEGER REFERENCES chat_messages(id) ON DELETE SET NULL,
+        ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP
     `).then(() => pool.query(`
       CREATE TABLE IF NOT EXISTS chat_typing (
         user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
@@ -97,7 +99,7 @@ export async function GET(request, { params }) {
         SELECT
           CASE WHEN m.sender_id=$1 THEN m.receiver_id ELSE m.sender_id END AS other_user_id,
           u.name AS other_user_name,
-          (array_agg(COALESCE(m.message, '') ORDER BY m.created_at DESC))[1] AS last_message,
+           (array_agg(CASE WHEN m.deleted_at IS NULL THEN COALESCE(m.message, '') ELSE '[Message deleted]' END ORDER BY m.created_at DESC))[1] AS last_message,
           MAX(m.created_at) AS last_message_at,
           COUNT(*) FILTER (WHERE m.receiver_id=$1 AND m.is_read=FALSE)::int AS unread
         FROM chat_messages m
@@ -113,8 +115,8 @@ export async function GET(request, { params }) {
       if (!Number.isInteger(receiver)) return NextResponse.json({ success: false, error: "Conversation recipient is required." }, { status: 400 });
       await pool.query("UPDATE chat_messages SET is_read=TRUE WHERE sender_id=$1 AND receiver_id=$2 AND is_read=FALSE", [receiver, user.id]);
       const result = await pool.query(`
-        SELECT id, sender_id, receiver_id, order_id, message, msg_type, is_read,
-               attachment_url, attachment_name, attachment_type, created_at
+           SELECT id, sender_id, receiver_id, order_id, message, msg_type, is_read,
+                attachment_url, attachment_name, attachment_type, reply_to_id, deleted_at, created_at
         FROM chat_messages
         WHERE (sender_id=$1 AND receiver_id=$2) OR (sender_id=$2 AND receiver_id=$1)
         ORDER BY created_at ASC LIMIT 100
@@ -167,14 +169,39 @@ export async function POST(request, { params }) {
     }
     if (message.length > 2000) return NextResponse.json({ success: false, error: "Messages must be 2,000 characters or fewer." }, { status: 400 });
     const msgType = body.msg_type || (String(body.attachment_type || "").startsWith("image/") ? "image" : "file");
+    const replyToId = body.reply_to_id == null ? null : Number(body.reply_to_id);
+    if (replyToId !== null && !Number.isInteger(replyToId)) {
+      return NextResponse.json({ success: false, error: "reply_to_id must be a message id." }, { status: 400 });
+    }
     const result = await pool.query(`
-      INSERT INTO chat_messages(sender_id, receiver_id, message, msg_type, attachment_url, attachment_name, attachment_type)
-      VALUES($1,$2,$3,$4,$5,$6,$7)
-      RETURNING id, sender_id, receiver_id, message, msg_type, is_read, attachment_url, attachment_name, attachment_type, created_at
-    `, [user.id, receiver, message, msgType, attachmentUrl, body.attachment_name || null, body.attachment_type || null]);
+      INSERT INTO chat_messages(sender_id, receiver_id, message, msg_type, attachment_url, attachment_name, attachment_type, reply_to_id)
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8)
+      RETURNING id, sender_id, receiver_id, message, msg_type, is_read, attachment_url, attachment_name, attachment_type, reply_to_id, created_at
+    `, [user.id, receiver, message, msgType, attachmentUrl, body.attachment_name || null, body.attachment_type || null, replyToId]);
     return NextResponse.json({ success: true, message: result.rows[0] }, { status: 201 });
   } catch (error) {
     console.error("[chat] POST failed:", error.message);
+    return NextResponse.json({ success: false, error: "Chat service is unavailable." }, { status: 503 });
+  }
+}
+
+export async function DELETE(request, { params }) {
+  const user = getUser(request);
+  if (!user) return NextResponse.json({ success: false, error: "Authentication required." }, { status: 401 });
+  const { action } = await params;
+  if (action !== "message") return NextResponse.json({ success: false, error: "Unknown chat action." }, { status: 404 });
+  const messageId = Number(new URL(request.url).searchParams.get("id"));
+  if (!Number.isInteger(messageId)) return NextResponse.json({ success: false, error: "Message id is required." }, { status: 400 });
+  try {
+    await ensureChatSchema();
+    const result = await pool.query(
+      "UPDATE chat_messages SET message='', attachment_url=NULL, deleted_at=NOW() WHERE id=$1 AND sender_id=$2 AND deleted_at IS NULL RETURNING id",
+      [messageId, user.id]
+    );
+    if (!result.rows.length) return NextResponse.json({ success: false, error: "Message not found or cannot be deleted." }, { status: 404 });
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("[chat] delete failed:", error.message);
     return NextResponse.json({ success: false, error: "Chat service is unavailable." }, { status: 503 });
   }
 }

@@ -15,3 +15,4 @@
 - [CTO final patch July 2026](cto-final-patch-july2026.md) — Vendor edit/delete modals, delivery form expanded (WhatsApp/vehicle/ID), checkout mobile grid, 480px CSS, 4 docs, 2 commits unpushed (NO_CREDENTIALS on gitPush)
 - [August 2026 production fixes](aug2026-fixes.md) — Cart JSX rewrite, navbar theme vars, mobile 360px breakpoint, OG image JSON parse, currency.js service, vendor ID off image, delivery error fallback
 - [GitHub push authentication](github-push-auth.md) — HTTPS pushes may need an ephemeral askpass backed by the stored token when the workspace helper fails
+- [Next server-side API URLs](next-server-api-urls.md) — relative /api works in browser code but server fetches need an internal absolute origin; public metadata URLs stay on dunazoe.com

@@ -12,15 +12,12 @@ const ThemeContext = createContext({ theme: "system", resolvedTheme: "dark", set
 export function useTheme() { return useContext(ThemeContext); }
 
 function getSystemTheme() {
-  if (typeof window === "undefined") return "dark";
+  if (typeof window === "undefined" || !window.matchMedia) return null;
   return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
 }
 
 function getAutomaticTheme() {
-  if (typeof window === "undefined") return "dark";
-  const hour = new Date().getHours();
-  if (hour >= 6 && hour < 18) return "light";
-  return "dark";
+  return getSystemTheme() || (typeof window !== "undefined" && new Date().getHours() >= 6 && new Date().getHours() < 18 ? "light" : "dark");
 }
 
 export function ThemeProvider({ children }) {
@@ -40,7 +37,7 @@ export function ThemeProvider({ children }) {
   useEffect(() => {
     if (theme !== "system") return;
     const mq = window.matchMedia("(prefers-color-scheme: light)");
-    const handler = (e) => {
+    const handler = () => {
       const r = getAutomaticTheme();
       setResolved(r);
       document.documentElement.setAttribute("data-theme", r);

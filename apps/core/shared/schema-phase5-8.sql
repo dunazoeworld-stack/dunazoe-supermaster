@@ -123,6 +123,8 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   message     TEXT NOT NULL,
   msg_type    TEXT DEFAULT 'text' CHECK (msg_type IN ('text','image','file')),
   is_read     BOOLEAN DEFAULT FALSE,
+  reply_to_id INTEGER REFERENCES chat_messages(id) ON DELETE SET NULL,
+  deleted_at  TIMESTAMP,
   created_at  TIMESTAMP DEFAULT NOW()
 );
 
