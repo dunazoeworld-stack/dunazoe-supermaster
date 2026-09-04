@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "NODE_OPTIONS='--max-old-space-size=512' next dev --webpack --port 5000",
     "build": "next build",
-    "start": "next start --port 5000"
+    "start": "next start --port 5000",
+    "test:product-sharing": "node scripts/test-product-sharing.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

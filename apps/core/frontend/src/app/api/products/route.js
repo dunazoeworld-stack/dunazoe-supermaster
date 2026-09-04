@@ -58,6 +58,7 @@ function enrichLocalProduct(product) {
     product_slug: product.product_slug || shortSlug,
     canonical_url: product.canonical_url || `${getPublicSiteUrl()}/p/${shortSlug}`,
     shareable_link: product.shareable_link || `${getPublicSiteUrl()}/p/${shortSlug}`,
+    share_image_url: product.share_image_url || `${getPublicSiteUrl()}/api/products/share-image/${encodeURIComponent(shortSlug)}`,
   };
 }
 
@@ -181,8 +182,9 @@ export async function POST(request) {
       } catch (error) {
         console.warn("[Products] share image generation skipped:", error.message);
       }
-      saveToLocal({ ...body, ...createdProduct, share_image_url: shareImageUrl }, createdId);
-      if (shareImageUrl) d.share_image_url = shareImageUrl;
+      const shareImage = shareImageUrl || `${getPublicSiteUrl()}/api/products/share-image/${encodeURIComponent(createdProduct.short_slug || createdProduct.product_slug || createdId)}`;
+      saveToLocal({ ...body, ...createdProduct, share_image_url: shareImage }, createdId);
+      d.share_image_url = shareImage;
       d.canonical_url = d.canonical_url || d.shareable_link || (d.short_slug ? `${getPublicSiteUrl()}/p/${d.short_slug}` : null);
       d.product_slug = d.product_slug || d.short_slug || null;
     }
@@ -198,7 +200,8 @@ export async function POST(request) {
     } catch (error) {
       console.warn("[Products] local share image generation skipped:", error.message);
     }
-    saveToLocal({ ...body, share_image_url: shareImageUrl }, localId, shortSlug);
+    const shareImage = shareImageUrl || `${getPublicSiteUrl()}/api/products/share-image/${encodeURIComponent(shortSlug)}`;
+    saveToLocal({ ...body, share_image_url: shareImage }, localId, shortSlug);
     return NextResponse.json({
       success:         true,
       product_id:      localId,
@@ -210,7 +213,7 @@ export async function POST(request) {
       short_slug:      shortSlug,
       product_slug:    shortSlug,
       canonical_url:   `${getPublicSiteUrl()}/p/${shortSlug}`,
-      share_image_url: shareImageUrl,
+      share_image_url: shareImage,
       message:         "Product saved and visible in the marketplace.",
       source:          "local_store",
     }, { status: 201 });
@@ -249,7 +252,7 @@ function saveToLocal(body, id, suppliedSlug = null) {
     share_token:    body.share_token || crypto.randomBytes(12).toString("hex"),
     canonical_url: canonicalUrl,
     shareable_link: canonicalUrl,
-    share_image_url: body.share_image_url || null,
+    share_image_url: body.share_image_url || `${getPublicSiteUrl()}/api/products/share-image/${encodeURIComponent(shortSlug)}`,
   };
   writeStore([record, ...without]);
 }

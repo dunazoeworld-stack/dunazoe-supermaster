@@ -79,6 +79,7 @@ export async function GET(request, { params }) {
       product_slug: found.product_slug || shortSlug,
       canonical_url: found.canonical_url || `${getPublicSiteUrl()}/p/${shortSlug}`,
       shareable_link: found.shareable_link || `${getPublicSiteUrl()}/p/${shortSlug}`,
+      share_image_url: found.share_image_url || `${getPublicSiteUrl()}/api/products/share-image/${encodeURIComponent(shortSlug)}`,
       source: "local_store",
     }, { status: 200 });
   }

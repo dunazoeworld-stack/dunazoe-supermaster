@@ -115,14 +115,26 @@ Verification status: the production frontend build, focused source checks, workf
 - User-facing savings wording is now “Personal Savings”; support links use WhatsApp `07056916999` and X `@DunazoeWorld`.
 - The 5% payout entry is retained as vendor-base-price reconciliation, not a second buyer charge.
 
+## Sharing and Calling Addendum — 2026-09-04
+
+- Added `productShareImageUrl` fallback enrichment across product APIs and a cacheable `/api/products/share-image/:slug` endpoint.
+- Local data-URI product images are converted to crawler-friendly 1200×630 JPEGs, allowing WhatsApp/Facebook previews to show the actual product image instead of `og-default.png`.
+- Fixed native sharing so the product URL is sent in the dedicated share URL field rather than duplicated in the share text; explicit WhatsApp sharing remains a single-link message.
+- Added authenticated Socket.IO signaling for voice/video call invites, accept/answer, ICE candidates, busy/end-call forwarding, and remote audio/video rendering in the chat widget. Signaling remains ephemeral; no new persistence schema is required.
+- Restored the root workspace `winston` dependency required by the shared logger so the realtime service can boot in the monorepo workflow.
+- Added `npm run test:product-sharing` covering product discovery, ID/slug resolution, server-rendered metadata, and the JPEG image endpoint.
+
 ### Final verification — 2026-09-04
 
 - `NODE_ENV=production npm run build` passed; Next.js compiled and prerendered 102 static pages.
+- `npm run test:product-sharing` passed for the local DC solar bulb product.
+- The share-image endpoint returned HTTP 200 with `image/jpeg`, 1200×630 output, and public cache headers.
+- The realtime service health endpoint returned HTTP 200; an authenticated two-client smoke test passed invite, answer, and end-call forwarding.
 - Changed server-side JavaScript passed `node --check`; `git diff --check` passed.
 - Frontend workflow restarted successfully and serves the preview.
 - Core microservice workflow starts the configured services; it reports that `DATABASE_URL` is not injected in this workspace and skips the already-missing `cart-service/index.js`.
 - Local product ID and short-slug APIs both return HTTP 200 and the same HTTPS canonical/share URL.
-- The short product page returns HTTP 200 with `og:type=product`, canonical URL, Twitter card, and 1200×630 image metadata.
+- The short product page returns HTTP 200 with valid `og:type=website`, canonical URL, Twitter card, and 1200×630 image metadata.
 - No automatic deployment was performed.
 - The pre-existing edit in `apps/core/frontend/local_data/products.json` was intentionally left unstaged and is not part of the implementation commit.
 
