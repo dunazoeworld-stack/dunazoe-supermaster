@@ -60,7 +60,7 @@ export async function generateMetadata({ params }) {
 
   const price    = parseFloat(product.price || 0);
   const currency = "NGN";
-  const title    = `${product.name || "Product"} — DUNAZOE`;
+  const title    = `DUNAZOE - ${product.name || "Product"}`;
   const desc     = product.description
     ? product.description.slice(0, 200)
     : `Buy ${product.name} on DUNAZOE. Secure payment · Fast delivery · Escrow protected.`;
@@ -73,7 +73,7 @@ export async function generateMetadata({ params }) {
     title,
     description: desc,
     openGraph: {
-      title:       product.name || "Product on DUNAZOE",
+      title,
       description: desc,
       url:         productUrl,
       type:        "website",
@@ -90,7 +90,7 @@ export async function generateMetadata({ params }) {
     },
     twitter: {
       card:        "summary_large_image",
-      title:       product.name || "Product on DUNAZOE",
+      title,
       description: desc,
       images:      [ogImage],
       site:        "@dunazoe",

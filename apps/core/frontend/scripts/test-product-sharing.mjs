@@ -27,6 +27,7 @@ assert.match(resolved.share_image_url || "", /\/api\/products\/share-image\//, "
 const page = await get(`/p/${encodeURIComponent(slug)}`);
 assert.equal(page.response.status, 200, "short product page should render");
 const html = page.text();
+assert.match(html, /<title>DUNAZOE - DC solar bulb/, "product title should use the public DUNAZOE format");
 assert.match(html, /(?:property|name)="og:type" content="website"/, "valid website OG type should be present");
 assert.match(html, /property="og:image" content="https:\/\/dunazoe\.com\/api\/products\/share-image\//, "OG image should use the public product image endpoint");
 assert.match(html, /name="twitter:card" content="summary_large_image"/, "Twitter summary card should be present");
