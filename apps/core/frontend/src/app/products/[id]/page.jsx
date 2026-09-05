@@ -116,7 +116,7 @@ export default function ProductDetailPage({ params, resolvedId }) {
 
   function handleShare(p) {
     const link = getShareLink(p);
-    const text = `Check out '${p.name}' on DUNAZOE: ${link}`;
+    const text = `Check out '${p.name}' on DUNAZOE`;
     if (navigator.share) {
       navigator.share({ title: p.name, text, url: link }).catch(() => {});
     } else {

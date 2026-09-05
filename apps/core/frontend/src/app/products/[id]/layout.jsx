@@ -7,7 +7,9 @@
 
 // Use relative URL for server-side fetch within the same Next.js process,
 // or fall back to the configured API URL (never hardcode localhost).
-const SITE_URL_ENV = process.env.NEXT_PUBLIC_SITE_URL || "https://dunazoe.com";
+import { getPublicSiteUrl, productShareImageUrl } from "../../../lib/public-url.js";
+
+const SITE_URL_ENV = getPublicSiteUrl();
 const VERCEL_URL_ENV = process.env.VERCEL_URL || "";
 const _origin = SITE_URL_ENV
   ? SITE_URL_ENV
@@ -18,7 +20,7 @@ const configuredApi = process.env.NEXT_PUBLIC_API_URL;
 const API_BASE = configuredApi && /^https?:\/\//i.test(configuredApi)
   ? configuredApi
   : `http://127.0.0.1:${process.env.PORT || 5000}/api`;
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://dunazoe.com";
+const SITE_URL = getPublicSiteUrl();
 const FALLBACK_IMAGE = `${SITE_URL}/og-default.png`;
 
 export async function generateMetadata({ params }) {
@@ -52,28 +54,9 @@ export async function generateMetadata({ params }) {
     };
   }
 
-  // Pick the best image: handle array, JSON string array, or plain URL
-  let parsedImages = product.images;
-  if (typeof parsedImages === "string") {
-    try { parsedImages = JSON.parse(parsedImages); } catch (_) {}
-  }
-  const rawImage =
-    (Array.isArray(parsedImages) && parsedImages[0]) ||
-    (typeof parsedImages === "string" && parsedImages) ||
-    product.image_url ||
-    product.image ||
-    FALLBACK_IMAGE;
-  // Social crawlers require a public absolute URL; local data URIs are not valid OG images.
-  const imageString = typeof rawImage === "string" ? rawImage.trim() : "";
-  const normalizedImage = imageString.startsWith("http://")
-    ? `https://${imageString.slice("http://".length)}`
-    : imageString;
-  const ogImage = product.share_image_url && !String(product.share_image_url).startsWith("data:")
-    ? product.share_image_url
-    : !normalizedImage || normalizedImage.startsWith("data:") ? FALLBACK_IMAGE
-    : normalizedImage.startsWith("/")
-      ? `${SITE_URL}${normalizedImage}`
-      : normalizedImage;
+  // Social crawlers cannot use data URIs. Serve local/uploaded images through
+  // our stable JPEG endpoint so WhatsApp and Facebook can fetch the preview.
+  const ogImage = productShareImageUrl(product, product.short_slug || id);
 
   const price    = parseFloat(product.price || 0);
   const currency = "NGN";
@@ -115,7 +98,6 @@ export async function generateMetadata({ params }) {
     alternates: { canonical: productUrl },
     // Product-specific structured metadata
     other: {
-      "og:type":                 "product",
       "og:price:amount":         price.toFixed(2),
       "og:price:currency":       currency,
       "product:price:amount":    price.toFixed(2),

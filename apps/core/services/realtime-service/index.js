@@ -43,6 +43,11 @@ io.use((socket,next)=>{
 
 const connectedUsers=new Map();
 function emitToUser(uid,event,data){ const s=connectedUsers.get(uid)||new Set(); for(const sid of s) io.to(sid).emit(event,data); }
+function relayCall(socket, event, data) {
+  const receiver_id = Number(data?.receiver_id);
+  if (!Number.isInteger(receiver_id) || receiver_id <= 0 || receiver_id === socket.user_id) return;
+  emitToUser(receiver_id, event, { ...data, receiver_id, sender_id: socket.user_id });
+}
 
 io.on("connection",socket=>{
   const uid=socket.user_id, role=socket.user_role;
@@ -84,6 +89,19 @@ io.on("connection",socket=>{
 
   socket.on("chat:typing",data=>{ if(data.receiver_id) emitToUser(data.receiver_id,"chat:typing",{sender_id:uid,order_id:data.order_id}); });
   socket.on("chat:stop_typing",data=>{ if(data.receiver_id) emitToUser(data.receiver_id,"chat:stop_typing",{sender_id:uid}); });
+  socket.on("call:invite", data => {
+    if (!data?.offer || !["voice", "video"].includes(data.kind)) return;
+    relayCall(socket, "call:invite", { receiver_id: data.receiver_id, kind: data.kind, offer: data.offer, sender_name: data.sender_name || null });
+  });
+  socket.on("call:answer", data => {
+    if (!data?.answer) return;
+    relayCall(socket, "call:answer", { receiver_id: data.receiver_id, answer: data.answer });
+  });
+  socket.on("call:ice", data => {
+    if (!data?.candidate) return;
+    relayCall(socket, "call:ice", { receiver_id: data.receiver_id, candidate: data.candidate });
+  });
+  socket.on("call:end", data => relayCall(socket, "call:end", { receiver_id: data?.receiver_id }));
   socket.on("disconnect",()=>{ const s=connectedUsers.get(uid); if(s){s.delete(socket.id); if(!s.size) connectedUsers.delete(uid);} });
 });
 

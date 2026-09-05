@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "/api";
+const REALTIME_URL = process.env.NEXT_PUBLIC_REALTIME_URL ||
+  (typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:4021` : null);
 const EMOJIS = ["😀", "😂", "😍", "😊", "👍", "🙏", "❤️", "🔥", "🎉", "👏", "😅", "🤝", "💯", "📦", "🚚", "✨"];
 
 function formatTime(value) {
@@ -42,13 +44,6 @@ function Bubble({ msg, myId, onReply, onForward, onDelete }) {
   );
 }
 
-// Call transport boundary: signaling can be attached here without changing chat UI.
-function createCallSession(kind) {
-  if (typeof RTCPeerConnection === "undefined") return null;
-  const peer = new RTCPeerConnection();
-  return { kind, peer, close: () => peer.close() };
-}
-
 export default function ChatWidget() {
   const [open, setOpen] = useState(false);
   const [user, setUser] = useState(null);
@@ -65,6 +60,8 @@ export default function ChatWidget() {
   const [recording, setRecording] = useState(false);
   const [callStatus, setCallStatus] = useState("");
   const [callActive, setCallActive] = useState(false);
+  const [callKind, setCallKind] = useState("voice");
+  const [incomingCall, setIncomingCall] = useState(null);
   const [replyingTo, setReplyingTo] = useState(null);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const bottomRef = useRef(null);
@@ -72,6 +69,68 @@ export default function ChatWidget() {
   const recorderRef = useRef(null);
   const voiceChunks = useRef([]);
   const callRef = useRef(null);
+  const socketRef = useRef(null);
+  const activeRef = useRef(null);
+  const remoteAudioRef = useRef(null);
+  const remoteVideoRef = useRef(null);
+
+  useEffect(() => { activeRef.current = active; }, [active]);
+
+  useEffect(() => {
+    if (!token || !user || !REALTIME_URL) return undefined;
+    let disposed = false;
+    import("socket.io-client").then(({ io }) => {
+      if (disposed) return;
+      const socket = io(REALTIME_URL, {
+        auth: { token },
+        transports: ["websocket", "polling"],
+        reconnectionAttempts: 8,
+        reconnectionDelay: 2000,
+        timeout: 8000,
+      });
+      socket.on("call:invite", data => {
+        if (!data?.sender_id || callRef.current) {
+          if (data?.sender_id) socket.emit("call:end", { receiver_id: data.sender_id });
+          return;
+        }
+        setActive(current => current || { receiver_id: data.sender_id, name: data.sender_name || "User" });
+        setIncomingCall(data);
+        setCallKind(data.kind === "video" ? "video" : "voice");
+        setCallStatus(`Incoming ${data.kind === "video" ? "video" : "voice"} call. Accept to connect.`);
+      });
+      socket.on("call:answer", async data => {
+        const session = callRef.current;
+        if (!session || String(session.peerUserId) !== String(data?.sender_id) || !data.answer) return;
+        try {
+          await session.peer.setRemoteDescription(data.answer);
+          session.remoteDescriptionSet = true;
+          await flushIce(session);
+          setCallStatus("Call connected.");
+        } catch (_) { setCallStatus("The call could not connect."); }
+      });
+      socket.on("call:ice", async data => {
+        const session = callRef.current;
+        if (!session || String(session.peerUserId) !== String(data?.sender_id) || !data.candidate) return;
+        try {
+          if (session.remoteDescriptionSet) await session.peer.addIceCandidate(data.candidate);
+          else session.pendingIce.push(data.candidate);
+        } catch (_) {}
+      });
+      socket.on("call:end", data => {
+        const session = callRef.current;
+        if (session && (!data?.sender_id || String(session.peerUserId) === String(data.sender_id))) endCall(false);
+        setIncomingCall(null);
+        setCallStatus("");
+      });
+      socket.on("call:busy", () => setCallStatus("The recipient is already on another call."));
+      socketRef.current = socket;
+    }).catch(() => {});
+    return () => {
+      disposed = true;
+      socketRef.current?.disconnect();
+      socketRef.current = null;
+    };
+  }, [token, user]);
 
   useEffect(() => {
     try {
@@ -213,32 +272,116 @@ export default function ChatWidget() {
     finally { setSending(false); }
   }
 
+  function emitCall(event, data) {
+    if (socketRef.current?.connected) socketRef.current.emit(event, data);
+  }
+
+  async function flushIce(session) {
+    if (!session.remoteDescriptionSet) return;
+    const queued = session.pendingIce.splice(0);
+    for (const candidate of queued) {
+      try { await session.peer.addIceCandidate(candidate); } catch (_) {}
+    }
+  }
+
+  function createPeer(kind, peerUserId) {
+    if (typeof RTCPeerConnection === "undefined") return null;
+    const peer = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+    const session = { kind, peer, peerUserId, stream: null, pendingIce: [], remoteDescriptionSet: false };
+    peer.onicecandidate = event => {
+      if (event.candidate) emitCall("call:ice", { receiver_id: peerUserId, candidate: event.candidate });
+    };
+    peer.ontrack = event => {
+      const stream = event.streams?.[0];
+      if (remoteAudioRef.current && stream) remoteAudioRef.current.srcObject = stream;
+      if (remoteVideoRef.current && stream) remoteVideoRef.current.srcObject = stream;
+    };
+    peer.onconnectionstatechange = () => {
+      if (["failed", "disconnected", "closed"].includes(peer.connectionState)) {
+        setCallStatus("Call disconnected.");
+      }
+    };
+    return session;
+  }
+
   async function startCall(kind) {
     if (callRef.current) endCall();
-    const session = createCallSession(kind);
+    if (!active?.receiver_id) return;
+    const session = createPeer(kind, active.receiver_id);
     if (!session || !navigator.mediaDevices?.getUserMedia) {
+      session?.peer?.close();
       setCallStatus("Calling is not supported by this browser.");
       return;
     }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: kind === "video" });
+      session.stream = stream;
+      callRef.current = session;
       stream.getTracks().forEach(track => session.peer.addTrack(track, stream));
       const offer = await session.peer.createOffer();
       await session.peer.setLocalDescription(offer);
-      callRef.current = { ...session, stream };
       setCallActive(true);
-      setCallStatus(`${kind === "video" ? "Video" : "Voice"} call started. Waiting for the recipient to join…`);
+      setCallKind(kind);
+      setCallStatus(`${kind === "video" ? "Video" : "Voice"} call ringing…`);
+      emitCall("call:invite", {
+        receiver_id: active.receiver_id,
+        kind,
+        offer: session.peer.localDescription,
+      });
     } catch (error) {
-      session.close();
+      session.peer.close();
+      callRef.current = null;
       setCallStatus(error.name === "NotAllowedError" ? "Microphone/camera permission was not granted." : "Could not start the call.");
     }
   }
 
-  function endCall() {
+  async function acceptCall() {
+    const invite = incomingCall;
+    if (!invite?.sender_id) return;
+    setIncomingCall(null);
+    const session = createPeer(invite.kind === "video" ? "video" : "voice", invite.sender_id);
+    if (!session || !navigator.mediaDevices?.getUserMedia) {
+      setCallStatus("Calling is not supported by this browser.");
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: invite.kind === "video" });
+      session.stream = stream;
+      callRef.current = session;
+      stream.getTracks().forEach(track => session.peer.addTrack(track, stream));
+      await session.peer.setRemoteDescription(invite.offer);
+      session.remoteDescriptionSet = true;
+      await flushIce(session);
+      const answer = await session.peer.createAnswer();
+      await session.peer.setLocalDescription(answer);
+      setCallKind(session.kind);
+      setCallActive(true);
+      setCallStatus("Call connected.");
+      emitCall("call:answer", { receiver_id: invite.sender_id, answer: session.peer.localDescription });
+    } catch (error) {
+      session.peer.close();
+      callRef.current = null;
+      emitCall("call:end", { receiver_id: invite.sender_id });
+      setCallStatus(error.name === "NotAllowedError" ? "Microphone/camera permission was not granted." : "Could not accept the call.");
+    }
+  }
+
+  function declineCall() {
+    if (incomingCall?.sender_id) emitCall("call:end", { receiver_id: incomingCall.sender_id });
+    setIncomingCall(null);
+    setCallStatus("");
+  }
+
+  function endCall(notify = true) {
+    const session = callRef.current;
+    if (notify && session?.peerUserId) emitCall("call:end", { receiver_id: session.peerUserId });
     callRef.current?.stream?.getTracks().forEach(track => track.stop());
-    callRef.current?.close();
+    callRef.current?.peer?.close();
     callRef.current = null;
+    if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
+    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
     setCallActive(false);
+    setIncomingCall(null);
     setCallStatus("");
   }
 
@@ -294,7 +437,15 @@ export default function ChatWidget() {
              {messages.map((message, index) => <Bubble key={message.id || index} msg={message} myId={user.id || user.user_id} onReply={setReplyingTo} onForward={forwardMessage} onDelete={deleteMessage} />)}
             <div ref={bottomRef} />
           </div>
-          {callStatus && <div style={{ padding: "6px 12px", color: "var(--warning)", fontSize: "0.7rem", borderTop: "1px solid var(--border)" }}>{callStatus}</div>}
+           {callStatus && <div style={{ padding: "6px 12px", color: "var(--warning)", fontSize: "0.7rem", borderTop: "1px solid var(--border)" }}>{callStatus}</div>}
+           {incomingCall && <div style={{ padding: "8px 12px", borderTop: "1px solid var(--border)", display: "flex", gap: "6px", alignItems: "center" }}>
+             <span style={{ flex: 1, fontSize: "0.72rem" }}>Incoming {callKind} call</span>
+             <button type="button" onClick={acceptCall} className="btn btn-primary btn-sm">Accept</button>
+             <button type="button" onClick={declineCall} className="btn btn-outline btn-sm">Decline</button>
+           </div>}
+           {callActive && <div style={{ borderTop: "1px solid var(--border)", padding: "6px 10px" }}>
+             {callKind === "video" ? <video ref={remoteVideoRef} autoPlay playsInline style={{ width: "100%", maxHeight: "170px", borderRadius: "10px", background: "#000" }} /> : <audio ref={remoteAudioRef} autoPlay controls style={{ width: "100%" }} />}
+           </div>}
            {replyingTo && <div style={{ padding: "6px 12px", color: "var(--dz-blue)", fontSize: "0.72rem", borderTop: "1px solid var(--border)" }}>↩ Replying to: {replyingTo.message || replyingTo.attachment_name || "attachment"} <button type="button" onClick={() => setReplyingTo(null)} style={{ border: "none", background: "none", color: "var(--danger)", cursor: "pointer" }}>cancel</button></div>}
            {pendingAttachment && <div style={{ padding: "6px 12px", color: "var(--dz-blue)", fontSize: "0.72rem", borderTop: "1px solid var(--border)" }}>📎 {pendingAttachment.name} <button type="button" onClick={() => setPendingAttachment(null)} style={{ border: "none", background: "none", color: "var(--danger)", cursor: "pointer" }}>remove</button></div>}
            {emojiOpen && <div style={{ padding: "8px 10px", borderTop: "1px solid var(--border)", display: "flex", flexWrap: "wrap", gap: "4px", background: "var(--surface)" }}>

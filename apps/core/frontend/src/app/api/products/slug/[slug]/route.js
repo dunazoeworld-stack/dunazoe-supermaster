@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 import pool from "../../../../../lib/db.js";
+import { getPublicSiteUrl } from "../../../../../lib/public-url.js";
 
 const GATEWAY = process.env.GATEWAY_URL || "http://localhost:3000";
 const STORE_PATH = path.join(process.cwd(), "local_data", "products.json");
@@ -48,6 +49,7 @@ export async function GET(_request, { params }) {
         product_slug: local.product_slug || shortSlug,
         canonical_url: local.canonical_url || `https://dunazoe.com/p/${shortSlug}`,
         shareable_link: local.shareable_link || `https://dunazoe.com/p/${shortSlug}`,
+        share_image_url: local.share_image_url || `${getPublicSiteUrl()}/api/products/share-image/${encodeURIComponent(shortSlug)}`,
         source: "local_store",
       },
     });
