@@ -26,7 +26,7 @@ Verification status: the production frontend build, focused source checks, workf
 
 - Local implementation commit created: `fix: harden product sharing and realtime calling`.
 - The shell askpass credential was rejected by GitHub; the GitHub Replit connection was then authorized for a secure API-based repository update.
-- No credential was printed, committed, or stored in the repository. The implementation source synchronization commit is on GitHub `main` at `0b3096ac296c72091918e9008181d133f28a0cc3`; this handover update follows as a separate documentation commit.
+- No credential was printed, committed, or stored in the repository. The implementation source synchronization commit is on GitHub `main` at `0b3096ac296c72091918e9008181d133f28a0cc3`; the final metadata-title alignment is `6218f1a460a85561ea7a3100674aa894bdc51d2f`; this handover update follows as a separate documentation commit.
 
 ---
 
@@ -120,6 +120,7 @@ Verification status: the production frontend build, focused source checks, workf
 - Added `productShareImageUrl` fallback enrichment across product APIs and a cacheable `/api/products/share-image/:slug` endpoint.
 - Local data-URI product images are converted to crawler-friendly 1200×630 JPEGs, allowing WhatsApp/Facebook previews to show the actual product image instead of `og-default.png`.
 - Fixed native sharing so the product URL is sent in the dedicated share URL field rather than duplicated in the share text; explicit WhatsApp sharing remains a single-link message.
+- Product page and social titles now follow the requested `DUNAZOE - {Product Name}` format.
 - Added authenticated Socket.IO signaling for voice/video call invites, accept/answer, ICE candidates, busy/end-call forwarding, and remote audio/video rendering in the chat widget. Signaling remains ephemeral; no new persistence schema is required.
 - Restored the root workspace `winston` dependency required by the shared logger so the realtime service can boot in the monorepo workflow.
 - Added `npm run test:product-sharing` covering product discovery, ID/slug resolution, server-rendered metadata, and the JPEG image endpoint.
