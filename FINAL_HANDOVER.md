@@ -20,13 +20,13 @@ Required detail documents:
 - `PRODUCT_SYSTEM_UPDATE.md`
 - `CHAT_SYSTEM_UPDATE.md`
 
-Verification status: the production frontend build, focused source checks, workflow startup, live short-link API, short product page, and social metadata checks passed on 2026-09-04. Publishing was intentionally not performed.
+Verification status: the production frontend build, focused source checks, workflow startup, live short-link API, short product page, social metadata checks, recovery checks, and core unit suite passed on 2026-09-05. Publishing was intentionally not performed.
 
 ## Git handover state
 
-- Local implementation commit created: `fix: harden product sharing and realtime calling`.
+- Local implementation commit created: `feat: harden production recovery paths`.
 - The shell askpass credential was rejected by GitHub; the GitHub Replit connection was then authorized for a secure API-based repository update.
-- No credential was printed, committed, or stored in the repository. The implementation source synchronization commit is on GitHub `main` at `0b3096ac296c72091918e9008181d133f28a0cc3`; the final metadata-title alignment is `6218f1a460a85561ea7a3100674aa894bdc51d2f`; this handover update follows as a separate documentation commit.
+- No credential was printed, committed, or stored in the repository. The implementation source synchronization commit is on GitHub `main` at `0b3096ac296c72091918e9008181d133f28a0cc3`; the final metadata-title alignment is `6218f1a460a85561ea7a3100674aa894bdc51d2f`; the production recovery hardening commit is `31a276c1237b83b2419f334965f7ebe48923662c`; this handover update follows as a separate documentation commit.
 
 ---
 
@@ -190,4 +190,50 @@ Use `/deploy` on your browser to initiate the controlled deploy flow.
 
 ---
 
-*Updated: 2026-06-29 — DUNAZOE Deployment AI Control Plane*
+---
+
+## Production Recovery & Enterprise Hardening — 2026-09-05
+
+### Implemented and verified
+
+- Added `docs/ENVIRONMENT_SETUP.md` with the required secret names, compatibility aliases, purpose, secure seed-account flow, and verification commands.
+- Added `npm run seed:test-users`. It requires secure `TEST_*_EMAIL` and `TEST_*_PASSWORD` environment values, hashes passwords with bcrypt, upserts the five requested roles, and never prints passwords.
+- Added the admin-only `/admin/share-tester` dashboard. It checks product resolution, public-page status, canonical URL, OpenGraph tags, Twitter tags, and renders the share image.
+- Fixed cart image rendering so valid `product_image`, remote URLs, arrays, JSON arrays, and local data-URI images are shown; the DUNAZOE logo is used only after an absent or failed image.
+- Added authenticated `/api/realtime/ice` configuration. It returns STUN plus configured TURN servers without bundling TURN credentials into the frontend. The chat WebRTC client consumes the endpoint.
+- Removed hardcoded JWT fallback secrets from shared authentication, the auth service, the realtime service, and token security helpers.
+- Added `npm test`, `npm run build`, and `npm run production-check` root commands.
+- Preserved the gateway-first/local-fallback product behavior and did not rewrite the intentional local product-store state.
+
+### Verification
+
+- `npm test`: product-sharing checks passed; 22 core unit tests passed.
+- `npm run build`: passed; 104 Next.js pages generated.
+- `npm run production-check`: public products API and public product page passed.
+- Frontend and core microservice workflows restarted and remained running.
+- Realtime health returned `status: ok`; unauthenticated ICE configuration correctly returned HTTP 401.
+- Homepage visual review showed only customer-facing Search, Cart, and Account actions.
+- No secrets, credentials, or password values were printed or committed.
+
+### Environment-gated items
+
+- The microservice workflow still reports `DATABASE_URL` as unavailable even though the workspace environment inventory exposes a runtime-managed database key. Database-backed seed, payment, notification, and full end-to-end tests therefore remain blocked until workflow environment injection is corrected.
+- The running payment service reports Paystack and Stripe as unconfigured; no live payment was attempted.
+- `TERMII_API_KEY` is absent, so SMS/WhatsApp notifications remain queued-only. In-app notifications remain active.
+- TURN variables are documented but not configured; calls retain STUN fallback and need TURN credentials for restrictive NATs.
+- Test accounts were not created because creating them requires user-provided development emails/passwords through secure environment storage. No credentials belong in this handover.
+- Full provider tests, Facebook/LinkedIn debugger calls, and production deployment were intentionally not performed.
+
+### Required secure values before staging
+
+Request through Replit Secrets only:
+
+- `CLOUDINARY_API_KEY`
+- `TERMII_API_KEY`
+- `TURN_SERVER_URL`
+- `TURN_USERNAME`
+- `TURN_PASSWORD`
+
+Existing aliases used by the codebase include `SESSION_SECRET` for JWT signing and `PAYSTACK_LSK` for Paystack server access. Do not duplicate them into plaintext files.
+
+*Updated: 2026-09-05 — production recovery and enterprise hardening batch*
