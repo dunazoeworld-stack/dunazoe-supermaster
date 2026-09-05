@@ -6,7 +6,7 @@
 
 const jwt = require("jsonwebtoken");
 
-const JWT_SECRET = process.env.JWT_SECRET || "dunazoe_secret_change_in_production";
+const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || "";
 
 /**
  * Verify JWT token on protected routes.
@@ -20,6 +20,9 @@ function requireAuth(req, res, next) {
     return res.status(401).json({ success: false, error: "No token provided" });
   }
 
+  if (!JWT_SECRET) {
+    return res.status(503).json({ success: false, error: "Authentication is not configured" });
+  }
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user      = decoded;

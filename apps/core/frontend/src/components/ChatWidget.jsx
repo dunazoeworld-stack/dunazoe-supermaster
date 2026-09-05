@@ -62,6 +62,7 @@ export default function ChatWidget() {
   const [callActive, setCallActive] = useState(false);
   const [callKind, setCallKind] = useState("voice");
   const [incomingCall, setIncomingCall] = useState(null);
+  const [iceServers, setIceServers] = useState([{ urls: "stun:stun.l.google.com:19302" }]);
   const [replyingTo, setReplyingTo] = useState(null);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const bottomRef = useRef(null);
@@ -131,6 +132,18 @@ export default function ChatWidget() {
       socketRef.current = null;
     };
   }, [token, user]);
+
+  useEffect(() => {
+    if (!token) return;
+    fetch(`${API}/realtime/ice`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(response => response.ok ? response.json() : null)
+      .then(data => {
+        if (Array.isArray(data?.ice_servers) && data.ice_servers.length) {
+          setIceServers(data.ice_servers);
+        }
+      })
+      .catch(() => {});
+  }, [token]);
 
   useEffect(() => {
     try {
@@ -286,7 +299,7 @@ export default function ChatWidget() {
 
   function createPeer(kind, peerUserId) {
     if (typeof RTCPeerConnection === "undefined") return null;
-    const peer = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+    const peer = new RTCPeerConnection({ iceServers });
     const session = { kind, peer, peerUserId, stream: null, pendingIce: [], remoteDescriptionSet: false };
     peer.onicecandidate = event => {
       if (event.candidate) emitCall("call:ice", { receiver_id: peerUserId, candidate: event.candidate });

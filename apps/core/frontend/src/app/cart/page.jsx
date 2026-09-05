@@ -6,7 +6,7 @@ import Image from "next/image";
 
 /** Parse images field — handles array, JSON string, or plain URL. */
 function resolveImage(item) {
-  let src = item.images || item.image_url || item.image || null;
+  let src = item.product_image || item.productImage || item.images || item.image_url || item.image || null;
   if (src && typeof src === "string") {
     try {
       const parsed = JSON.parse(src);
@@ -15,9 +15,22 @@ function resolveImage(item) {
   } else if (Array.isArray(src)) {
     src = src[0] || null;
   }
-  // Reject data URIs for CSS background-image
-  if (src && src.startsWith("data:")) src = null;
   return src;
+}
+
+function CartImage({ src, alt }) {
+  const [failed, setFailed] = useState(false);
+  if (!src || failed) {
+    return (
+      <Image src="/assets/dunazoe-logo.jpg" alt="" width={32} height={32}
+        style={{ borderRadius: "6px", opacity: 0.3 }} />
+    );
+  }
+  return (
+    <img src={src} alt={alt} width={64} height={64}
+      onError={() => setFailed(true)}
+      style={{ width: "64px", height: "64px", objectFit: "cover", borderRadius: "10px", display: "block" }} />
+  );
 }
 
 export default function CartPage() {
@@ -75,13 +88,10 @@ export default function CartPage() {
                   {/* Product image */}
                   <div style={{
                     width: "64px", height: "64px", borderRadius: "10px",
-                    background: imgSrc ? `url(${imgSrc}) center/cover` : "var(--bg-3)",
+                    background: "var(--bg-3)",
                     flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
                   }}>
-                    {!imgSrc && (
-                      <Image src="/assets/dunazoe-logo.jpg" alt="" width={32} height={32}
-                        style={{ borderRadius: "6px", opacity: 0.3 }} />
-                    )}
+                    <CartImage src={imgSrc} alt={item.product_name || item.name || "Product"} />
                   </div>
 
                   {/* Item details */}

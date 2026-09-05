@@ -1,6 +1,6 @@
 const crypto=require("crypto");const jwt=require("jsonwebtoken");
-const JWT_SECRET=process.env.JWT_SECRET||"dunazoe_secret_change";
-const REFRESH_SECRET=process.env.REFRESH_SECRET||"dunazoe_refresh_change";
+const JWT_SECRET=process.env.JWT_SECRET||process.env.SESSION_SECRET||"";
+const REFRESH_SECRET=process.env.REFRESH_SECRET||process.env.SESSION_SECRET||"";
 let pg_pool=null,redis_client=null;
 function init(pool){pg_pool=pool;try{const{createClient}=require("redis");redis_client=createClient({url:process.env.REDIS_URL||"redis://localhost:6379"});redis_client.on("error",()=>{});redis_client.connect().catch(()=>{});}catch(_){}}
 function getFingerprint(req){return crypto.createHash("sha256").update(`${req.headers["user-agent"]||""}|${req.headers["accept-language"]||""}`).digest("hex").substring(0,16);}

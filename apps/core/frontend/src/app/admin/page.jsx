@@ -303,6 +303,7 @@ export default function SuperuserPage() {
               { href: "/deploy/apis",   icon: "⚡", label: "API Center",        desc: "Manage API keys" },
               { href: "/deploy/features", icon: "🔘", label: "Feature Flags",  desc: "Toggle features on/off" },
               { href: "/deploy/health", icon: "🩺", label: "Health Monitor",   desc: "System health checks" },
+              { href: "/admin/share-tester", icon: "🔗", label: "Share Tester", desc: "Validate product previews" },
             ].map(({ href, icon, label, desc }) => (
               <Link key={href} href={href} className="card" style={{ textDecoration: "none" }}>
                 <div className="card-body" style={{ display: "flex", gap: "14px", alignItems: "center" }}>

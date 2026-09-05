@@ -7,7 +7,12 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "npm run test:product-sharing && npm run test:core-unit",
+    "test:product-sharing": "npm --prefix apps/core/frontend run test:product-sharing",
+    "test:core-unit": "npm --prefix apps/core run test:unit",
+    "build": "NODE_ENV=production npm --prefix apps/core/frontend run build",
+    "production-check": "node scripts/production-check.mjs",
+    "seed:test-users": "node apps/core/scripts/seed-test-users.mjs",
     "start": "node server.js",
     "dev": "cd apps/core/frontend && node ../../../node_modules/.bin/next dev --port 5000"
   },
