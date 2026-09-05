@@ -24,12 +24,13 @@ export async function generateMetadata({ params }) {
   const imageUrl = productShareImageUrl(product, slug);
   const url = `${SITE_URL}/p/${slug}`;
   const description = product.description || `Buy ${product.name} on DUNAZOE. Secure checkout and fast delivery.`;
+  const title = `DUNAZOE - ${product.name || "Product"}`;
   return {
-    title: `${product.name || "Product"} — DUNAZOE`,
+    title,
     description,
     alternates: { canonical: url },
     openGraph: {
-      title: `${product.name || "Product"} | DUNAZOE`,
+      title,
       description,
       url,
       siteName: "DUNAZOE",
@@ -39,7 +40,7 @@ export async function generateMetadata({ params }) {
     },
     twitter: {
       card: "summary_large_image",
-      title: `${product.name || "Product"} | DUNAZOE`,
+      title,
       description,
       images: [imageUrl],
     },
