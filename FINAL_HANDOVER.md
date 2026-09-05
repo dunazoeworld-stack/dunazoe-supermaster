@@ -24,9 +24,9 @@ Verification status: the production frontend build, focused source checks, workf
 
 ## Git handover state
 
-- Local implementation commit created: `fix: complete production sharing and operations hardening`.
+- Local implementation commit created: `fix: harden product sharing and realtime calling`.
 - The shell askpass credential was rejected by GitHub; the GitHub Replit connection was then authorized for a secure API-based repository update.
-- No credential was printed, committed, or stored in the repository. The source synchronization commit is on GitHub `main` at `944a0d9b1d377c693b06833a28ad61b98a358fc4`; the handover update follows as a separate documentation commit.
+- No credential was printed, committed, or stored in the repository. The implementation source synchronization commit is on GitHub `main` at `0b3096ac296c72091918e9008181d133f28a0cc3`; this handover update follows as a separate documentation commit.
 
 ---
 
