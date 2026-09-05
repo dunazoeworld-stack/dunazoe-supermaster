@@ -11,7 +11,7 @@ const { logger } = require("../../shared/logger");
 const app    = express();
 const server = http.createServer(app);
 const PORT   = process.env.PORT || 4021;
-const JWT_SECRET = process.env.JWT_SECRET || "dunazoe_secret_change_in_prod";
+const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || "";
 
 app.use(cors()); app.use(express.json());
 
@@ -37,6 +37,7 @@ async function setupRedis() {
 io.use((socket,next)=>{
   const token=socket.handshake.auth?.token||(socket.handshake.headers?.authorization||"").replace("Bearer ","");
   if (!token) return next(new Error("Auth required"));
+  if (!JWT_SECRET) return next(new Error("Realtime authentication is not configured"));
   try { const d=jwt.verify(token,JWT_SECRET); socket.user_id=d.id; socket.user_role=d.role; next(); }
   catch { next(new Error("Invalid token")); }
 });

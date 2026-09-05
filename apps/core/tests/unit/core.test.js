@@ -4,7 +4,7 @@ process.env.INTERNAL_SECRET = "test_internal_secret_32_characters_ok";
 process.env.DATABASE_URL = "postgresql://test:test@localhost:5432/dunazoe_test";
 process.env.NODE_ENV = "test";
 jest.mock("pg", () => ({ Pool: jest.fn(() => ({ query: jest.fn(), connect: jest.fn(() => ({ query:jest.fn(),release:jest.fn() })) })) }));
-jest.mock("redis", () => ({ createClient: jest.fn(() => ({ connect:jest.fn(),get:jest.fn(()=>null),set:jest.fn(),exists:jest.fn(()=>0),ttl:jest.fn(()=>-1),incr:jest.fn(()=>1),expire:jest.fn(),on:jest.fn(),isReady:true })) }));
+jest.mock("redis", () => ({ createClient: jest.fn(() => ({ connect:jest.fn(),get:jest.fn(()=>null),set:jest.fn(),exists:jest.fn(()=>0),ttl:jest.fn(()=>-1),incr:jest.fn(()=>1),expire:jest.fn(),on:jest.fn(),isReady:true })) }), { virtual: true });
 
 describe("Business Rules", () => {
   test("5%+5% charge model", () => {

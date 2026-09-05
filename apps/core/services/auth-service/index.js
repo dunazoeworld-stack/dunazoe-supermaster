@@ -28,7 +28,7 @@ const pool = new Pool({
     : false,
 });
 
-const JWT_SECRET      = process.env.JWT_SECRET      || "dunazoe_secret_change_in_prod";
+const JWT_SECRET      = process.env.JWT_SECRET      || process.env.SESSION_SECRET || "";
 const SALT_ROUNDS     = parseInt(process.env.BCRYPT_ROUNDS || "12");
 const SESSION_DAYS    = parseInt(process.env.SESSION_DAYS  || "7");
 
