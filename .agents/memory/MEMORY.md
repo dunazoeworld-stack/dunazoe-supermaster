@@ -17,3 +17,4 @@
 - [GitHub push authentication](github-push-auth.md) — HTTPS pushes may need an ephemeral askpass backed by the stored token when the workspace helper fails
 - [GitHub connector push](github-connector-push.md) — if shell Git auth is rejected, sync the final tree through the connected GitHub API without exposing credentials
 - [Next server-side API URLs](next-server-api-urls.md) — relative /api works in browser code but server fetches need an internal absolute origin; public metadata URLs stay on dunazoe.com
+- [Recovery environment constraints](recovery-environment.md) — microservice workflow may not inherit workspace secrets; local product-store state must stay excluded from GitHub sync

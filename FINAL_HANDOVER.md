@@ -218,6 +218,7 @@ Use `/deploy` on your browser to initiate the controlled deploy flow.
 ### Environment-gated items
 
 - The microservice workflow still reports `DATABASE_URL` as unavailable even though the workspace environment inventory exposes a runtime-managed database key. Database-backed seed, payment, notification, and full end-to-end tests therefore remain blocked until workflow environment injection is corrected.
+- `apps/core/frontend/local_data/products.json` was deliberately excluded from the GitHub synchronization. Its local and existing remote blobs differ; this is intentional local-only state and must not be overwritten by a future source sync.
 - The running payment service reports Paystack and Stripe as unconfigured; no live payment was attempted.
 - `TERMII_API_KEY` is absent, so SMS/WhatsApp notifications remain queued-only. In-app notifications remain active.
 - TURN variables are documented but not configured; calls retain STUN fallback and need TURN credentials for restrictive NATs.
