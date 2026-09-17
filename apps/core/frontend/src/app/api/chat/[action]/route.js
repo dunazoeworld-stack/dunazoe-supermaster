@@ -25,13 +25,25 @@ async function ensureChatSchema() {
         ADD COLUMN IF NOT EXISTS attachment_name TEXT,
         ADD COLUMN IF NOT EXISTS attachment_type TEXT,
         ADD COLUMN IF NOT EXISTS reply_to_id INTEGER REFERENCES chat_messages(id) ON DELETE SET NULL,
-        ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP
+         ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP,
+         ADD COLUMN IF NOT EXISTS edited_at TIMESTAMP,
+         ADD COLUMN IF NOT EXISTS reactions JSONB NOT NULL DEFAULT '{}'::jsonb
     `).then(() => pool.query(`
       CREATE TABLE IF NOT EXISTS chat_typing (
         user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
         receiver_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
         expires_at TIMESTAMP NOT NULL
       )
+     `)).then(() => pool.query(`
+       CREATE TABLE IF NOT EXISTS chat_call_history (
+         id SERIAL PRIMARY KEY,
+         caller_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+         receiver_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+         kind VARCHAR(10) NOT NULL CHECK (kind IN ('voice','video')),
+         status VARCHAR(16) NOT NULL CHECK (status IN ('ringing','connected','ended','declined','missed','failed')),
+         created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+         ended_at TIMESTAMP
+       )
     `)).catch(err => {
       schemaReady = null;
       throw err;
@@ -112,20 +124,34 @@ export async function GET(request, { params }) {
     }
     if (action === "messages") {
       const receiver = Number(new URL(request.url).searchParams.get("with"));
+      const search = String(new URL(request.url).searchParams.get("q") || "").trim().slice(0, 100);
       if (!Number.isInteger(receiver)) return NextResponse.json({ success: false, error: "Conversation recipient is required." }, { status: 400 });
       await pool.query("UPDATE chat_messages SET is_read=TRUE WHERE sender_id=$1 AND receiver_id=$2 AND is_read=FALSE", [receiver, user.id]);
       const result = await pool.query(`
            SELECT id, sender_id, receiver_id, order_id, message, msg_type, is_read,
-                attachment_url, attachment_name, attachment_type, reply_to_id, deleted_at, created_at
+                 attachment_url, attachment_name, attachment_type, reply_to_id, deleted_at, edited_at, reactions, created_at
         FROM chat_messages
-        WHERE (sender_id=$1 AND receiver_id=$2) OR (sender_id=$2 AND receiver_id=$1)
+        WHERE ((sender_id=$1 AND receiver_id=$2) OR (sender_id=$2 AND receiver_id=$1))
+          AND ($3 = '' OR message ILIKE '%' || $3 || '%')
         ORDER BY created_at ASC LIMIT 100
-      `, [user.id, receiver]);
+      `, [user.id, receiver, search]);
       const typing = await pool.query(
         "SELECT 1 FROM chat_typing WHERE user_id=$1 AND receiver_id=$2 AND expires_at > NOW()",
         [receiver, user.id]
       );
       return NextResponse.json({ success: true, messages: result.rows, typing: typing.rows.length > 0 });
+    }
+    if (action === "call-history") {
+      const receiver = Number(new URL(request.url).searchParams.get("with"));
+      const result = await pool.query(
+        `SELECT id, caller_id, receiver_id, kind, status, created_at, ended_at
+         FROM chat_call_history
+         WHERE (caller_id=$1 OR receiver_id=$1)
+           AND ($2::int IS NULL OR caller_id=$2 OR receiver_id=$2)
+         ORDER BY created_at DESC LIMIT 50`,
+        [user.id, Number.isInteger(receiver) ? receiver : null]
+      );
+      return NextResponse.json({ success: true, calls: result.rows });
     }
     return NextResponse.json({ success: false, error: "Unknown chat action." }, { status: 404 });
   } catch (error) {
@@ -159,6 +185,45 @@ export async function POST(request, { params }) {
       `, [user.id, receiver]);
       return NextResponse.json({ success: true });
     }
+    if (action === "react") {
+      const messageId = Number(body.message_id);
+      const emoji = String(body.emoji || "").trim();
+      const validEmojis = ["😀", "😂", "😍", "😊", "👍", "🙏", "❤️", "🔥", "🎉", "👏", "😅", "🤝", "💯", "📦", "🚚", "✨"];
+      if (!Number.isInteger(messageId) || !validEmojis.includes(emoji)) {
+        return NextResponse.json({ success: false, error: "A valid message_id and emoji are required." }, { status: 400 });
+      }
+      const existing = await pool.query(
+        "SELECT id, sender_id, receiver_id, reactions FROM chat_messages WHERE id=$1 AND (sender_id=$2 OR receiver_id=$2)",
+        [messageId, user.id]
+      );
+      if (!existing.rows.length) return NextResponse.json({ success: false, error: "Message not found." }, { status: 404 });
+      const reactions = existing.rows[0].reactions && typeof existing.rows[0].reactions === "object" ? existing.rows[0].reactions : {};
+      const users = Array.isArray(reactions[emoji]) ? reactions[emoji].map(Number).filter(Number.isInteger) : [];
+      const nextUsers = users.includes(Number(user.id)) ? users.filter(id => id !== Number(user.id)) : [...users, Number(user.id)];
+      if (nextUsers.length) reactions[emoji] = nextUsers;
+      else delete reactions[emoji];
+      const updated = await pool.query(
+        "UPDATE chat_messages SET reactions=$1::jsonb WHERE id=$2 RETURNING id, reactions",
+        [JSON.stringify(reactions), messageId]
+      );
+      return NextResponse.json({ success: true, message: updated.rows[0] });
+    }
+    if (action === "call-event") {
+      const peerId = Number(body.peer_id);
+      const kind = body.kind === "video" ? "video" : "voice";
+      const allowedStatuses = ["ringing", "connected", "ended", "declined", "missed", "failed"];
+      const status = String(body.status || "");
+      if (!Number.isInteger(peerId) || !allowedStatuses.includes(status)) {
+        return NextResponse.json({ success: false, error: "A valid peer_id and call status are required." }, { status: 400 });
+      }
+      const result = await pool.query(
+        `INSERT INTO chat_call_history(caller_id, receiver_id, kind, status, ended_at)
+         VALUES($1,$2,$3,$4,CASE WHEN $4 IN ('ended','declined','missed','failed') THEN NOW() ELSE NULL END)
+         RETURNING id, caller_id, receiver_id, kind, status, created_at, ended_at`,
+        [user.id, peerId, kind, status]
+      );
+      return NextResponse.json({ success: true, call: result.rows[0] }, { status: 201 });
+    }
     if (action !== "send") return NextResponse.json({ success: false, error: "Unknown chat action." }, { status: 404 });
 
     const receiver = Number(body.receiver_id);
@@ -181,6 +246,35 @@ export async function POST(request, { params }) {
     return NextResponse.json({ success: true, message: result.rows[0] }, { status: 201 });
   } catch (error) {
     console.error("[chat] POST failed:", error.message);
+    return NextResponse.json({ success: false, error: "Chat service is unavailable." }, { status: 503 });
+  }
+}
+
+export async function PATCH(request, { params }) {
+  const user = getUser(request);
+  if (!user) return NextResponse.json({ success: false, error: "Authentication required." }, { status: 401 });
+  const { action } = await params;
+  if (action !== "message") return NextResponse.json({ success: false, error: "Unknown chat action." }, { status: 404 });
+  try {
+    await ensureChatSchema();
+    const body = await request.json().catch(() => ({}));
+    const messageId = Number(body.message_id);
+    const message = String(body.message || "").trim();
+    if (!Number.isInteger(messageId) || !message) {
+      return NextResponse.json({ success: false, error: "message_id and message are required." }, { status: 400 });
+    }
+    if (message.length > 2000) return NextResponse.json({ success: false, error: "Messages must be 2,000 characters or fewer." }, { status: 400 });
+    const result = await pool.query(
+      `UPDATE chat_messages SET message=$1, edited_at=NOW()
+       WHERE id=$2 AND sender_id=$3 AND deleted_at IS NULL
+         AND created_at > NOW() - INTERVAL '15 minutes'
+       RETURNING id, message, edited_at`,
+      [message, messageId, user.id]
+    );
+    if (!result.rows.length) return NextResponse.json({ success: false, error: "Message cannot be edited." }, { status: 404 });
+    return NextResponse.json({ success: true, message: result.rows[0] });
+  } catch (error) {
+    console.error("[chat] edit failed:", error.message);
     return NextResponse.json({ success: false, error: "Chat service is unavailable." }, { status: 503 });
   }
 }

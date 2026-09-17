@@ -192,7 +192,7 @@ Use `/deploy` on your browser to initiate the controlled deploy flow.
 
 ---
 
-## Production Recovery & Enterprise Hardening — 2026-09-05
+## Production Recovery & Enterprise Hardening — 2026-09-17
 
 ### Implemented and verified
 
@@ -201,6 +201,9 @@ Use `/deploy` on your browser to initiate the controlled deploy flow.
 - Added the admin-only `/admin/share-tester` dashboard. It checks product resolution, public-page status, canonical URL, OpenGraph tags, Twitter tags, and renders the share image.
 - Fixed cart image rendering so valid `product_image`, remote URLs, arrays, JSON arrays, and local data-URI images are shown; the DUNAZOE logo is used only after an absent or failed image.
 - Added authenticated `/api/realtime/ice` configuration. It returns STUN plus configured TURN servers without bundling TURN credentials into the frontend. The chat WebRTC client consumes the endpoint.
+- Added a TURN provider abstraction with Coturn HMAC credentials and cloud TURN configuration paths.
+- Completed additive chat contracts for reactions, message search, sender-only 15-minute edits, call history, missed/declined states, camera capture, mute/camera controls, camera switching, and connection-quality status.
+- Added `docs/PRODUCTION_QA_MATRIX.md` with the release-gate status and readiness score.
 - Removed hardcoded JWT fallback secrets from shared authentication, the auth service, the realtime service, and token security helpers.
 - Added `npm test`, `npm run build`, and `npm run production-check` root commands.
 - Preserved the gateway-first/local-fallback product behavior and did not rewrite the intentional local product-store state.
@@ -210,6 +213,7 @@ Use `/deploy` on your browser to initiate the controlled deploy flow.
 - `npm test`: product-sharing checks passed; 22 core unit tests passed.
 - `npm run build`: passed; 104 Next.js pages generated.
 - `npm run production-check`: public products API and public product page passed.
+- Product-sharing regression now derives its expected title from the current catalog instead of assuming a particular first product.
 - Frontend and core microservice workflows restarted and remained running.
 - Realtime health returned `status: ok`; unauthenticated ICE configuration correctly returned HTTP 401.
 - Homepage visual review showed only customer-facing Search, Cart, and Account actions.
@@ -222,19 +226,21 @@ Use `/deploy` on your browser to initiate the controlled deploy flow.
 - The running payment service reports Paystack and Stripe as unconfigured; no live payment was attempted.
 - `TERMII_API_KEY` is absent, so SMS/WhatsApp notifications remain queued-only. In-app notifications remain active.
 - TURN variables are documented but not configured; calls retain STUN fallback and need TURN credentials for restrictive NATs.
+- Chat schema changes are lazy migrations executed on first authenticated chat request; database-backed chat tests remain gated by the unavailable workflow database.
 - Test accounts were not created because creating them requires user-provided development emails/passwords through secure environment storage. No credentials belong in this handover.
 - Full provider tests, Facebook/LinkedIn debugger calls, and production deployment were intentionally not performed.
 
 ### Required secure values before staging
 
-Request through Replit Secrets only:
+Request through Replit Secrets only. The earlier secure request was declined; no values were created or retried:
 
 - `CLOUDINARY_API_KEY`
 - `TERMII_API_KEY`
-- `TURN_SERVER_URL`
-- `TURN_USERNAME`
-- `TURN_PASSWORD`
+- `TURN_SERVER_URL` plus `TURN_USERNAME` and `TURN_SECRET` for preferred Coturn HMAC credentials
+- Or `TURN_SERVER_URL` plus `TURN_USERNAME` and `TURN_PASSWORD` for static credentials when HMAC credentials are unavailable
 
 Existing aliases used by the codebase include `SESSION_SECRET` for JWT signing and `PAYSTACK_LSK` for Paystack server access. Do not duplicate them into plaintext files.
 
-*Updated: 2026-09-05 — production recovery and enterprise hardening batch*
+See `docs/PRODUCTION_QA_MATRIX.md` for the complete release gate and readiness score.
+
+*Updated: 2026-09-17 — production recovery and enterprise hardening batch*

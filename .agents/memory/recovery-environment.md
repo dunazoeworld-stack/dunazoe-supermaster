@@ -14,3 +14,9 @@ The frontend local product-store file is intentional local-only state. A GitHub 
 **Why:** The local catalog is an offline gateway fallback and may contain workspace-specific state that is not part of the source synchronization.
 
 **How to apply:** Use an explicit allowlist for source synchronization and compare the local/remote catalog only for awareness; never include that path in a source commit or connector tree update.
+
+Realtime should launch with Coturn-compatible configuration but keep provider selection outside application call logic. Prefer short-lived HMAC credentials derived from `TURN_SECRET`; static username/password values remain a compatibility path.
+
+**Why:** The approved infrastructure starts with self-hosted Coturn while retaining a migration path to cloud TURN providers. Embedding Coturn-specific credential logic in the chat UI would make that migration a code refactor.
+
+**How to apply:** Configure `TURN_PROVIDER` and server-side provider variables, expose only the authenticated ICE server response, and never return `TURN_SECRET` to the browser.

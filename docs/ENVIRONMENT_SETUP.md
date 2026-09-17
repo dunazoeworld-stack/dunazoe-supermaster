@@ -45,11 +45,19 @@ Without `TERMII_API_KEY`, in-app notifications remain available and outbound SMS
 
 ## WebRTC calls
 
+- `TURN_PROVIDER` — `coturn` by default; use `cloud`/`cloudflare` only when the corresponding cloud TURN URLs and credentials are configured.
 - `TURN_SERVER_URL` or comma-separated `TURN_SERVER_URLS` — TURN endpoint(s), returned only to authenticated call clients.
 - `TURN_USERNAME`, `TURN_PASSWORD` — TURN credentials. Prefer short-lived credentials from a TURN provider in production.
+- `TURN_SECRET` — optional Coturn REST/API shared secret. When set with `TURN_USERNAME`, the server generates one-hour HMAC credentials and does not return the shared secret.
+- `CLOUD_TURN_SERVER_URL` or comma-separated `CLOUD_TURN_SERVER_URLS` — cloud TURN endpoint(s) for the provider abstraction.
+- `CLOUD_TURN_USERNAME`, `CLOUD_TURN_CREDENTIAL` — cloud TURN credential pair.
 - `NEXT_PUBLIC_REALTIME_URL` — browser URL for the authenticated realtime service.
 
-STUN remains available without TURN, but restrictive NATs require a configured TURN service.
+STUN remains available without TURN, but restrictive NATs require a configured TURN service. The application logic is provider-neutral; Coturn is the launch provider and cloud TURN is a configuration-level migration path.
+
+## Chat storage and behavior
+
+Cloudinary is used for configured chat media uploads. Without Cloudinary credentials, development fallback supports data-URI files up to 2 MB and deliberately returns a service-unavailable response for larger files rather than pretending local storage is durable. Chat messages support authenticated search, reactions, 15-minute sender-only edits, soft deletion, typing state, read state, voice notes, and call-history events.
 
 ## Development test accounts
 

@@ -206,6 +206,17 @@ body {
   overflow: visible;
   text-overflow: clip;
 }
+.vendor-product-top-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 4px;
+}
+.vendor-product-top-actions .btn {
+  min-width: 0;
+  min-height: 42px;
+  white-space: normal;
+}
 .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-4); }
 .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-4); }
 .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--sp-4); }
@@ -366,6 +377,15 @@ body {
   main, section { padding-left: var(--sp-3) !important; padding-right: var(--sp-3) !important; }
 }
 @media (max-width: 360px) {
+  .vendor-product-top-actions .btn,
+  .vendor-product-actions .btn {
+    min-height: 38px;
+    font-size: 0.66rem !important;
+    white-space: normal;
+  }
+  .vendor-product-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   /* Extra small screens (Samsung A10, Galaxy A01) */
   .grid-auto { grid-template-columns: 1fr 1fr; }
   .btn-sm { padding: 6px 10px; font-size: 0.78rem; }
