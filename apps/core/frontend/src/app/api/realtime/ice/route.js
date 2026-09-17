@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
+import { getIceServers, hasTurnConfiguration } from "../../../../lib/turnProvider.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || "";
 
@@ -19,24 +20,11 @@ export async function GET(request) {
     return NextResponse.json({ success: false, error: "Authentication required." }, { status: 401 });
   }
 
-  const servers = [{ urls: "stun:stun.l.google.com:19302" }];
-  const configuredTurnUrls = [
-    process.env.TURN_SERVER_URL,
-    ...(process.env.TURN_SERVER_URLS || "").split(","),
-  ].map(value => String(value || "").trim()).filter(Boolean);
-
-  for (const urls of configuredTurnUrls) {
-    servers.push({
-      urls,
-      ...(process.env.TURN_USERNAME ? { username: process.env.TURN_USERNAME } : {}),
-      ...(process.env.TURN_PASSWORD ? { credential: process.env.TURN_PASSWORD } : {}),
-    });
-  }
-
   return NextResponse.json({
     success: true,
-    ice_servers: servers,
-    turn_configured: servers.length > 1,
+    provider: process.env.TURN_PROVIDER || "coturn",
+    ice_servers: getIceServers(),
+    turn_configured: hasTurnConfiguration(),
   }, {
     headers: { "Cache-Control": "private, no-store" },
   });

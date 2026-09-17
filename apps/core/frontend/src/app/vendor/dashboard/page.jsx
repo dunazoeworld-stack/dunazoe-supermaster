@@ -374,7 +374,7 @@ export default function VendorDashboardPage() {
                   {/* Product ID — in card body, never over the image */}
                   <p style={{ fontFamily: "monospace", fontSize: "0.68rem", color: "var(--text-muted)", marginTop: "-2px" }}>{productId}</p>
                   {/* Action buttons row 1: Edit / Delete */}
-                  <div style={{ display: "flex", gap: "6px", marginTop: "4px" }}>
+                  <div className="vendor-product-top-actions">
                     <button onClick={() => openEdit(p)} className="btn btn-outline btn-sm" style={{ flex: 1, fontSize: "0.72rem", padding: "5px" }}>
                       ✏️ Edit
                     </button>

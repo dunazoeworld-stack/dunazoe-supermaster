@@ -11,11 +11,13 @@ function formatTime(value) {
   return value ? new Date(value).toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit" }) : "";
 }
 
-function Bubble({ msg, myId, onReply, onForward, onDelete }) {
+function Bubble({ msg, myId, onReply, onForward, onDelete, onEdit, onReact }) {
   const own = String(msg.sender_id) === String(myId);
   const isImage = msg.attachment_type?.startsWith("image/");
   const isAudio = msg.attachment_type?.startsWith("audio/");
   const deleted = Boolean(msg.deleted_at);
+  const reactions = msg.reactions && typeof msg.reactions === "object" ? msg.reactions : {};
+  const reactionEntries = Object.entries(reactions).filter(([, users]) => Array.isArray(users) && users.length);
   return (
     <div style={{ display: "flex", justifyContent: own ? "flex-end" : "flex-start", marginBottom: "8px" }}>
       <div style={{
@@ -34,10 +36,15 @@ function Bubble({ msg, myId, onReply, onForward, onDelete }) {
         <div style={{ display: "flex", justifyContent: own ? "flex-end" : "flex-start", gap: "4px", marginTop: "4px" }}>
           <button type="button" onClick={() => onReply(msg)} style={{ border: "none", background: "transparent", color: own ? "rgba(255,255,255,0.8)" : "var(--text-muted)", fontSize: "0.62rem", cursor: "pointer" }}>Reply</button>
           <button type="button" onClick={() => onForward(msg)} style={{ border: "none", background: "transparent", color: own ? "rgba(255,255,255,0.8)" : "var(--text-muted)", fontSize: "0.62rem", cursor: "pointer" }}>Forward</button>
+          {!deleted && <button type="button" onClick={() => onReact(msg, "👍")} style={{ border: "none", background: "transparent", color: own ? "rgba(255,255,255,0.8)" : "var(--text-muted)", fontSize: "0.62rem", cursor: "pointer" }}>👍</button>}
+          {own && !deleted && <button type="button" onClick={() => onEdit(msg)} style={{ border: "none", background: "transparent", color: "rgba(255,255,255,0.8)", fontSize: "0.62rem", cursor: "pointer" }}>Edit</button>}
           {own && !deleted && <button type="button" onClick={() => onDelete(msg)} style={{ border: "none", background: "transparent", color: own ? "rgba(255,255,255,0.8)" : "var(--text-muted)", fontSize: "0.62rem", cursor: "pointer" }}>Delete</button>}
         </div>
+        {reactionEntries.length > 0 && <div style={{ display: "flex", gap: "4px", marginTop: "3px", flexWrap: "wrap" }}>
+          {reactionEntries.map(([emoji, users]) => <button key={emoji} type="button" onClick={() => onReact(msg, emoji)} style={{ border: "1px solid rgba(127,127,127,0.35)", borderRadius: "10px", background: "transparent", color: own ? "#fff" : "var(--text)", fontSize: "0.65rem", cursor: "pointer", padding: "1px 5px" }}>{emoji} {users.length}</button>)}
+        </div>}
         <p style={{ fontSize: "0.65rem", color: own ? "rgba(255,255,255,0.72)" : "var(--text-muted)", marginTop: "3px", textAlign: "right" }}>
-          {formatTime(msg.created_at)} {own && <span aria-label={msg.is_read ? "Read" : "Sent"}>{msg.is_read ? "✓✓" : "✓"}</span>}
+          {formatTime(msg.created_at)} {msg.edited_at && <span> · edited</span>} {own && <span aria-label={msg.is_read ? "Read" : "Sent"}>{msg.is_read ? "✓✓" : "✓"}</span>}
         </p>
       </div>
     </div>
@@ -61,10 +68,16 @@ export default function ChatWidget() {
   const [callStatus, setCallStatus] = useState("");
   const [callActive, setCallActive] = useState(false);
   const [callKind, setCallKind] = useState("voice");
+  const [micMuted, setMicMuted] = useState(false);
+  const [cameraEnabled, setCameraEnabled] = useState(true);
+  const [connectionQuality, setConnectionQuality] = useState("Connecting");
   const [incomingCall, setIncomingCall] = useState(null);
   const [iceServers, setIceServers] = useState([{ urls: "stun:stun.l.google.com:19302" }]);
   const [replyingTo, setReplyingTo] = useState(null);
   const [emojiOpen, setEmojiOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [editingMessage, setEditingMessage] = useState(null);
+  const [callHistory, setCallHistory] = useState([]);
   const bottomRef = useRef(null);
   const typingTimer = useRef(null);
   const recorderRef = useRef(null);
@@ -106,7 +119,8 @@ export default function ChatWidget() {
           await session.peer.setRemoteDescription(data.answer);
           session.remoteDescriptionSet = true;
           await flushIce(session);
-          setCallStatus("Call connected.");
+        setConnectionQuality("Good");
+        setCallStatus("Call connected.");
         } catch (_) { setCallStatus("The call could not connect."); }
       });
       socket.on("call:ice", async data => {
@@ -119,7 +133,10 @@ export default function ChatWidget() {
       });
       socket.on("call:end", data => {
         const session = callRef.current;
-        if (session && (!data?.sender_id || String(session.peerUserId) === String(data.sender_id))) endCall(false);
+        if (session && (!data?.sender_id || String(session.peerUserId) === String(data.sender_id))) {
+          recordCallEvent("ended", session.peerUserId, session.kind);
+          endCall(false);
+        }
         setIncomingCall(null);
         setCallStatus("");
       });
@@ -186,18 +203,27 @@ export default function ChatWidget() {
   const loadMsgs = useCallback(async () => {
     if (!token || !active) return;
     try {
-      const response = await fetch(`${API}/chat/messages?with=${encodeURIComponent(active.receiver_id)}`, { headers: { Authorization: `Bearer ${token}` } });
+      const response = await fetch(`${API}/chat/messages?with=${encodeURIComponent(active.receiver_id)}&q=${encodeURIComponent(searchTerm)}`, { headers: { Authorization: `Bearer ${token}` } });
       const data = await response.json();
       if (response.ok) { setMessages(data.messages || []); setTyping(Boolean(data.typing)); }
     } catch (_) {}
-  }, [token, active]);
+  }, [token, active, searchTerm]);
 
   useEffect(() => {
     if (!active) return undefined;
-    setMessages([]); setTyping(false); loadMsgs();
+    setMessages([]); setTyping(false); setSearchTerm(""); setEditingMessage(null); loadMsgs();
     const id = setInterval(loadMsgs, 4000);
     return () => clearInterval(id);
   }, [active, loadMsgs]);
+
+  useEffect(() => {
+    if (!active || !token) return;
+    fetch(`${API}/chat/call-history?with=${encodeURIComponent(active.receiver_id)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).then(response => response.ok ? response.json() : null)
+      .then(data => setCallHistory(Array.isArray(data?.calls) ? data.calls : []))
+      .catch(() => setCallHistory([]));
+  }, [active, token]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -268,6 +294,17 @@ export default function ChatWidget() {
     const attachment = pendingAttachment;
     setInput(""); setPendingAttachment(null); setCallStatus("");
     try {
+      if (editingMessage) {
+        const response = await fetch(`${API}/chat/message`, {
+          method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ message_id: editingMessage.id, message }),
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.error || "Message edit failed");
+        setEditingMessage(null);
+        await loadMsgs();
+        return;
+      }
       const response = await fetch(`${API}/chat/send`, {
         method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -310,6 +347,8 @@ export default function ChatWidget() {
       if (remoteVideoRef.current && stream) remoteVideoRef.current.srcObject = stream;
     };
     peer.onconnectionstatechange = () => {
+      const state = peer.connectionState;
+      setConnectionQuality(state === "connected" ? "Good" : state === "connecting" ? "Connecting" : "Poor");
       if (["failed", "disconnected", "closed"].includes(peer.connectionState)) {
         setCallStatus("Call disconnected.");
       }
@@ -329,6 +368,9 @@ export default function ChatWidget() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: kind === "video" });
       session.stream = stream;
+      setMicMuted(false);
+      setCameraEnabled(kind === "video");
+      setConnectionQuality("Connecting");
       callRef.current = session;
       stream.getTracks().forEach(track => session.peer.addTrack(track, stream));
       const offer = await session.peer.createOffer();
@@ -341,6 +383,7 @@ export default function ChatWidget() {
         kind,
         offer: session.peer.localDescription,
       });
+      recordCallEvent("ringing", active.receiver_id, kind);
     } catch (error) {
       session.peer.close();
       callRef.current = null;
@@ -360,6 +403,9 @@ export default function ChatWidget() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: invite.kind === "video" });
       session.stream = stream;
+      setMicMuted(false);
+      setCameraEnabled(invite.kind === "video");
+      setConnectionQuality("Connecting");
       callRef.current = session;
       stream.getTracks().forEach(track => session.peer.addTrack(track, stream));
       await session.peer.setRemoteDescription(invite.offer);
@@ -371,6 +417,7 @@ export default function ChatWidget() {
       setCallActive(true);
       setCallStatus("Call connected.");
       emitCall("call:answer", { receiver_id: invite.sender_id, answer: session.peer.localDescription });
+      recordCallEvent("connected", invite.sender_id, session.kind);
     } catch (error) {
       session.peer.close();
       callRef.current = null;
@@ -380,20 +427,27 @@ export default function ChatWidget() {
   }
 
   function declineCall() {
-    if (incomingCall?.sender_id) emitCall("call:end", { receiver_id: incomingCall.sender_id });
+    if (incomingCall?.sender_id) {
+      emitCall("call:end", { receiver_id: incomingCall.sender_id });
+      recordCallEvent("declined", incomingCall.sender_id, callKind);
+    }
     setIncomingCall(null);
     setCallStatus("");
   }
 
   function endCall(notify = true) {
     const session = callRef.current;
-    if (notify && session?.peerUserId) emitCall("call:end", { receiver_id: session.peerUserId });
+    if (notify && session?.peerUserId) {
+      emitCall("call:end", { receiver_id: session.peerUserId });
+      recordCallEvent("ended", session.peerUserId, session.kind);
+    }
     callRef.current?.stream?.getTracks().forEach(track => track.stop());
     callRef.current?.peer?.close();
     callRef.current = null;
     if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
     setCallActive(false);
+    setConnectionQuality("Connecting");
     setIncomingCall(null);
     setCallStatus("");
   }
@@ -404,6 +458,64 @@ export default function ChatWidget() {
       if (!response.ok) throw new Error("Could not delete message.");
       await loadMsgs();
     } catch (error) { setCallStatus(error.message); }
+  }
+
+  async function editMessage(message) {
+    setEditingMessage(message);
+    setReplyingTo(null);
+    setInput(message.message || "");
+    setCallStatus("Editing message — changes are allowed for 15 minutes.");
+  }
+
+  async function reactToMessage(message, emoji) {
+    try {
+      const response = await fetch(`${API}/chat/react`, {
+        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ message_id: message.id, emoji }),
+      });
+      if (!response.ok) throw new Error("Could not update reaction.");
+      await loadMsgs();
+    } catch (error) { setCallStatus(error.message); }
+  }
+
+  function recordCallEvent(status, peerId, kind) {
+    if (!peerId || !token) return;
+    fetch(`${API}/chat/call-event`, {
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ peer_id: peerId, kind, status }),
+    }).catch(() => {});
+  }
+
+  function toggleMute() {
+    const stream = callRef.current?.stream;
+    if (!stream) return;
+    const next = !micMuted;
+    stream.getAudioTracks().forEach(track => { track.enabled = !next; });
+    setMicMuted(next);
+  }
+
+  function toggleCamera() {
+    const stream = callRef.current?.stream;
+    if (!stream || callKind !== "video") return;
+    const next = !cameraEnabled;
+    stream.getVideoTracks().forEach(track => { track.enabled = next; });
+    setCameraEnabled(next);
+  }
+
+  async function switchCamera() {
+    const session = callRef.current;
+    if (!session || session.kind !== "video" || !navigator.mediaDevices?.getUserMedia) return;
+    try {
+      const replacement = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      const newTrack = replacement.getVideoTracks()[0];
+      const sender = session.peer.getSenders().find(item => item.track?.kind === "video");
+      if (sender && newTrack) await sender.replaceTrack(newTrack);
+      const oldTrack = session.stream.getVideoTracks()[0];
+      oldTrack?.stop();
+      session.stream.removeTrack(oldTrack);
+      session.stream.addTrack(newTrack);
+      setCameraEnabled(true);
+    } catch (_) { setCallStatus("Could not switch camera."); }
   }
 
   function forwardMessage(message) {
@@ -446,8 +558,18 @@ export default function ChatWidget() {
           ))}
         </div> : <>
           <div style={{ flex: 1, overflowY: "auto", padding: "12px" }}>
-            {messages.length === 0 && <div style={{ textAlign: "center", padding: "32px 12px", color: "var(--text-muted)", fontSize: "0.82rem" }}>Say hello! 👋</div>}
-             {messages.map((message, index) => <Bubble key={message.id || index} msg={message} myId={user.id || user.user_id} onReply={setReplyingTo} onForward={forwardMessage} onDelete={deleteMessage} />)}
+             <input value={searchTerm} onChange={event => setSearchTerm(event.target.value)} placeholder="Search messages…" aria-label="Search messages"
+               style={{ width: "100%", boxSizing: "border-box", padding: "7px 10px", marginBottom: "10px", borderRadius: "10px", background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)", fontSize: "0.75rem", outline: "none" }} />
+             {callHistory.length > 0 && <details style={{ marginBottom: "10px", color: "var(--text-muted)", fontSize: "0.72rem" }}>
+               <summary style={{ cursor: "pointer" }}>Call history ({callHistory.length})</summary>
+               <div style={{ padding: "5px 8px" }}>
+                 {callHistory.slice(0, 5).map(call => <div key={call.id} style={{ display: "flex", justifyContent: "space-between", gap: "8px", padding: "3px 0" }}>
+                   <span>{call.kind === "video" ? "🎥" : "📞"} {call.status}</span><span>{formatTime(call.created_at)}</span>
+                 </div>)}
+               </div>
+             </details>}
+             {messages.length === 0 && <div style={{ textAlign: "center", padding: "32px 12px", color: "var(--text-muted)", fontSize: "0.82rem" }}>{searchTerm ? "No matching messages." : "Say hello! 👋"}</div>}
+              {messages.map((message, index) => <Bubble key={message.id || index} msg={message} myId={user.id || user.user_id} onReply={setReplyingTo} onForward={forwardMessage} onDelete={deleteMessage} onEdit={editMessage} onReact={reactToMessage} />)}
             <div ref={bottomRef} />
           </div>
            {callStatus && <div style={{ padding: "6px 12px", color: "var(--warning)", fontSize: "0.7rem", borderTop: "1px solid var(--border)" }}>{callStatus}</div>}
@@ -458,8 +580,14 @@ export default function ChatWidget() {
            </div>}
            {callActive && <div style={{ borderTop: "1px solid var(--border)", padding: "6px 10px" }}>
              {callKind === "video" ? <video ref={remoteVideoRef} autoPlay playsInline style={{ width: "100%", maxHeight: "170px", borderRadius: "10px", background: "#000" }} /> : <audio ref={remoteAudioRef} autoPlay controls style={{ width: "100%" }} />}
+              <div style={{ display: "flex", alignItems: "center", gap: "5px", marginTop: "6px", flexWrap: "wrap" }}>
+                <button type="button" onClick={toggleMute} className="btn btn-ghost btn-sm">{micMuted ? "🔇 Unmute" : "🎙 Mute"}</button>
+                {callKind === "video" && <><button type="button" onClick={toggleCamera} className="btn btn-ghost btn-sm">{cameraEnabled ? "📷 Camera" : "🚫 Camera"}</button><button type="button" onClick={switchCamera} className="btn btn-ghost btn-sm">🔄 Switch</button></>}
+                <span style={{ marginLeft: "auto", fontSize: "0.65rem", color: connectionQuality === "Good" ? "var(--success)" : "var(--warning)" }}>● {connectionQuality}</span>
+              </div>
            </div>}
-           {replyingTo && <div style={{ padding: "6px 12px", color: "var(--dz-blue)", fontSize: "0.72rem", borderTop: "1px solid var(--border)" }}>↩ Replying to: {replyingTo.message || replyingTo.attachment_name || "attachment"} <button type="button" onClick={() => setReplyingTo(null)} style={{ border: "none", background: "none", color: "var(--danger)", cursor: "pointer" }}>cancel</button></div>}
+            {editingMessage && <div style={{ padding: "6px 12px", color: "var(--dz-blue)", fontSize: "0.72rem", borderTop: "1px solid var(--border)" }}>✏️ Editing message <button type="button" onClick={() => { setEditingMessage(null); setInput(""); setCallStatus(""); }} style={{ border: "none", background: "none", color: "var(--danger)", cursor: "pointer" }}>cancel</button></div>}
+            {!editingMessage && replyingTo && <div style={{ padding: "6px 12px", color: "var(--dz-blue)", fontSize: "0.72rem", borderTop: "1px solid var(--border)" }}>↩ Replying to: {replyingTo.message || replyingTo.attachment_name || "attachment"} <button type="button" onClick={() => setReplyingTo(null)} style={{ border: "none", background: "none", color: "var(--danger)", cursor: "pointer" }}>cancel</button></div>}
            {pendingAttachment && <div style={{ padding: "6px 12px", color: "var(--dz-blue)", fontSize: "0.72rem", borderTop: "1px solid var(--border)" }}>📎 {pendingAttachment.name} <button type="button" onClick={() => setPendingAttachment(null)} style={{ border: "none", background: "none", color: "var(--danger)", cursor: "pointer" }}>remove</button></div>}
            {emojiOpen && <div style={{ padding: "8px 10px", borderTop: "1px solid var(--border)", display: "flex", flexWrap: "wrap", gap: "4px", background: "var(--surface)" }}>
              {EMOJIS.map(emoji => (
@@ -467,10 +595,10 @@ export default function ChatWidget() {
              ))}
            </div>}
           <form onSubmit={send} style={{ padding: "8px 10px", borderTop: "1px solid var(--border)", display: "flex", gap: "6px", alignItems: "center" }}>
-            <label title="Upload image, document, PDF, or video" style={{ cursor: uploading ? "wait" : "pointer", color: "var(--text-secondary)", fontSize: "1.1rem" }}>📎<input type="file" hidden accept="image/*,.pdf,.doc,.docx,video/*" onChange={onFileSelected} disabled={uploading} /></label>
+             <label title="Upload image, document, PDF, or video" style={{ cursor: uploading ? "wait" : "pointer", color: "var(--text-secondary)", fontSize: "1.1rem" }}>📎<input type="file" hidden accept="image/*,.pdf,.doc,.docx,video/*" capture="environment" onChange={onFileSelected} disabled={uploading} /></label>
              <button type="button" title="Choose emoji" onClick={() => setEmojiOpen(value => !value)} style={{ border: "none", background: "none", cursor: "pointer", color: emojiOpen ? "var(--dz-blue)" : "var(--text-secondary)", fontSize: "1.05rem" }}>😊</button>
             <button type="button" title="Record voice note" onClick={toggleRecording} style={{ border: "none", background: "none", cursor: "pointer", color: recording ? "var(--danger)" : "var(--text-secondary)", fontSize: "1.05rem" }}>{recording ? "⏹️" : "🎤"}</button>
-            <input value={input} onChange={event => { setInput(event.target.value); notifyTyping(); }} placeholder={recording ? "Recording voice note…" : "Type a message…"} disabled={sending || recording} style={{ flex: 1, minWidth: 0, padding: "9px 10px", borderRadius: "12px", background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)", fontSize: "0.85rem", outline: "none" }} />
+             <input value={input} onChange={event => { setInput(event.target.value); notifyTyping(); }} placeholder={recording ? "Recording voice note…" : editingMessage ? "Update message…" : "Type a message…"} disabled={sending || recording} style={{ flex: 1, minWidth: 0, padding: "9px 10px", borderRadius: "12px", background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)", fontSize: "0.85rem", outline: "none" }} />
             <button type="submit" disabled={sending || uploading || (!input.trim() && !pendingAttachment)} style={{ padding: "9px 12px", borderRadius: "12px", background: "var(--dz-gradient)", border: "none", cursor: "pointer", color: "#fff" }}>→</button>
           </form>
         </>}
