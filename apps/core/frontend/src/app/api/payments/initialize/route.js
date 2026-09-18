@@ -12,6 +12,16 @@ import { convertNGNtoUSD } from "../../../../lib/currency.js";
 const PAYSTACK_BASE = "https://api.paystack.co";
 const GATEWAY = process.env.GATEWAY_URL || "http://localhost:3000";
 
+async function readProviderJson(response, provider) {
+  const text = await response.text();
+  if (!text.trim()) return {};
+  try {
+    return JSON.parse(text);
+  } catch (_) {
+    throw new Error(`${provider} returned an invalid response (${response.status}).`);
+  }
+}
+
 export async function POST(request) {
   const PAYSTACK_SECRET = process.env.PAYSTACK_LSK || process.env.PAYSTACK_SECRET_KEY || "";
   const STRIPE_SECRET   = process.env.STRIPE_SECRET_KEY || "";
@@ -38,9 +48,10 @@ export async function POST(request) {
     ? crypto.createHash("sha256").update(idempotencyKey).digest("hex")
     : "";
 
-  if (!amount || !email) {
+  const amountNumber = Number(amount);
+  if (!Number.isFinite(amountNumber) || amountNumber <= 0 || !email) {
     return NextResponse.json(
-      { success: false, error: "amount and email are required." },
+      { success: false, error: "A positive amount and email are required." },
       { status: 400 }
     );
   }
@@ -92,7 +103,7 @@ export async function POST(request) {
         signal: ctrl.signal,
       });
       clearTimeout(timer);
-      const d = await res.json();
+      const d = await readProviderJson(res, "Payment gateway");
       if (d.payment_url) return NextResponse.json({ ...d, provider: "stripe" });
     } catch (_) {}
 
@@ -119,7 +130,7 @@ export async function POST(request) {
       body.append("line_items[0][price_data][product_data][name]",    `DUNAZOE Order${order_id ? ` #${order_id}` : ""}`);
       body.append("line_items[0][quantity]",                          "1");
       body.append("mode",                                             "payment");
-      body.append("success_url",                                      `${appUrl}/payment/verify?ref=${successRef}&order=${order_id}`);
+       body.append("success_url",                                      `${appUrl}/payment/verify?provider=stripe&session_id={CHECKOUT_SESSION_ID}&order=${order_id || ""}`);
       body.append("cancel_url",                                       `${appUrl}/cart`);
       if (email) body.append("customer_email",                        email);
       if (order_id) body.append("metadata[order_id]",                 String(order_id));
@@ -207,7 +218,7 @@ export async function POST(request) {
       }),
     });
 
-    const psData = await psRes.json();
+    const psData = await readProviderJson(psRes, "Paystack");
 
     if (!psRes.ok || !psData.status) {
       const msg = psData.message || `Paystack error ${psRes.status}`;

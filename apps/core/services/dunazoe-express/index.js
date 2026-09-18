@@ -397,6 +397,25 @@ app.post("/express/track", requireAuth, asyncHandler(async (req, res) => {
     return res.status(400).json({ success:false, error:"photo_url required to mark delivered" });
   }
 
+  const assignmentResult = await pool.query(
+    "SELECT assignment_id, order_id, agent_user_id, status FROM delivery_assignments WHERE assignment_id=$1",
+    [assignment_id]
+  );
+  const assignment = assignmentResult.rows[0];
+  if (!assignment) return res.status(404).json({ success: false, error: "Delivery assignment not found." });
+  const privileged = ["admin", "super_admin", "superuser", "cto"].includes(req.user?.role);
+  if (!privileged && String(assignment.agent_user_id) !== String(req.user?.id)) {
+    return res.status(403).json({ success: false, code: "LOGISTICS_FORBIDDEN", error: "Only the assigned delivery agent can update tracking." });
+  }
+  const stageOrder = { pending: -1, assigned: 0, accepted: 0, confirmed: 0, picked_up: 1, in_transit: 2, nearby: 3, delivered: 4 };
+  const currentRank = stageOrder[assignment.status] ?? -1;
+  if (stageOrder[stage] < currentRank) {
+    return res.status(409).json({ success: false, code: "TRACKING_REGRESSION", error: "Tracking status cannot move backward.", current_status: assignment.status });
+  }
+  if (stageOrder[stage] === currentRank && assignment.status === stage) {
+    return res.json({ success: true, stage, assignment_id, idempotent: true });
+  }
+
   const updates = {
     status:    stage === "delivered" ? "delivered" : "in_transit",
     gps_lat:   gps_lat || null,

@@ -5,6 +5,29 @@ import pool from "../../../../lib/db.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || "";
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+const ALLOWED_MIME_TYPES = new Set([
+  "image/jpeg", "image/png", "image/webp", "image/gif",
+  "application/pdf", "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "text/plain", "application/zip",
+  "audio/webm", "audio/ogg", "audio/mpeg", "audio/mp4", "audio/wav", "audio/x-wav",
+  "video/mp4", "video/webm", "video/quicktime",
+]);
+const EXTENSION_MIME = {
+  jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp", gif: "image/gif",
+  pdf: "application/pdf", doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  xls: "application/vnd.ms-excel",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ppt: "application/vnd.ms-powerpoint",
+  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  txt: "text/plain", zip: "application/zip", webm: "audio/webm", ogg: "audio/ogg",
+  mp3: "audio/mpeg", m4a: "audio/mp4", wav: "audio/wav", mp4: "video/mp4", mov: "video/quicktime",
+};
 let schemaReady;
 
 function getUser(request) {
@@ -52,19 +75,45 @@ async function ensureChatSchema() {
   return schemaReady;
 }
 
+function uploadError(error, status = 400, details = {}) {
+  return NextResponse.json({ success: false, code: error.code, error: error.message, details }, { status });
+}
+
+function hasSignature(mime, bytes) {
+  const head = Buffer.from(bytes).subarray(0, 12);
+  if (mime === "image/jpeg") return head[0] === 0xff && head[1] === 0xd8 && head[2] === 0xff;
+  if (mime === "image/png") return head.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  if (mime === "image/gif") return head.subarray(0, 4).toString() === "GIF8";
+  if (mime === "image/webp") return head.subarray(0, 4).toString() === "RIFF" && head.subarray(8, 12).toString() === "WEBP";
+  if (mime === "application/pdf") return head.subarray(0, 5).toString() === "%PDF-";
+  if (mime === "application/zip" || mime.includes("officedocument")) return head[0] === 0x50 && head[1] === 0x4b;
+  return true;
+}
+
 async function uploadFile(request) {
   const form = await request.formData();
   const file = form.get("file");
   const kind = form.get("kind") || "file";
   if (!file || typeof file === "string") {
-    return NextResponse.json({ success: false, error: "No file provided." }, { status: 400 });
+    return uploadError({ code: "ATTACHMENT_REQUIRED", message: "No file provided." });
   }
+  if (!file.size) return uploadError({ code: "ATTACHMENT_EMPTY", message: "The selected file is empty." });
   if (file.size > MAX_UPLOAD_BYTES) {
-    return NextResponse.json({ success: false, error: "Chat files must be 10 MB or smaller." }, { status: 413 });
+    return uploadError({ code: "ATTACHMENT_TOO_LARGE", message: "Chat files must be 10 MB or smaller." }, 413, { maxBytes: MAX_UPLOAD_BYTES });
   }
 
   const bytes = await file.arrayBuffer();
-  const mime = file.type || "application/octet-stream";
+  const extension = String(file.name || "").toLowerCase().split(".").pop();
+  const browserMime = String(file.type || "").toLowerCase();
+  const mime = browserMime && browserMime !== "application/octet-stream"
+    ? browserMime
+    : EXTENSION_MIME[extension] || browserMime || "application/octet-stream";
+  if (!ALLOWED_MIME_TYPES.has(mime)) {
+    return uploadError({ code: "ATTACHMENT_UNSUPPORTED", message: "This file type is not supported in chat." }, 415, { mime, extension });
+  }
+  if (!hasSignature(mime, bytes)) {
+    return uploadError({ code: "ATTACHMENT_CORRUPT", message: "The file content does not match its declared type." }, 415, { mime });
+  }
   const cloud = (process.env.CLOUDINARY_CLOUD_NAME || "").trim();
   const key = (process.env.CLOUDINARY_API_KEY || "").trim();
   const secret = (process.env.CLOUDINARY_API_SECRET || "").trim();
@@ -126,6 +175,9 @@ export async function GET(request, { params }) {
       const receiver = Number(new URL(request.url).searchParams.get("with"));
       const search = String(new URL(request.url).searchParams.get("q") || "").trim().slice(0, 100);
       if (!Number.isInteger(receiver)) return NextResponse.json({ success: false, error: "Conversation recipient is required." }, { status: 400 });
+      if (receiver === Number(user.id)) {
+        return NextResponse.json({ success: false, code: "SELF_CHAT_BLOCKED", error: "You cannot open a conversation with yourself." }, { status: 403 });
+      }
       await pool.query("UPDATE chat_messages SET is_read=TRUE WHERE sender_id=$1 AND receiver_id=$2 AND is_read=FALSE", [receiver, user.id]);
       const result = await pool.query(`
            SELECT id, sender_id, receiver_id, order_id, message, msg_type, is_read,
@@ -178,6 +230,9 @@ export async function POST(request, { params }) {
     if (action === "typing") {
       const receiver = Number(body.receiver_id);
       if (!Number.isInteger(receiver)) return NextResponse.json({ success: false, error: "receiver_id is required." }, { status: 400 });
+      if (receiver === Number(user.id)) {
+        return NextResponse.json({ success: false, code: "SELF_CHAT_BLOCKED", error: "You cannot send typing activity to yourself." }, { status: 403 });
+      }
       await pool.query(`
         INSERT INTO chat_typing(user_id, receiver_id, expires_at)
         VALUES($1,$2,NOW() + INTERVAL '3 seconds')
@@ -216,6 +271,9 @@ export async function POST(request, { params }) {
       if (!Number.isInteger(peerId) || !allowedStatuses.includes(status)) {
         return NextResponse.json({ success: false, error: "A valid peer_id and call status are required." }, { status: 400 });
       }
+      if (peerId === Number(user.id)) {
+        return NextResponse.json({ success: false, code: "SELF_CHAT_BLOCKED", error: "Self-calls are not allowed." }, { status: 403 });
+      }
       const result = await pool.query(
         `INSERT INTO chat_call_history(caller_id, receiver_id, kind, status, ended_at)
          VALUES($1,$2,$3,$4,CASE WHEN $4 IN ('ended','declined','missed','failed') THEN NOW() ELSE NULL END)
@@ -232,11 +290,38 @@ export async function POST(request, { params }) {
     if (!Number.isInteger(receiver) || (!message && !attachmentUrl)) {
       return NextResponse.json({ success: false, error: "A recipient and message or attachment are required." }, { status: 400 });
     }
+    if (receiver === Number(user.id)) {
+      return NextResponse.json({ success: false, code: "SELF_CHAT_BLOCKED", error: "You cannot chat with yourself." }, { status: 403 });
+    }
     if (message.length > 2000) return NextResponse.json({ success: false, error: "Messages must be 2,000 characters or fewer." }, { status: 400 });
     const msgType = body.msg_type || (String(body.attachment_type || "").startsWith("image/") ? "image" : "file");
+    if (!["text", "image", "file"].includes(msgType)) {
+      return NextResponse.json({ success: false, code: "INVALID_MESSAGE_TYPE", error: "Unsupported message type." }, { status: 400 });
+    }
+    if (attachmentUrl) {
+      const value = String(attachmentUrl);
+      const isLocalAttachment = value.startsWith("data:") && value.length <= 3 * 1024 * 1024;
+      let isHttpsAttachment = false;
+      try {
+        const parsed = new URL(value);
+        isHttpsAttachment = parsed.protocol === "https:";
+      } catch (_) {}
+      if (!isLocalAttachment && !isHttpsAttachment) {
+        return NextResponse.json({ success: false, code: "INVALID_ATTACHMENT_URL", error: "Attachment storage URL is not allowed." }, { status: 400 });
+      }
+    }
     const replyToId = body.reply_to_id == null ? null : Number(body.reply_to_id);
     if (replyToId !== null && !Number.isInteger(replyToId)) {
       return NextResponse.json({ success: false, error: "reply_to_id must be a message id." }, { status: 400 });
+    }
+    if (replyToId !== null) {
+      const reply = await pool.query(
+        "SELECT id FROM chat_messages WHERE id=$1 AND ((sender_id=$2 AND receiver_id=$3) OR (sender_id=$3 AND receiver_id=$2))",
+        [replyToId, user.id, receiver]
+      );
+      if (!reply.rows.length) {
+        return NextResponse.json({ success: false, code: "INVALID_REPLY_TARGET", error: "The reply target is not in this conversation." }, { status: 400 });
+      }
     }
     const result = await pool.query(`
       INSERT INTO chat_messages(sender_id, receiver_id, message, msg_type, attachment_url, attachment_name, attachment_type, reply_to_id)

@@ -10,6 +10,7 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [user, setUser]         = useState(null);
   const [scrolled, setScrolled] = useState(false);
+  const [activeMode, setActiveMode] = useState("USER");
   const pathname = usePathname();
   const isHome = pathname === "/";
   const menuAllowed = /^\/(dashboard|vendor|admin|ops)(\/|$)/.test(pathname || "");
@@ -17,7 +18,15 @@ export default function Navbar() {
   useEffect(() => {
     try {
       const u = localStorage.getItem("dunazoe_user");
-      if (u) setUser(JSON.parse(u));
+      if (u) {
+        const parsed = JSON.parse(u);
+        setUser(parsed);
+        const allowed = ["vendor", "admin", "superuser", "super_admin"].includes(parsed.role)
+          ? ["USER", parsed.role === "vendor" ? "BUSINESS" : parsed.role === "admin" ? "ADMIN" : "SUPERUSER"]
+          : ["USER"];
+        const storedMode = localStorage.getItem("dunazoe_mode");
+        setActiveMode(allowed.includes(storedMode) ? storedMode : "USER");
+      }
     } catch (_) {}
   }, []);
 
@@ -34,6 +43,27 @@ export default function Navbar() {
     localStorage.removeItem("dunazoe_user");
     window.location.href = "/login";
   }
+
+  function switchMode(nextMode) {
+    setActiveMode(nextMode);
+    localStorage.setItem("dunazoe_mode", nextMode);
+    window.dispatchEvent(new CustomEvent("dz:mode-change", { detail: nextMode }));
+    if (nextMode === "USER") window.location.href = "/dashboard";
+    else if (nextMode === "BUSINESS") window.location.href = "/vendor/dashboard";
+    else window.location.href = "/ops";
+  }
+
+  const elevatedMode = user && ["vendor", "admin", "superuser", "super_admin"].includes(user.role);
+  const modeLinks = activeMode === "USER"
+    ? [
+        { href: "/products", label: "Shop" },
+        { href: "/vendors", label: "Vendors" },
+        { href: "/thrift", label: "Personal Savings" },
+        { href: "/services", label: "Services" },
+      ]
+    : activeMode === "BUSINESS"
+      ? [{ href: "/vendor/dashboard", label: "Dashboard" }, { href: "/vendor/marketing", label: "Marketing" }, { href: "/deliver", label: "Delivery" }]
+      : [{ href: "/ops", label: "Operations" }, { href: "/admin", label: "Administration" }, { href: "/deploy", label: "Deployment" }];
 
   const isActive = (href) => pathname === href;
 
@@ -61,12 +91,7 @@ export default function Navbar() {
 
           {/* Desktop nav */}
           {!isHome && <div style={{ display: "flex", gap: "4px", alignItems: "center" }} className="desktop-nav">
-            {[
-              { href: "/products", label: "Shop" },
-              { href: "/vendors", label: "Vendors" },
-              { href: "/thrift", label: "Personal Savings" },
-              { href: "/services", label: "Services" },
-            ].map(({ href, label }) => (
+            {modeLinks.map(({ href, label }) => (
               <Link key={href} href={href} style={{
                 padding: "7px 14px", borderRadius: "9px", fontSize: "0.85rem", fontWeight: 600,
                 color: isActive(href) ? "var(--dz-blue)" : "var(--text-secondary)",
@@ -82,26 +107,38 @@ export default function Navbar() {
             {!isHome && <span className="navbar-theme-toggle"><ThemeToggle compact /></span>}
 
             {/* Cart */}
-            <Link href="/cart" style={{ position: "relative", display: "flex", alignItems: "center", padding: "7px", borderRadius: "9px", color: "var(--text-secondary)", textDecoration: "none", fontSize: "1.1rem" }} aria-label="Cart">🛒</Link>
+            {activeMode === "USER" && <Link href="/cart" style={{ position: "relative", display: "flex", alignItems: "center", padding: "7px", borderRadius: "9px", color: "var(--text-secondary)", textDecoration: "none", fontSize: "1.1rem" }} aria-label="Cart">🛒</Link>}
 
             {/* Notification Bell (logged in only) */}
             {!isHome && <span className="navbar-notifications"><NotificationBell /></span>}
 
             {user ? (
-              isHome ? (
-                <Link href="/dashboard" className="homepage-account" aria-label="Open account">👤 <span>Account</span></Link>
-              ) : <div className="navbar-user-desktop" style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                <Link href="/dashboard" style={{ padding: "7px 14px", borderRadius: "9px", fontSize: "0.85rem", fontWeight: 600, color: "var(--text-secondary)", textDecoration: "none" }}>
-                  {user.name?.split(" ")[0]}
-                </Link>
-                {/* Vendor shortcut */}
-                {user.role === "vendor" && (
-                  <Link href="/vendor/dashboard" style={{ padding: "7px 10px", borderRadius: "9px", fontSize: "0.78rem", fontWeight: 600, color: "var(--dz-blue)", textDecoration: "none", background: "rgba(0,163,255,0.1)" }}>
-                    🏪
+              <>
+                {elevatedMode && <label style={{ display: "flex", alignItems: "center", gap: "4px", color: "var(--text-muted)", fontSize: "0.68rem" }}>
+                  <span className="sr-only">Account mode</span>
+                  <select value={activeMode} onChange={event => switchMode(event.target.value)} aria-label="Account mode"
+                    style={{ maxWidth: "108px", padding: "5px 6px", borderRadius: "8px", border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", fontSize: "0.7rem" }}>
+                    <option value="USER">User mode</option>
+                    {user.role === "vendor" && <option value="BUSINESS">Business mode</option>}
+                    {user.role === "admin" && <option value="ADMIN">Admin mode</option>}
+                    {["superuser", "super_admin"].includes(user.role) && <option value="SUPERUSER">Superuser mode</option>}
+                  </select>
+                </label>}
+                {isHome ? (
+                  <Link href="/dashboard" className="homepage-account" aria-label="Open account">👤 <span>Account</span></Link>
+                ) : <div className="navbar-user-desktop" style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                  <Link href="/dashboard" style={{ padding: "7px 14px", borderRadius: "9px", fontSize: "0.85rem", fontWeight: 600, color: "var(--text-secondary)", textDecoration: "none" }}>
+                    {user.name?.split(" ")[0]}
                   </Link>
-                )}
-                <button onClick={handleLogout} className="btn btn-ghost btn-sm">Sign Out</button>
-              </div>
+                  {/* Vendor shortcut */}
+                  {user.role === "vendor" && (
+                    <Link href="/vendor/dashboard" style={{ padding: "7px 10px", borderRadius: "9px", fontSize: "0.78rem", fontWeight: 600, color: "var(--dz-blue)", textDecoration: "none", background: "rgba(0,163,255,0.1)" }}>
+                      🏪
+                    </Link>
+                  )}
+                  <button onClick={handleLogout} className="btn btn-ghost btn-sm">Sign Out</button>
+                </div>}
+              </>
             ) : (
               <Link href="/login" className={isHome ? "homepage-account" : "btn btn-primary btn-sm"}>{isHome ? "👤 Account" : "Sign In"}</Link>
             )}
@@ -124,15 +161,18 @@ export default function Navbar() {
           <div className="mobile-menu-drawer">
             {/* Primary nav links */}
             <div className="mobile-menu-section">
-              {[
-                { href: "/products", label: "🛒 Shop" },
-                { href: "/vendors",  label: "🏪 Vendors" },
-                { href: "/thrift",   label: "⬡ Personal Savings" },
-                { href: "/services", label: "⚡ Services" },
-                { href: "/cart",     label: "🛒 Cart" },
-                { href: "/orders",   label: "📦 Orders" },
-                { href: "/profile",  label: "👤 Profile" },
-              ].map(({ href, label }) => (
+              {(activeMode === "USER"
+                ? [
+                    { href: "/products", label: "🛒 Shop" },
+                    { href: "/vendors",  label: "🏪 Vendors" },
+                    { href: "/thrift",   label: "⬡ Personal Savings" },
+                    { href: "/services", label: "⚡ Services" },
+                    { href: "/cart",     label: "🛒 Cart" },
+                    { href: "/orders",   label: "📦 Orders" },
+                    { href: "/profile",  label: "👤 Profile" },
+                  ]
+                : modeLinks.map(({ href, label }) => ({ href, label: `◈ ${label}` }))
+              ).map(({ href, label }) => (
                 <Link key={href} href={href} className={`mobile-menu-link${isActive(href) ? " active" : ""}`}>{label}</Link>
               ))}
             </div>
@@ -140,24 +180,29 @@ export default function Navbar() {
             {/* More section */}
             <p className="mobile-menu-heading">More</p>
             <div className="mobile-menu-section">
-              {[
-                { href: "/wallet",               label: "💳 Wallet" },
-                { href: "/notifications",        label: "🔔 Notifications" },
-                { href: "/messages",             label: "💬 Messages" },
-                ...(user?.role === "vendor" || user?.role === "admin" || user?.role === "superuser"
+              {(activeMode === "USER"
+                ? [
+                    { href: "/wallet",        label: "💳 Wallet" },
+                    { href: "/notifications", label: "🔔 Notifications" },
+                    { href: "/messages",      label: "💬 Messages" },
+                    { href: "/deliver",       label: "🚗 Delivery" },
+                    { href: "/kyc",           label: "🪪 KYC / Verify" },
+                    { href: "/settings",      label: "⚙️ Settings" },
+                    { href: "/support",       label: "🆘 Support" },
+                  ]
+                : activeMode === "BUSINESS"
                   ? [
-                      { href: "/vendor/dashboard", label: "🏪 Vendor Dashboard" },
-                      { href: "/vendor/marketing", label: "📣 Marketing AI" },
+                      { href: "/orders",   label: "📦 Orders" },
+                      { href: "/profile",  label: "👤 Profile" },
+                      { href: "/settings", label: "⚙️ Settings" },
+                      { href: "/support",  label: "🆘 Support" },
                     ]
-                  : []),
-                ...(user?.role === "admin" || user?.role === "superuser"
-                  ? [{ href: "/ops", label: "🔧 Admin Panel" }]
-                  : []),
-                { href: "/deliver",  label: "🚗 Delivery" },
-                { href: "/kyc",      label: "🪪 KYC / Verify" },
-                { href: "/settings", label: "⚙️ Settings" },
-                { href: "/support",  label: "🆘 Support" },
-              ].map(({ href, label }) => (
+                  : [
+                      { href: "/notifications", label: "🔔 Notifications" },
+                      { href: "/settings",      label: "⚙️ Settings" },
+                      { href: "/support",       label: "🆘 Support" },
+                    ]
+              ).map(({ href, label }) => (
                 <Link key={href} href={href} className={`mobile-menu-link${isActive(href) ? " active" : ""}`}>{label}</Link>
               ))}
             </div>

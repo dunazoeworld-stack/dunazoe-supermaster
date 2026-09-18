@@ -61,28 +61,32 @@ export async function POST(request) {
   console.log(`[Webhook/Stripe] ▶ ${type} | id=${obj.id || "—"}`);
 
   try {
-    if (type === "payment_intent.succeeded") {
-      const amountNgn  = (obj.amount || 0) / 100;
+    if (type === "payment_intent.succeeded" || type === "checkout.session.completed" || type === "checkout.session.async_payment_succeeded") {
+      const amountUsd  = (obj.amount_total ?? obj.amount ?? 0) / 100;
       const reference  = obj.id;
       const orderId    = obj.metadata?.order_id || null;
       const vendorId   = obj.metadata?.vendor_id || null;
+      const sourceCurrency = String(obj.metadata?.source_currency || "USD").toUpperCase();
+      const exchangeRate = Number(obj.metadata?.exchange_rate || 0);
+      const amountNgn = sourceCurrency === "NGN" && exchangeRate > 0 ? amountUsd * exchangeRate : null;
 
       if (orderId) {
         const { rowCount } = await pool.query(
           `UPDATE orders
-           SET status='paid', payment_reference=$1, amount_paid=$2, paid_at=NOW(), updated_at=NOW()
+            SET status='paid', payment_reference=$1, amount_paid=COALESCE($2, amount_paid), paid_at=COALESCE(paid_at, NOW()), updated_at=NOW()
            WHERE (id=$3 OR stripe_payment_intent=$1) AND status != 'paid'`,
           [reference, amountNgn, orderId]
         );
         if (rowCount > 0 && vendorId) {
-          const vendorAmount = parseFloat((amountNgn * (1 - SERVICE_CHARGE_PCT)).toFixed(2));
+          const payoutBase = amountNgn ?? amountUsd;
+          const vendorAmount = parseFloat((payoutBase * (1 - SERVICE_CHARGE_PCT)).toFixed(2));
           await pool.query(
             `INSERT INTO vendor_payouts (vendor_id, order_id, gross_ngn, service_charge_ngn, net_ngn, status, scheduled_at)
              VALUES ($1,$2,$3,$4,$5,'pending',NOW()+INTERVAL '24 hours')
              ON CONFLICT DO NOTHING`,
-            [vendorId, orderId, amountNgn, amountNgn * SERVICE_CHARGE_PCT, vendorAmount]
+            [vendorId, orderId, payoutBase, payoutBase * SERVICE_CHARGE_PCT, vendorAmount]
           ).catch(() => {});
-          console.log(`[Webhook/Stripe] ✅ Order ${orderId} paid ₦${amountNgn}, payout scheduled`);
+          console.log(`[Webhook/Stripe] ✅ Order ${orderId} paid ${sourceCurrency === "NGN" ? `₦${payoutBase}` : `$${amountUsd}`}, payout scheduled`);
         }
       }
     }

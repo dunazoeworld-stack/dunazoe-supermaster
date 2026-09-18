@@ -23,9 +23,11 @@ function PaymentVerifyContent() {
   const [error,  setError]  = useState("");
 
   useEffect(() => {
+    const provider = searchParams.get("provider");
+    const sessionId = searchParams.get("session_id");
     const ref = searchParams.get("reference") || searchParams.get("trxref") || searchParams.get("ref");
 
-    if (!ref) {
+    if (!ref && !sessionId) {
       setStatus("failed");
       setError("No payment reference found. If you were charged, contact support.");
       return;
@@ -33,8 +35,11 @@ function PaymentVerifyContent() {
 
     (async () => {
       try {
-        const res = await fetch(`${API}/payments/verify?reference=${encodeURIComponent(ref)}`);
-        const d   = await res.json();
+        const query = sessionId
+          ? `provider=stripe&session_id=${encodeURIComponent(sessionId)}`
+          : `reference=${encodeURIComponent(ref)}`;
+        const res = await fetch(`${API}/payments/verify?${query}`);
+        const d   = await res.json().catch(() => ({}));
         setData(d);
 
         if (d.paid) {
@@ -80,14 +85,16 @@ function PaymentVerifyContent() {
             <div style={{ fontSize: "4rem", marginBottom: "20px" }}>✅</div>
             <h2 style={{ color: "#00C851", marginBottom: "12px" }}>Payment Confirmed!</h2>
             <p style={{ color: "var(--text-secondary)", marginBottom: "8px" }}>
-              ₦{data?.amount_ngn?.toLocaleString("en-NG")} paid successfully.
+              {data?.provider === "stripe"
+                ? `$${Number(data?.amount_usd || 0).toFixed(2)} paid successfully.`
+                : `₦${Number(data?.amount_ngn || 0).toLocaleString("en-NG")} paid successfully.`}
             </p>
             {data?.reference && (
               <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", fontFamily: "monospace", marginBottom: "24px" }}>
                 Ref: {data.reference}
               </p>
             )}
-            <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>Redirecting to your order…</p>
+             <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>Redirecting to your order…</p>
             <div style={{ marginTop: "28px" }}>
               <a href="/orders" style={{ color: "var(--dz-blue)", textDecoration: "none", fontWeight: 600 }}>
                 View all orders →

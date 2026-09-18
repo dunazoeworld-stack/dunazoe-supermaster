@@ -244,3 +244,71 @@ Existing aliases used by the codebase include `SESSION_SECRET` for JWT signing a
 See `docs/PRODUCTION_QA_MATRIX.md` for the complete release gate and readiness score.
 
 *Updated: 2026-09-17 — production recovery and enterprise hardening batch*
+
+---
+
+## CTO Production Fix Continuation — 2026-09-18
+
+### Implemented → tested → result
+
+- Frontend startup JSX failure in the account-mode navigation → restarted the frontend workflow and ran the production build → **PASS**
+- User/business/admin/superuser mode navigation → static mode-path review plus successful 104-route build → **PASS**
+- Mobile mode separation → customer cart and customer-only links are limited to USER MODE; business/admin links are mode-specific → **PASS**
+- Self-purchase and self-chat protection → backend route checks and product-page owner action guards → **PASS by source/build checks; database-backed live mutation test remains environment-gated**
+- Chat attachments → centralized MIME/extension/size/empty/signature validation with structured errors and safe response parsing → **PASS by syntax/build checks; authenticated upload requires workflow database/storage configuration**
+- Voice notes → multiple native audio players with independent browser playback controls, previous-player pause behavior, retryable uploads, and explicit cancellation → **PASS by build/source checks; microphone/upload session requires an authenticated browser test**
+- Product social sharing → crawler-style local HTTP request, canonical metadata, actual product image endpoint → **PASS**
+- Product share image → HTTP 200, `image/jpeg`, 1200×630 for `iphone-14-pro-6408ea0721` → **PASS**
+- Payment input safety and provider response parsing → invalid amount returns HTTP 400; provider responses are status/body parsed before JSON decoding → **PASS**
+- Logistics quote path → inter-state quote request returns HTTP 200 with six ranked quotes → **PASS**
+
+### Tests executed
+
+| Command or smoke test | Result |
+|---|---|
+| `node --check` on changed payment/chat/service routes | PASS |
+| `npm test` | PASS — product-sharing regression plus 22 core unit tests |
+| `npm run production-check` | PASS — HTTP 200 `/api/products` and `/p/dc-solar-bulb-e6b55aef1b` |
+| `cd apps/core/frontend && npm run build` | PASS — 104 Next.js routes generated |
+| Frontend workflow restart and log review | PASS — server ready on port 5000, no browser errors |
+| `GET /api/payment/health` | Expected HTTP 503 — wallet ledger valid, no payment provider available in workflow |
+| Invalid `POST /api/payments/initialize` | PASS — HTTP 400 for non-positive amount |
+| `POST /api/logistics/quote` | PASS — HTTP 200 with six quotes |
+| Crawler request to `/p/iphone-14-pro-6408ea0721` and local share-image fetch | PASS — OG tags present, image HTTP 200, JPEG, 1200×630 |
+| `git diff --check` | PASS before handover commit |
+
+### Payment status
+
+- **Paystack:** code path includes deterministic references, server-side verification, and existing webhook flow; live initialization/verification was not attempted because the running workflow reports `PAYSTACK_LSK` unavailable.
+- **Stripe:** code path includes NGN→USD conversion, Checkout Session idempotency, server-side session verification, signature-checked webhook handling, and refund state handling; live provider verification was not attempted because the running workflow reports `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` unavailable.
+- **Result:** **CODE IMPLEMENTED — EXTERNAL CREDENTIALS REQUIRED FOR LIVE VERIFICATION.** No payment success was faked.
+
+### Logistics status
+
+- **Quote:** verified locally with HTTP 200 and six ranked options.
+- **DUNAZOE Express:** quote and internal delivery paths are wired.
+- **Agent assignment/tracking:** authorization, delivery-photo requirement, monotonic tracking, and ownership checks are implemented; database-backed live flow was not run because `DATABASE_URL` is unavailable to the microservice workflow.
+- **Third-party booking:** Shipbubble credentials/provider-account configuration are not available, so no live courier booking or tracking claim is made.
+- **Result:** **QUOTE IMPLEMENTED → TESTED → PASS; LIVE BOOKING/TRACKING CODE IMPLEMENTED — EXTERNAL DATABASE/PROVIDER CONFIGURATION REQUIRED FOR LIVE VERIFICATION.**
+
+### Remaining environment names
+
+Names only; values must remain in Replit Secrets/workflow configuration:
+
+- `DATABASE_URL`
+- `PAYSTACK_LSK`
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+- `SHIPBUBBLE_API_KEY`
+- `CLOUDINARY_API_KEY`
+
+Existing intentional environment-gated items from the preceding handover remain unchanged, including `TERMII_API_KEY`, TURN configuration, secure test-user values, and the excluded local product catalog state.
+
+### GitHub handover
+
+- Local catalog state in `apps/core/frontend/local_data/products.json` remains intentionally excluded from source synchronization.
+- Verified implementation commit: `118cf506c213b17ea2a0ed1646c4be4123c33f1e`
+- GitHub history reconciliation commit: `3c086b827f33a1638188404d3a00b2ea29374978`
+- Push target: `main`; push status is finalized after remote ref verification.
+
+*Updated: 2026-09-18 — production fix continuation*

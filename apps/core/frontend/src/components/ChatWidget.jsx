@@ -7,11 +7,19 @@ const REALTIME_URL = process.env.NEXT_PUBLIC_REALTIME_URL ||
   (typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:4021` : null);
 const EMOJIS = ["😀", "😂", "😍", "😊", "👍", "🙏", "❤️", "🔥", "🎉", "👏", "😅", "🤝", "💯", "📦", "🚚", "✨"];
 
+async function safeJson(response) {
+  const text = await response.text();
+  if (!text) return {};
+  try { return JSON.parse(text); } catch (_) {
+    return { error: response.ok ? "The server returned an invalid response." : `Request failed (${response.status}).` };
+  }
+}
+
 function formatTime(value) {
   return value ? new Date(value).toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit" }) : "";
 }
 
-function Bubble({ msg, myId, onReply, onForward, onDelete, onEdit, onReact }) {
+function Bubble({ msg, myId, onReply, onForward, onDelete, onEdit, onReact, onAudioReady, onAudioPlay }) {
   const own = String(msg.sender_id) === String(myId);
   const isImage = msg.attachment_type?.startsWith("image/");
   const isAudio = msg.attachment_type?.startsWith("audio/");
@@ -26,7 +34,13 @@ function Bubble({ msg, myId, onReply, onForward, onDelete, onEdit, onReact }) {
         fontSize: "0.85rem", lineHeight: 1.5,
       }}>
         {!deleted && isImage && msg.attachment_url && <img src={msg.attachment_url} alt={msg.attachment_name || "Shared image"} style={{ maxWidth: "220px", maxHeight: "180px", borderRadius: "8px", display: "block", marginBottom: msg.message ? "6px" : 0 }} />}
-        {!deleted && isAudio && msg.attachment_url && <audio controls src={msg.attachment_url} style={{ maxWidth: "220px" }} />}
+        {!deleted && isAudio && msg.attachment_url && <audio
+          controls
+          src={msg.attachment_url}
+          onPlay={() => onAudioPlay?.(msg.id)}
+          ref={node => { if (node) onAudioReady?.(msg.id, node); }}
+          style={{ maxWidth: "220px" }}
+        />}
         {!deleted && !isImage && !isAudio && msg.attachment_url && (
           <a href={msg.attachment_url} target="_blank" rel="noreferrer" style={{ color: own ? "#fff" : "var(--dz-blue)", display: "block", marginBottom: msg.message ? "5px" : 0 }}>
             📎 {msg.attachment_name || "Open attachment"}
@@ -51,8 +65,8 @@ function Bubble({ msg, myId, onReply, onForward, onDelete, onEdit, onReact }) {
   );
 }
 
-export default function ChatWidget() {
-  const [open, setOpen] = useState(false);
+export default function ChatWidget({ embedded = false }) {
+  const [open, setOpen] = useState(embedded);
   const [user, setUser] = useState(null);
   const [token, setToken] = useState("");
   const [convos, setConvos] = useState([]);
@@ -61,8 +75,8 @@ export default function ChatWidget() {
   const [input, setInput] = useState("");
   const [unread, setUnread] = useState(0);
   const [sending, setSending] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [pendingAttachment, setPendingAttachment] = useState(null);
+  const [pendingAttachments, setPendingAttachments] = useState([]);
+  const uploading = pendingAttachments.some(item => item.status === "uploading");
   const [typing, setTyping] = useState(false);
   const [recording, setRecording] = useState(false);
   const [callStatus, setCallStatus] = useState("");
@@ -82,11 +96,13 @@ export default function ChatWidget() {
   const typingTimer = useRef(null);
   const recorderRef = useRef(null);
   const voiceChunks = useRef([]);
+  const discardRecordingRef = useRef(false);
   const callRef = useRef(null);
   const socketRef = useRef(null);
   const activeRef = useRef(null);
   const remoteAudioRef = useRef(null);
   const remoteVideoRef = useRef(null);
+  const audioPlayersRef = useRef(new Map());
 
   useEffect(() => { activeRef.current = active; }, [active]);
 
@@ -153,7 +169,7 @@ export default function ChatWidget() {
   useEffect(() => {
     if (!token) return;
     fetch(`${API}/realtime/ice`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(response => response.ok ? response.json() : null)
+      .then(async response => response.ok ? safeJson(response) : null)
       .then(data => {
         if (Array.isArray(data?.ice_servers) && data.ice_servers.length) {
           setIceServers(data.ice_servers);
@@ -173,18 +189,23 @@ export default function ChatWidget() {
   useEffect(() => {
     function handler(e) {
       if (!e.detail) return;
+      if (String(e.detail.receiver_id) === String(user?.id || user?.user_id)) {
+        setCallStatus("You cannot chat with yourself.");
+        setOpen(true);
+        return;
+      }
       setActive({ receiver_id: e.detail.receiver_id, name: e.detail.name || "Vendor" });
       setOpen(true);
     }
     document.addEventListener("dz:open-chat", handler);
     return () => document.removeEventListener("dz:open-chat", handler);
-  }, []);
+  }, [user]);
 
   const loadConvos = useCallback(async () => {
     if (!token) return;
     try {
       const response = await fetch(`${API}/chat/conversations`, { headers: { Authorization: `Bearer ${token}` } });
-      const data = await response.json();
+      const data = await safeJson(response);
       if (response.ok) {
         const list = data.conversations || [];
         setConvos(list);
@@ -204,7 +225,7 @@ export default function ChatWidget() {
     if (!token || !active) return;
     try {
       const response = await fetch(`${API}/chat/messages?with=${encodeURIComponent(active.receiver_id)}&q=${encodeURIComponent(searchTerm)}`, { headers: { Authorization: `Bearer ${token}` } });
-      const data = await response.json();
+      const data = await safeJson(response);
       if (response.ok) { setMessages(data.messages || []); setTyping(Boolean(data.typing)); }
     } catch (_) {}
   }, [token, active, searchTerm]);
@@ -220,7 +241,7 @@ export default function ChatWidget() {
     if (!active || !token) return;
     fetch(`${API}/chat/call-history?with=${encodeURIComponent(active.receiver_id)}`, {
       headers: { Authorization: `Bearer ${token}` },
-    }).then(response => response.ok ? response.json() : null)
+    }).then(async response => response.ok ? safeJson(response) : null)
       .then(data => setCallHistory(Array.isArray(data?.calls) ? data.calls : []))
       .catch(() => setCallHistory([]));
   }, [active, token]);
@@ -229,25 +250,43 @@ export default function ChatWidget() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  async function uploadAttachment(file, kind = "file") {
+  async function uploadAttachment(file, kind = "file", existingId = null) {
     if (!file || !token) return;
-    setUploading(true);
+    const queueId = existingId || `attachment-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    if (existingId) {
+      setPendingAttachments(items => items.map(item => item.id === existingId
+        ? { ...item, status: "uploading", error: "" } : item));
+    } else {
+      setPendingAttachments(items => [...items, {
+        id: queueId,
+        name: file.name || `${kind}.webm`,
+        type: file.type || "application/octet-stream",
+        kind,
+        file,
+        status: "uploading",
+        error: "",
+      }]);
+    }
     try {
       const form = new FormData();
       form.append("file", file, file.name || `${kind}.webm`);
       form.append("kind", kind);
       const response = await fetch(`${API}/chat/upload`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form });
-      const data = await response.json();
+      const data = await safeJson(response);
       if (!response.ok || !data.success) throw new Error(data.error || "Upload failed");
-      setPendingAttachment({ url: data.url, name: data.name, type: data.type, kind });
+      setPendingAttachments(items => items.map(item => item.id === queueId
+        ? { ...item, url: data.url, name: data.name || item.name, type: data.type || item.type, status: "ready", error: "" }
+        : item));
     } catch (error) {
+      setPendingAttachments(items => items.map(item => item.id === queueId
+        ? { ...item, status: "failed", error: error.message || "Upload failed" } : item));
       setCallStatus(error.message);
-    } finally { setUploading(false); }
+    }
   }
 
   function onFileSelected(event) {
     const file = event.target.files?.[0];
-    if (file) uploadAttachment(file, file.type.startsWith("image/") ? "image" : "file");
+    if (file) uploadAttachment(file, file.type.startsWith("image/") ? "image" : file.type.startsWith("audio/") ? "voice" : "file");
     event.target.value = "";
   }
 
@@ -264,16 +303,30 @@ export default function ChatWidget() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       voiceChunks.current = [];
+      discardRecordingRef.current = false;
       const recorder = new MediaRecorder(stream);
       recorder.ondataavailable = e => e.data.size && voiceChunks.current.push(e.data);
       recorder.onstop = () => {
+        const discarded = discardRecordingRef.current;
+        discardRecordingRef.current = false;
         stream.getTracks().forEach(track => track.stop());
-        uploadAttachment(new File([new Blob(voiceChunks.current, { type: recorder.mimeType || "audio/webm" })], "voice-note.webm", { type: recorder.mimeType || "audio/webm" }), "voice");
+        recorderRef.current = null;
+        if (!discarded) {
+          uploadAttachment(new File([new Blob(voiceChunks.current, { type: recorder.mimeType || "audio/webm" })], "voice-note.webm", { type: recorder.mimeType || "audio/webm" }), "voice");
+        }
       };
       recorderRef.current = recorder;
       recorder.start();
       setRecording(true); setCallStatus("Recording voice note… tap the microphone to stop.");
     } catch (_) { setCallStatus("Microphone permission was not granted."); }
+  }
+
+  function cancelRecording() {
+    if (!recording) return;
+    discardRecordingRef.current = true;
+    recorderRef.current?.stop();
+    setRecording(false);
+    setCallStatus("Voice note cancelled.");
   }
 
   function notifyTyping() {
@@ -289,36 +342,50 @@ export default function ChatWidget() {
   async function send(event) {
     event.preventDefault();
     const message = input.trim();
-    if ((!message && !pendingAttachment) || !active || sending) return;
+    const failed = pendingAttachments.filter(item => item.status === "failed");
+    const attachments = pendingAttachments.filter(item => item.status === "ready");
+    if (failed.length) {
+      setCallStatus("Retry or remove the failed attachment before sending.");
+      return;
+    }
+    if ((!message && !attachments.length) || !active || sending) return;
     setSending(true);
-    const attachment = pendingAttachment;
-    setInput(""); setPendingAttachment(null); setCallStatus("");
+    setInput(""); setPendingAttachments([]); setCallStatus("");
     try {
       if (editingMessage) {
         const response = await fetch(`${API}/chat/message`, {
           method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           body: JSON.stringify({ message_id: editingMessage.id, message }),
         });
-        const data = await response.json();
+        const data = await safeJson(response);
         if (!response.ok || !data.success) throw new Error(data.error || "Message edit failed");
         setEditingMessage(null);
         await loadMsgs();
         return;
       }
-      const response = await fetch(`${API}/chat/send`, {
-        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-           receiver_id: active.receiver_id, message,
-           reply_to_id: replyingTo?.id || null,
-          msg_type: attachment?.kind === "image" ? "image" : attachment?.kind === "voice" ? "file" : attachment ? "file" : "text",
-          attachment_url: attachment?.url, attachment_name: attachment?.name, attachment_type: attachment?.type,
-        }),
-      });
-      const data = await response.json();
-      if (!response.ok || !data.success) throw new Error(data.error || "Message failed");
+      const remaining = [...attachments];
+      const outbound = attachments.length ? attachments : [null];
+      for (const attachment of outbound) {
+        const response = await fetch(`${API}/chat/send`, {
+          method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            receiver_id: active.receiver_id,
+            message: attachment === outbound[0] ? message : "",
+            reply_to_id: replyingTo?.id || null,
+            msg_type: attachment?.kind === "image" ? "image" : attachment ? "file" : "text",
+            attachment_url: attachment?.url, attachment_name: attachment?.name, attachment_type: attachment?.type,
+          }),
+        });
+        const data = await safeJson(response);
+        if (!response.ok || !data.success) throw new Error(data.error || "Message failed");
+        if (attachment) remaining.shift();
+      }
       setReplyingTo(null);
       await loadMsgs(); await loadConvos();
-    } catch (error) { setCallStatus(error.message); }
+    } catch (error) {
+      setPendingAttachments(remaining.map(item => ({ ...item, status: "ready" })));
+      setCallStatus(error.message);
+    }
     finally { setSending(false); }
   }
 
@@ -524,27 +591,38 @@ export default function ChatWidget() {
     setCallStatus("Edit the forwarded message and send it.");
   }
 
+  const handleAudioReady = useCallback((id, node) => {
+    audioPlayersRef.current.set(String(id), node);
+  }, []);
+
+  const handleAudioPlay = useCallback((id) => {
+    for (const [otherId, player] of audioPlayersRef.current.entries()) {
+      if (otherId !== String(id) && !player.paused) player.pause();
+    }
+  }, []);
+
   if (!user) return null;
   return (
     <>
-      <button onClick={() => setOpen(value => !value)} aria-label={open ? "Close chat" : "Open chat"} style={{
+      {!embedded && <button onClick={() => setOpen(value => !value)} aria-label={open ? "Close chat" : "Open chat"} style={{
         position: "fixed", bottom: "24px", right: "24px", zIndex: 9000, width: "56px", height: "56px",
         borderRadius: "50%", background: "var(--dz-gradient)", border: "none", cursor: "pointer", fontSize: "1.3rem",
         boxShadow: "0 4px 24px rgba(0,102,255,0.5)", display: "flex", alignItems: "center", justifyContent: "center",
       }}>
         {open ? "✕" : "💬"}
         {!open && unread > 0 && <span style={{ position: "absolute", top: "2px", right: "2px", minWidth: "18px", height: "18px", borderRadius: "9px", background: "var(--danger)", border: "2px solid var(--bg)", fontSize: "0.6rem", fontWeight: 800, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>{unread > 99 ? "99+" : unread}</span>}
-      </button>
+      </button>}
 
       {open && <div className="chat-widget-panel" style={{
-        position: "fixed", bottom: "92px", right: "24px", zIndex: 9000, width: "360px", height: "540px",
-        borderRadius: "20px", background: "var(--bg)", border: "1px solid var(--border)", display: "flex",
+         position: embedded ? "relative" : "fixed", bottom: embedded ? "auto" : "92px", right: embedded ? "auto" : "24px",
+         zIndex: embedded ? "auto" : 9000, width: embedded ? "100%" : "min(360px, calc(100vw - 24px))",
+         height: embedded ? "calc(100vh - 150px)" : "540px", minHeight: embedded ? "480px" : "0",
+         borderRadius: embedded ? "0" : "20px", background: "var(--bg)", border: "1px solid var(--border)", display: "flex",
         flexDirection: "column", boxShadow: "0 8px 40px rgba(0,0,0,0.6)", overflow: "hidden",
       }}>
         <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: "8px", background: "var(--surface)" }}>
           {active ? <button type="button" onClick={() => setActive(null)} style={{ background: "none", border: "none", color: "var(--text-secondary)", cursor: "pointer", fontSize: "1rem" }}>←</button> : <span style={{ fontSize: "1.1rem" }}>💬</span>}
-          <div style={{ flex: 1 }}><p style={{ fontWeight: 700, fontSize: "0.9rem" }}>{active ? active.name : "Messages"}</p><p style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>{active ? (typing ? "Typing…" : "Secure chat") : "Vendor · Buyer chats"}</p></div>
-           {active && <>{callActive ? <button type="button" onClick={endCall} aria-label="End call" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--danger)", fontSize: "1rem" }}>⏹️</button> : <><button type="button" onClick={() => startCall("voice")} aria-label="Start voice call" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)", fontSize: "1rem" }}>📞</button><button type="button" onClick={() => startCall("video")} aria-label="Start video call" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)", fontSize: "1rem" }}>🎥</button></>}</>}
+           <div style={{ flex: 1 }}><p style={{ fontWeight: 700, fontSize: "0.9rem" }}>{active ? active.name : "Messages"}</p><p style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>{active ? (typing ? "Typing…" : "Secure chat") : "Vendor · Buyer chats"}</p></div>
           {!active && <button type="button" onClick={loadConvos} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}>↻</button>}
         </div>
 
@@ -560,46 +638,32 @@ export default function ChatWidget() {
           <div style={{ flex: 1, overflowY: "auto", padding: "12px" }}>
              <input value={searchTerm} onChange={event => setSearchTerm(event.target.value)} placeholder="Search messages…" aria-label="Search messages"
                style={{ width: "100%", boxSizing: "border-box", padding: "7px 10px", marginBottom: "10px", borderRadius: "10px", background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)", fontSize: "0.75rem", outline: "none" }} />
-             {callHistory.length > 0 && <details style={{ marginBottom: "10px", color: "var(--text-muted)", fontSize: "0.72rem" }}>
-               <summary style={{ cursor: "pointer" }}>Call history ({callHistory.length})</summary>
-               <div style={{ padding: "5px 8px" }}>
-                 {callHistory.slice(0, 5).map(call => <div key={call.id} style={{ display: "flex", justifyContent: "space-between", gap: "8px", padding: "3px 0" }}>
-                   <span>{call.kind === "video" ? "🎥" : "📞"} {call.status}</span><span>{formatTime(call.created_at)}</span>
-                 </div>)}
-               </div>
-             </details>}
              {messages.length === 0 && <div style={{ textAlign: "center", padding: "32px 12px", color: "var(--text-muted)", fontSize: "0.82rem" }}>{searchTerm ? "No matching messages." : "Say hello! 👋"}</div>}
-              {messages.map((message, index) => <Bubble key={message.id || index} msg={message} myId={user.id || user.user_id} onReply={setReplyingTo} onForward={forwardMessage} onDelete={deleteMessage} onEdit={editMessage} onReact={reactToMessage} />)}
+               {messages.map((message, index) => <Bubble key={message.id || index} msg={message} myId={user.id || user.user_id} onReply={setReplyingTo} onForward={forwardMessage} onDelete={deleteMessage} onEdit={editMessage} onReact={reactToMessage} onAudioReady={handleAudioReady} onAudioPlay={handleAudioPlay} />)}
             <div ref={bottomRef} />
           </div>
            {callStatus && <div style={{ padding: "6px 12px", color: "var(--warning)", fontSize: "0.7rem", borderTop: "1px solid var(--border)" }}>{callStatus}</div>}
-           {incomingCall && <div style={{ padding: "8px 12px", borderTop: "1px solid var(--border)", display: "flex", gap: "6px", alignItems: "center" }}>
-             <span style={{ flex: 1, fontSize: "0.72rem" }}>Incoming {callKind} call</span>
-             <button type="button" onClick={acceptCall} className="btn btn-primary btn-sm">Accept</button>
-             <button type="button" onClick={declineCall} className="btn btn-outline btn-sm">Decline</button>
-           </div>}
-           {callActive && <div style={{ borderTop: "1px solid var(--border)", padding: "6px 10px" }}>
-             {callKind === "video" ? <video ref={remoteVideoRef} autoPlay playsInline style={{ width: "100%", maxHeight: "170px", borderRadius: "10px", background: "#000" }} /> : <audio ref={remoteAudioRef} autoPlay controls style={{ width: "100%" }} />}
-              <div style={{ display: "flex", alignItems: "center", gap: "5px", marginTop: "6px", flexWrap: "wrap" }}>
-                <button type="button" onClick={toggleMute} className="btn btn-ghost btn-sm">{micMuted ? "🔇 Unmute" : "🎙 Mute"}</button>
-                {callKind === "video" && <><button type="button" onClick={toggleCamera} className="btn btn-ghost btn-sm">{cameraEnabled ? "📷 Camera" : "🚫 Camera"}</button><button type="button" onClick={switchCamera} className="btn btn-ghost btn-sm">🔄 Switch</button></>}
-                <span style={{ marginLeft: "auto", fontSize: "0.65rem", color: connectionQuality === "Good" ? "var(--success)" : "var(--warning)" }}>● {connectionQuality}</span>
-              </div>
-           </div>}
             {editingMessage && <div style={{ padding: "6px 12px", color: "var(--dz-blue)", fontSize: "0.72rem", borderTop: "1px solid var(--border)" }}>✏️ Editing message <button type="button" onClick={() => { setEditingMessage(null); setInput(""); setCallStatus(""); }} style={{ border: "none", background: "none", color: "var(--danger)", cursor: "pointer" }}>cancel</button></div>}
             {!editingMessage && replyingTo && <div style={{ padding: "6px 12px", color: "var(--dz-blue)", fontSize: "0.72rem", borderTop: "1px solid var(--border)" }}>↩ Replying to: {replyingTo.message || replyingTo.attachment_name || "attachment"} <button type="button" onClick={() => setReplyingTo(null)} style={{ border: "none", background: "none", color: "var(--danger)", cursor: "pointer" }}>cancel</button></div>}
-           {pendingAttachment && <div style={{ padding: "6px 12px", color: "var(--dz-blue)", fontSize: "0.72rem", borderTop: "1px solid var(--border)" }}>📎 {pendingAttachment.name} <button type="button" onClick={() => setPendingAttachment(null)} style={{ border: "none", background: "none", color: "var(--danger)", cursor: "pointer" }}>remove</button></div>}
+            {pendingAttachments.length > 0 && <div style={{ padding: "6px 12px", borderTop: "1px solid var(--border)", maxHeight: "92px", overflowY: "auto" }}>
+              {pendingAttachments.map(item => <div key={item.id} style={{ display: "flex", alignItems: "center", gap: "6px", color: item.status === "failed" ? "var(--danger)" : "var(--dz-blue)", fontSize: "0.72rem", marginBottom: "3px" }}>
+                <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>📎 {item.name} {item.status === "uploading" ? "· uploading…" : item.status === "failed" ? `· ${item.error}` : "· ready"}</span>
+                {item.status === "failed" && item.file && <button type="button" onClick={() => uploadAttachment(item.file, item.kind, item.id)} style={{ border: "none", background: "none", color: "var(--dz-blue)", cursor: "pointer" }}>retry</button>}
+                <button type="button" onClick={() => setPendingAttachments(items => items.filter(entry => entry.id !== item.id))} style={{ border: "none", background: "none", color: "var(--danger)", cursor: "pointer" }}>remove</button>
+              </div>)}
+            </div>}
            {emojiOpen && <div style={{ padding: "8px 10px", borderTop: "1px solid var(--border)", display: "flex", flexWrap: "wrap", gap: "4px", background: "var(--surface)" }}>
              {EMOJIS.map(emoji => (
                <button key={emoji} type="button" onClick={() => setInput(value => `${value}${emoji}`)} aria-label={`Add ${emoji}`} style={{ border: "none", background: "transparent", cursor: "pointer", fontSize: "1.15rem", padding: "3px" }}>{emoji}</button>
              ))}
            </div>}
           <form onSubmit={send} style={{ padding: "8px 10px", borderTop: "1px solid var(--border)", display: "flex", gap: "6px", alignItems: "center" }}>
-             <label title="Upload image, document, PDF, or video" style={{ cursor: uploading ? "wait" : "pointer", color: "var(--text-secondary)", fontSize: "1.1rem" }}>📎<input type="file" hidden accept="image/*,.pdf,.doc,.docx,video/*" capture="environment" onChange={onFileSelected} disabled={uploading} /></label>
+              <label title="Upload image, document, PDF, audio, or video" style={{ cursor: uploading ? "wait" : "pointer", color: "var(--text-secondary)", fontSize: "1.1rem" }}>📎<input type="file" hidden accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,audio/*,video/*" capture="environment" onChange={onFileSelected} disabled={uploading} /></label>
              <button type="button" title="Choose emoji" onClick={() => setEmojiOpen(value => !value)} style={{ border: "none", background: "none", cursor: "pointer", color: emojiOpen ? "var(--dz-blue)" : "var(--text-secondary)", fontSize: "1.05rem" }}>😊</button>
+             {recording && <button type="button" title="Cancel voice note" onClick={cancelRecording} style={{ border: "none", background: "none", cursor: "pointer", color: "var(--danger)", fontSize: "1rem" }}>✕</button>}
             <button type="button" title="Record voice note" onClick={toggleRecording} style={{ border: "none", background: "none", cursor: "pointer", color: recording ? "var(--danger)" : "var(--text-secondary)", fontSize: "1.05rem" }}>{recording ? "⏹️" : "🎤"}</button>
              <input value={input} onChange={event => { setInput(event.target.value); notifyTyping(); }} placeholder={recording ? "Recording voice note…" : editingMessage ? "Update message…" : "Type a message…"} disabled={sending || recording} style={{ flex: 1, minWidth: 0, padding: "9px 10px", borderRadius: "12px", background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)", fontSize: "0.85rem", outline: "none" }} />
-            <button type="submit" disabled={sending || uploading || (!input.trim() && !pendingAttachment)} style={{ padding: "9px 12px", borderRadius: "12px", background: "var(--dz-gradient)", border: "none", cursor: "pointer", color: "#fff" }}>→</button>
+             <button type="submit" disabled={sending || uploading || (!input.trim() && !pendingAttachments.some(item => item.status === "ready"))} style={{ padding: "9px 12px", borderRadius: "12px", background: "var(--dz-gradient)", border: "none", cursor: "pointer", color: "#fff" }}>→</button>
           </form>
         </>}
       </div>}

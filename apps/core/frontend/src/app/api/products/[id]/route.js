@@ -90,9 +90,13 @@ export async function GET(request, { params }) {
       const isNumeric = /^\d+$/.test(id);
       if (isNumeric) {
         const r = await pool.query(
-          `SELECT p.*, v.business_name, v.city, v.state
+          `SELECT p.*, v.business_name, v.city, v.state,
+                  v.user_id AS vendor_user_id,
+                  u.whatsapp AS vendor_whatsapp,
+                  u.phone AS vendor_phone
            FROM products p
            LEFT JOIN vendors v ON p.vendor_id = v.id
+           LEFT JOIN users u ON v.user_id = u.id
            WHERE p.id = $1 AND p.is_active = TRUE`,
           [parseInt(id, 10)]
         );

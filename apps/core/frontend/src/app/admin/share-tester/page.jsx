@@ -30,11 +30,26 @@ export default function ProductShareTesterPage() {
     setResult(null);
     try {
       const productResponse = await fetch(`${API}/products/slug/${encodeURIComponent(cleanSlug)}`);
-      const product = await productResponse.json().catch(() => ({}));
+        const productEnvelope = await productResponse.json().catch(() => ({}));
+        const product = productEnvelope.product || productEnvelope;
       const pageResponse = await fetch(`/p/${encodeURIComponent(cleanSlug)}`, { cache: "no-store" });
       const html = await pageResponse.text();
       const parsed = new DOMParser().parseFromString(html, "text/html");
       const shareImage = product.share_image_url || product.shareImageUrl || "";
+        let imageStatus = null;
+        let imageContentType = "";
+        let imageDimensions = "";
+        if (shareImage) {
+          const imageResponse = await fetch(shareImage, { method: "HEAD", cache: "no-store" }).catch(() => null);
+          imageStatus = imageResponse?.status || 0;
+          imageContentType = imageResponse?.headers.get("content-type") || "";
+          await new Promise(resolve => {
+            const image = new Image();
+            image.onload = () => { imageDimensions = `${image.naturalWidth}×${image.naturalHeight}`; resolve(); };
+            image.onerror = resolve;
+            image.src = shareImage;
+          });
+        }
       setResult({
         product,
         pageStatus: pageResponse.status,
@@ -50,6 +65,10 @@ export default function ProductShareTesterPage() {
         twitterTitle: readMeta(parsed, 'meta[name="twitter:title"]'),
         twitterImage: readMeta(parsed, 'meta[name="twitter:image"]'),
         shareImage,
+          imageStatus,
+          imageContentType,
+          imageDimensions,
+          jsonLd: parsed.querySelectorAll('script[type="application/ld+json"]').length > 0,
       });
     } catch (inspectionError) {
       setError(inspectionError.message || "Could not inspect this product.");
@@ -83,6 +102,7 @@ export default function ProductShareTesterPage() {
             <p>Product API: <strong>{result.productStatus}</strong> · Public page: <strong>{result.pageStatus}</strong></p>
             <p>Canonical: <a href={result.canonical} target="_blank" rel="noreferrer">{result.canonical || "missing"}</a></p>
             <p>Title: <strong>{result.title || "missing"}</strong></p>
+            <p>JSON-LD: <strong>{result.jsonLd ? "detected" : "missing"}</strong> · Image: <strong>{result.imageStatus || "not checked"}</strong> {result.imageContentType || ""} {result.imageDimensions || ""}</p>
           </div></div>
           <div className="card"><div className="card-body">
             <h3 style={{ marginBottom: "10px" }}>OpenGraph and Twitter</h3>

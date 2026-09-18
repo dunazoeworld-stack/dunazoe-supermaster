@@ -26,6 +26,13 @@ function SpecRow({ icon, label, value }) {
 
 const TYPE_ICONS = { physical: "📦", digital: "💾", service: "🛠️" };
 
+function normalizeWhatsApp(value) {
+  let digits = String(value || "").replace(/[^\d]/g, "");
+  if (digits.startsWith("00")) digits = digits.slice(2);
+  if (digits.startsWith("0")) digits = `234${digits.slice(1)}`;
+  return /^\d{10,15}$/.test(digits) ? digits : "";
+}
+
 export default function ProductDetailPage({ params, resolvedId }) {
   const routeParams = params ? use(params) : null;
   const id = resolvedId || routeParams?.id;
@@ -61,11 +68,11 @@ export default function ProductDetailPage({ params, resolvedId }) {
   function isProductOwner(product) {
     if (!currentUser || !product) return false;
     const VENDOR_ROLES = ["vendor", "direct_vendor", "copytrader_vendor", "hybrid_vendor",
-      "admin", "super_admin", "head_of_store", "cto", "ceo"];
+      "admin", "super_admin", "superuser", "head_of_store", "cto", "ceo"];
     const isVendorRole = VENDOR_ROLES.some(r => (currentUser.role || "").toLowerCase().includes(r.split("_")[0]));
     if (!isVendorRole) return false;
     if (product.vendor_id && currentUser.vendor_id && String(product.vendor_id) === String(currentUser.vendor_id)) return true;
-    if (product.vendor_id && currentUser.id && String(product.vendor_id) === String(currentUser.id)) return true;
+    if (product.vendor_user_id && currentUser.id && String(product.vendor_user_id) === String(currentUser.id)) return true;
     return false;
   }
 
@@ -164,6 +171,9 @@ export default function ProductDetailPage({ params, resolvedId }) {
         const productId = `PRD-${String(product.id || id).padStart(5, "0")}`;
         const vendorIdDisplay = product.vendor_id ? `VND-${String(product.vendor_id).padStart(5, "0")}` : null;
         const isOwner = isProductOwner(product);
+        const vendorWhatsApp = normalizeWhatsApp(product.vendor_whatsapp || product.whatsapp || product.vendor_phone);
+        const vendorUserId = product.vendor_user_id || product.vendor_id;
+        const whatsappMessage = `Hello, I am interested in ${product.name} on DUNAZOE. ${getShareLink(product)}`;
 
         return (
           <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
@@ -325,13 +335,13 @@ export default function ProductDetailPage({ params, resolvedId }) {
                   >
                     📤 Share
                   </button>
-                   <a
-                     href={`https://wa.me/?text=${encodeURIComponent(`Check out '${product.name}' on DUNAZOE: ${getShareLink(product)}`)}`}
+                  {!isOwner && vendorWhatsApp && <a
+                    href={`https://wa.me/${vendorWhatsApp}?text=${encodeURIComponent(whatsappMessage)}`}
                     target="_blank" rel="noopener noreferrer"
                     className="btn btn-ghost btn-sm"
                   >
-                    📱 WhatsApp
-                  </a>
+                    📱 WhatsApp vendor
+                  </a>}
                   {/* Copy Link — visible to all users */}
                   <button
                     onClick={() => handleCopyLink(product)}
@@ -344,7 +354,7 @@ export default function ProductDetailPage({ params, resolvedId }) {
                   {!isOwner && (
                     <button
                       onClick={() => {
-                        window.__dunazoe_open_chat = { receiver_id: product.vendor_id, name: product.business_name || product.vendor_name || "Vendor" };
+                        window.__dunazoe_open_chat = { receiver_id: vendorUserId, name: product.business_name || product.vendor_name || "Vendor" };
                         document.dispatchEvent(new CustomEvent("dz:open-chat", { detail: window.__dunazoe_open_chat }));
                       }}
                       className="btn btn-ghost btn-sm"

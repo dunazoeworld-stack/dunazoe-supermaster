@@ -21,6 +21,7 @@ const cors     = require("cors");
 const axios    = require("axios");
 const { Pool } = require("pg");
 const { requireAuth, requireRole } = require("../../shared/middleware/auth");
+const { requireInternalAuth } = require("../../shared/internalAuth");
 const { errorHandler, asyncHandler } = require("../../shared/middleware/errorHandler");
 
 const app  = express();
@@ -98,11 +99,28 @@ app.post("/logistics/agents/register", requireAuth, asyncHandler(async (req, res
  * Called by Order Service after order is created
  * Body: { order_id, vendor_lat, vendor_lng, vendor_city, dest_city, state }
  */
-app.post("/logistics/assign", asyncHandler(async (req, res) => {
+function requireAuthOrInternal(req, res, next) {
+  if (req.headers["x-signature"]) return requireInternalAuth(req, res, next);
+  return requireAuth(req, res, next);
+}
+
+app.post("/logistics/assign", requireAuthOrInternal, asyncHandler(async (req, res) => {
   const { order_id, vendor_lat, vendor_lng, vendor_city, dest_city, state } = req.body;
 
   if (!order_id) {
     return res.status(400).json({ success: false, error: "order_id required" });
+  }
+  if (!req.internalCaller) {
+    const owner = await pool.query(
+      `SELECT o.customer_id, v.user_id AS vendor_user_id
+       FROM orders o LEFT JOIN vendors v ON o.vendor_id=v.id WHERE o.id=$1`,
+      [order_id]
+    );
+    const row = owner.rows[0];
+    const privileged = ["admin", "super_admin", "superuser", "cto"].includes(req.user?.role);
+    if (!row || (!privileged && String(req.user?.id) !== String(row.customer_id) && String(req.user?.id) !== String(row.vendor_user_id))) {
+      return res.status(row ? 403 : 404).json({ success: false, code: row ? "LOGISTICS_FORBIDDEN" : "ORDER_NOT_FOUND", error: row ? "You cannot assign logistics for this order." : "Order not found." });
+    }
   }
 
   const src = (vendor_city||"").toLowerCase().trim();
@@ -219,6 +237,29 @@ app.post("/logistics/track", requireAuth, asyncHandler(async (req, res) => {
       success: false,
       error:   "Delivery photo proof required to mark as delivered. Upload photo first.",
     });
+  }
+
+  const assignment = await pool.query(
+    `SELECT da.*, da.agent_id AS assignment_agent_id, da.status AS current_status,
+            a.user_id AS assigned_user_id
+     FROM delivery_assignments da
+     LEFT JOIN delivery_agents a ON a.id=da.agent_id
+     WHERE da.order_id=$1 ORDER BY da.id DESC LIMIT 1`,
+    [order_id]
+  ).catch(() => ({ rows: [] }));
+  const current = assignment.rows[0];
+  const privileged = ["admin", "super_admin", "superuser", "cto"].includes(req.user?.role);
+  if (!current) return res.status(404).json({ success: false, error: "Delivery assignment not found." });
+  if (!privileged && String(current.assigned_user_id) !== String(req.user?.id)) {
+    return res.status(403).json({ success: false, code: "LOGISTICS_FORBIDDEN", error: "Only the assigned delivery agent can update tracking." });
+  }
+  if (!privileged && agent_id && String(agent_id) !== String(current.assignment_agent_id)) {
+    return res.status(403).json({ success: false, code: "LOGISTICS_FORBIDDEN", error: "This assignment belongs to another delivery agent." });
+  }
+  const stageOrder = { confirmed: 0, picked_up: 1, in_transit: 2, nearby: 3, delivered: 4 };
+  const currentRank = stageOrder[current.current_status] ?? -1;
+  if (stageOrder[stage] < currentRank) {
+    return res.status(409).json({ success: false, code: "TRACKING_REGRESSION", error: "Tracking status cannot move backward.", current_status: current.current_status });
   }
 
   // Update assignment

@@ -121,6 +121,20 @@ app.post("/orders", requireAuth, asyncHandler(async (req, res) => {
   const unit_price = parseFloat(product.price);
   const amount     = parseFloat((unit_price * parseInt(quantity)).toFixed(2));
 
+  // A privileged account may preview its own products in USER MODE, but can
+  // never create a self-order or trigger payment/escrow/payout for itself.
+  const vendorOwner = await pool.query(
+    "SELECT user_id FROM vendors WHERE id=$1 LIMIT 1",
+    [vendor_id]
+  ).catch(() => ({ rows: [] }));
+  if (vendorOwner.rows[0] && String(vendorOwner.rows[0].user_id) === String(customer_id)) {
+    return res.status(403).json({
+      success: false,
+      code: "SELF_PURCHASE_BLOCKED",
+      error: "You cannot purchase your own product.",
+    });
+  }
+
   // ── STEP 1: FRAUD CHECK ───────────────────────────────────
   let fraud_result;
   try {
