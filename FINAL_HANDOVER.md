@@ -310,5 +310,7 @@ Existing intentional environment-gated items from the preceding handover remain 
 - Verified implementation commit: `118cf506c213b17ea2a0ed1646c4be4123c33f1e`
 - GitHub history reconciliation commit: `3c086b827f33a1638188404d3a00b2ea29374978`
 - Push target: `main`; push status is finalized after remote ref verification.
+- Published GitHub source-tree commit: `8b7ca837ecf7e01aa76c99650af88b2f7b949793`
+- GitHub `main` ref verified at that SHA through the connected GitHub API; 15 intended files updated and local catalog state preserved.
 
 *Updated: 2026-09-18 — production fix continuation*
