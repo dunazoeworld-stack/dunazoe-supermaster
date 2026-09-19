@@ -347,5 +347,6 @@ Existing intentional environment-gated items from the preceding handover remain 
 - Live payment, database-backed order creation, authenticated Product Vision provider calls, and provider-backed logistics booking were not fabricated or marked successful. The microservice workflow still reports that `DATABASE_URL` is not injected.
 - The Superuser operator command has not been run because it requires user-provided `SUPERUSER_BOOTSTRAP_TOKEN` / `SUPERUSER_INITIAL_PASSWORD` or reset equivalents through secure environment storage. Values must never be placed in chat, source files, or shell history.
 - `apps/core/frontend/local_data/products.json` remains intentionally local-only and was not modified or synchronized.
+- GitHub `main` was updated through the connected GitHub API at `0a84068dda66653212f6fa913e31c46e48412434`; the local-only catalog was excluded from that synchronization.
 
 *Updated: 2026-09-19 — P0/P1 hardening continuation*
