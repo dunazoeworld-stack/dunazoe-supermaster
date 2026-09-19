@@ -37,6 +37,7 @@ function RegisterContent() {
       if (!data.success) { setError(data.error || "Registration failed. Try again."); return; }
       localStorage.setItem("dunazoe_token", data.token);
       localStorage.setItem("dunazoe_user", JSON.stringify({ user_id: data.user_id, name: data.name, email: data.email, role: data.role }));
+      localStorage.setItem("dunazoe_mode", role === "vendor" ? "BUSINESS" : "USER");
       router.push(role === "vendor" ? "/vendor/dashboard" : "/dashboard");
     } catch (_) {
       setError("Connection failed. Check your internet and try again.");

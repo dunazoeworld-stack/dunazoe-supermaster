@@ -5,6 +5,18 @@ import PageShell from "../../components/PageShell";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "/api";
 
+async function fetchJsonWithTimeout(url, options, timeoutMs = 8000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    const data = await response.json().catch(() => ({}));
+    return { response, data };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export default function DashboardPage() {
   const [user,      setUser]      = useState(null);
   const [walletBal, setWalletBal] = useState(null);
@@ -14,12 +26,14 @@ export default function DashboardPage() {
   useEffect(() => {
     try { const u = JSON.parse(localStorage.getItem("dunazoe_user") || "{}"); setUser(u); } catch (_) {}
     const token = localStorage.getItem("dunazoe_token");
-    Promise.allSettled([
-      fetch(`${API}/wallet/balance`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
-      fetch(`${API}/orders?limit=5`,  { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+    Promise.all([
+      fetchJsonWithTimeout(`${API}/wallet/balance`, { headers: { Authorization: `Bearer ${token}` } }),
+      fetchJsonWithTimeout(`${API}/orders?limit=5`,  { headers: { Authorization: `Bearer ${token}` } }),
     ]).then(([bal, ord]) => {
-      if (bal.status === "fulfilled" && bal.value?.success) setWalletBal(bal.value.balance ?? null);
-      if (ord.status === "fulfilled" && ord.value?.orders) setOrders(ord.value.orders.slice(0, 5));
+      if (bal.data?.success) setWalletBal(bal.data.balance ?? null);
+      if (ord.data?.orders) setOrders(ord.data.orders.slice(0, 5));
+    }).catch(() => {
+      // The page remains usable when an optional dashboard request times out.
     }).finally(() => setLoading(false));
   }, []);
 

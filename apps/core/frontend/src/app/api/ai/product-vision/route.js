@@ -3,7 +3,86 @@ import jwt from "jsonwebtoken";
 
 const RATE_WINDOW_MS = 60 * 1000;
 const RATE_LIMIT = 10;
+const PROVIDER_TIMEOUT_MS = 15_000;
 const requestLog = new Map();
+
+const VALID_CATEGORIES = new Set([
+  "fashion", "phones_&_tablets", "food_&_groceries", "beauty_&_health",
+  "electronics", "solar_energy", "baby_&_kids", "agriculture",
+  "home_&_living", "sports", "books_&_education",
+]);
+
+function fetchWithTimeout(url, options = {}, timeoutMs = PROVIDER_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal })
+    .finally(() => clearTimeout(timer));
+}
+
+async function responseJson(response) {
+  const text = await response.text();
+  try { return JSON.parse(text); }
+  catch { throw new Error("AI provider returned invalid JSON"); }
+}
+
+// Extract one JSON object without accepting a greedy multi-object match.
+function parseObject(text) {
+  const source = String(text || "").replace(/```(?:json)?/gi, "").replace(/```/g, "").trim();
+  const start = source.indexOf("{");
+  if (start < 0) throw new Error("No JSON object in AI response");
+  let depth = 0;
+  let quoted = false;
+  let escaped = false;
+  for (let i = start; i < source.length; i++) {
+    const ch = source[i];
+    if (quoted) {
+      if (escaped) escaped = false;
+      else if (ch === "\\") escaped = true;
+      else if (ch === '"') quoted = false;
+      continue;
+    }
+    if (ch === '"') quoted = true;
+    else if (ch === "{") depth++;
+    else if (ch === "}" && --depth === 0) {
+      try { return JSON.parse(source.slice(start, i + 1)); }
+      catch { throw new Error("AI provider returned malformed JSON"); }
+    }
+  }
+  throw new Error("Incomplete JSON object in AI response");
+}
+
+function validateResult(value, source) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("AI response is not an object");
+  }
+  if (typeof value.name !== "string" || value.name.trim().length < 2) {
+    throw new Error("AI response is missing a valid product name");
+  }
+  if (typeof value.description !== "string" || value.description.trim().length < 10) {
+    throw new Error("AI response is missing a valid description");
+  }
+  if (!VALID_CATEGORIES.has(value.category)) {
+    throw new Error("AI response contains an invalid product category");
+  }
+  const confidence = Number(value.confidence);
+  if (!Number.isFinite(confidence) || confidence < 0 || confidence > 1) {
+    throw new Error("AI response contains an invalid confidence score");
+  }
+  for (const field of ["colors", "sizes", "features", "tags"]) {
+    if (value[field] !== undefined && !Array.isArray(value[field])) {
+      throw new Error(`AI response field ${field} must be an array`);
+    }
+  }
+  return {
+    ...value,
+    confidence,
+    colors: Array.isArray(value.colors) ? value.colors.filter(v => typeof v === "string").slice(0, 20) : [],
+    sizes: Array.isArray(value.sizes) ? value.sizes.filter(v => typeof v === "string").slice(0, 20) : [],
+    features: Array.isArray(value.features) ? value.features.filter(v => typeof v === "string").slice(0, 10) : [],
+    tags: Array.isArray(value.tags) ? value.tags.filter(v => typeof v === "string").slice(0, 20) : [],
+    source,
+  };
+}
 
 function authorizeAndRateLimit(req) {
   const token = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "").trim();
@@ -71,7 +150,7 @@ Weight estimation guide (use these ranges):
 
 // ── OpenAI GPT-4o Vision ──────────────────────────────────────────────────────
 async function callOpenAI(imageUrl, apiKey) {
-  const r = await fetch("https://api.openai.com/v1/chat/completions", {
+  const r = await fetchWithTimeout("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
@@ -84,16 +163,14 @@ async function callOpenAI(imageUrl, apiKey) {
     }),
   });
   if (!r.ok) throw new Error(`OpenAI ${r.status}: ${(await r.text()).slice(0, 200)}`);
-  const d = await r.json();
+  const d = await responseJson(r);
   const text = d.choices?.[0]?.message?.content || "";
-  const m = text.match(/\{[\s\S]*\}/);
-  if (!m) throw new Error("No JSON in OpenAI response");
-  return { ...JSON.parse(m[0]), source: "openai_gpt4o" };
+  return validateResult(parseObject(text), "openai_gpt4o");
 }
 
 // ── xAI Grok-2 Vision ────────────────────────────────────────────────────────
 async function callXAI(imageUrl, apiKey) {
-  const r = await fetch("https://api.x.ai/v1/chat/completions", {
+  const r = await fetchWithTimeout("https://api.x.ai/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
@@ -106,11 +183,9 @@ async function callXAI(imageUrl, apiKey) {
     }),
   });
   if (!r.ok) throw new Error(`xAI ${r.status}: ${(await r.text()).slice(0, 200)}`);
-  const d = await r.json();
+  const d = await responseJson(r);
   const text = d.choices?.[0]?.message?.content || "";
-  const m = text.match(/\{[\s\S]*\}/);
-  if (!m) throw new Error("No JSON in xAI response");
-  return { ...JSON.parse(m[0]), source: "xai_grok2" };
+  return validateResult(parseObject(text), "xai_grok2");
 }
 
 // ── Google Gemini 1.5 Flash Vision ───────────────────────────────────────────
@@ -123,14 +198,14 @@ async function callGemini(imageUrl, apiKey) {
     mime = match[1];
     b64 = match[2];
   } else {
-    const imgRes = await fetch(imageUrl, { signal: AbortSignal.timeout(10_000) });
+    const imgRes = await fetchWithTimeout(imageUrl, {}, 10_000);
     if (!imgRes.ok) throw new Error(`Image fetch failed: ${imgRes.status}`);
     const imgBuf = await imgRes.arrayBuffer();
     b64 = Buffer.from(imgBuf).toString("base64");
     mime = (imgRes.headers.get("content-type") || "image/jpeg").split(";")[0];
   }
 
-  const r = await fetch(
+  const r = await fetchWithTimeout(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
     {
       method: "POST",
@@ -145,11 +220,9 @@ async function callGemini(imageUrl, apiKey) {
     },
   );
   if (!r.ok) throw new Error(`Gemini ${r.status}: ${(await r.text()).slice(0, 200)}`);
-  const d    = await r.json();
+  const d    = await responseJson(r);
   const text = d.candidates?.[0]?.content?.parts?.[0]?.text || "";
-  const m    = text.match(/\{[\s\S]*\}/);
-  if (!m) throw new Error("No JSON in Gemini response");
-  return { ...JSON.parse(m[0]), source: "gemini_flash" };
+  return validateResult(parseObject(text), "gemini_flash");
 }
 
 // ── Self-Dependent Heuristic Fallback ─────────────────────────────────────────

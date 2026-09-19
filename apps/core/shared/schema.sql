@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS users (
   whatsapp      TEXT,
   password_hash TEXT NOT NULL,
   role          TEXT DEFAULT 'customer'
-                CHECK (role IN ('customer','vendor','agent','admin','coordinator')),
+                 CHECK (role IN ('customer','vendor','agent','admin','super_admin','coordinator')),
   state         TEXT,
   city          TEXT,
   town          TEXT,

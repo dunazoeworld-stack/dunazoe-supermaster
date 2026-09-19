@@ -340,7 +340,7 @@ export default function CheckoutPage() {
         window.location.href = data.payment_url;
         return;
       }
-      if (data.success) {
+      if (data.success && data.order_id) {
         localStorage.setItem("dunazoe_cart", "[]");
         // Determine redirect — if order_id looks like a real DB ID use it, else go to orders list
         const orderId = data.order_id;
@@ -362,10 +362,10 @@ export default function CheckoutPage() {
           window.location.href = "/orders";
         }
       } else {
-        setError(data.error || "Checkout failed. Please try again.");
+        setError(data.error || "Checkout was not completed. No payment was taken.");
       }
     } catch (_) {
-      setError("Checkout failed. Please check your connection and try again.");
+      setError("Checkout could not be confirmed. No payment was taken; please retry.");
     } finally {
       setLoading(false);
     }

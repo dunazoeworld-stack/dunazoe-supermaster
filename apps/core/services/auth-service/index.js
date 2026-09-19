@@ -71,7 +71,8 @@ app.post("/register", asyncHandler(async (req, res) => {
 
   // Hash password
   const password_hash = await bcrypt.hash(password, SALT_ROUNDS);
-  const safe_role     = ["customer","vendor","agent","admin","coordinator"].includes(role)
+  // Elevated roles are provisioned by operators, never by the public form.
+  const safe_role     = ["customer","vendor"].includes(role)
     ? role : "customer";
 
   // Insert user

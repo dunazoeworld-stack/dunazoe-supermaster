@@ -314,3 +314,38 @@ Existing intentional environment-gated items from the preceding handover remain 
 - GitHub `main` ref verified at that SHA through the connected GitHub API; 15 intended files updated and local catalog state preserved.
 
 *Updated: 2026-09-18 — production fix continuation*
+
+---
+
+## P0/P1 Production Hardening Continuation — 2026-09-19
+
+### Implemented
+
+- Account mode is now synchronized from the authenticated role and current route. Mode changes use client navigation instead of a full document reload; login and registration persist the correct initial mode.
+- The responsive navbar avoids the 320–430px overlap by allowing the action row to shrink and moving the wide mode selector out of the narrowest layout.
+- Customer and vendor dashboard requests have bounded timeouts, so an unavailable gateway cannot leave the loading state indefinite.
+- Product Vision AI provider calls now have bounded timeouts, safe response parsing, balanced JSON extraction, and schema validation for category, confidence, and array fields.
+- Low-confidence Product Vision results remain visible as suggestions but no longer auto-fill listing fields. Vendors must review them before publishing.
+- Public registration can create only customer or vendor accounts. Elevated roles are provisioned outside the public registration endpoint.
+- Checkout no longer turns an order-service timeout into a local success, and direct Paystack initialization requires a real database order ID. Failed or locally unavailable orders return an explicit no-charge failure state.
+- Added `apps/core/scripts/bootstrap-superuser.mjs` and the `superuser:bootstrap` command. Bootstrap and reset require deployment-supplied, single-use operator tokens and passwords; reset invalidates prior sessions. No password or token is stored in source control.
+- Added `super_admin` to the canonical users role constraint; the operator script also upgrades the role constraint transactionally for an existing database.
+
+### Verification
+
+| Command or smoke test | Result |
+|---|---|
+| Changed JavaScript `node --check` plus package JSON parse | PASS |
+| `git diff --check` | PASS |
+| `npm test` | PASS — product-sharing regression plus 22 core unit tests |
+| `npm run production-check` | PASS — public products API and product page |
+| `cd apps/core/frontend && npm run build` | PASS — 104 Next.js routes generated |
+| Frontend workflow restart and preview screenshot | PASS — server ready; no browser application errors |
+
+### Environment-gated items
+
+- Live payment, database-backed order creation, authenticated Product Vision provider calls, and provider-backed logistics booking were not fabricated or marked successful. The microservice workflow still reports that `DATABASE_URL` is not injected.
+- The Superuser operator command has not been run because it requires user-provided `SUPERUSER_BOOTSTRAP_TOKEN` / `SUPERUSER_INITIAL_PASSWORD` or reset equivalents through secure environment storage. Values must never be placed in chat, source files, or shell history.
+- `apps/core/frontend/local_data/products.json` remains intentionally local-only and was not modified or synchronized.
+
+*Updated: 2026-09-19 — P0/P1 hardening continuation*

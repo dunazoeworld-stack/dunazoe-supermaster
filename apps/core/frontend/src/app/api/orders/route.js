@@ -40,7 +40,7 @@ async function initPaystackDirect({ email, amountNgn, orderId, items, callbackUr
   const reference = `DZ-${orderId || "ORD"}-${Date.now()}`;
   const appUrl    = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL || "";
 
-  const res = await fetch(`${PAYSTACK_BASE}/transaction/initialize`, {
+  const res = await timedFetch(`${PAYSTACK_BASE}/transaction/initialize`, {
     method: "POST",
     headers: { Authorization: `Bearer ${SECRET}`, "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -119,15 +119,15 @@ export async function POST(req) {
         }, 10000);
         const d = await res.json();
         return { ...d, product_id: productId };
-      } catch (_) {
-        return { success: true, order_id: null, local: true, product_id: productId };
+      } catch (err) {
+        return { success: false, error: err?.name === "AbortError" ? "Order service timed out" : "Order service unavailable", product_id: productId };
       }
     });
 
   const results     = await Promise.all(orderPromises);
   const firstPayUrl = results.find(r => r.payment_url)?.payment_url || null;
   const allLocal    = results.every(r => r.local);
-  const anySuccess  = results.some(r => r.success || r.order_id);
+  const anySuccess  = results.some(r => r.success && r.order_id);
   const primaryId   = results.find(r => r.order_id && !r.local)?.order_id
                    || results.find(r => r.order_id)?.order_id
                    || null;
@@ -153,7 +153,9 @@ export async function POST(req) {
     if (!email) email = "buyer@dunazoe.com"; // last resort — Paystack requires email
 
     const chargeAmount = total > 0 ? total : subtotal + shipping_fee + service_charge;
-    if (chargeAmount > 0) {
+    // Never initialize a payment against a synthetic order reference. A
+    // successful gateway payment must always be tied to a real database order.
+    if (chargeAmount > 0 && primaryId) {
       try {
         const ps = await initPaystackDirect({
           email,
@@ -176,11 +178,10 @@ export async function POST(req) {
   }
 
   // ── 4. Wallet payment or all-local — no payment URL needed ───────────────
-  if (payment_method === "wallet" || allLocal) {
+  if (payment_method === "wallet" && primaryId) {
     return NextResponse.json({
       success:  true,
-      order_id: primaryId || `ORD-${Date.now()}`,
-      local:    allLocal,
+      order_id: primaryId,
       message:  allLocal
         ? "Order queued — confirm once services reconnect."
         : "Order placed. Wallet payment processing.",
@@ -189,7 +190,7 @@ export async function POST(req) {
   }
 
   // ── 5. Any gateway success without payment URL ────────────────────────────
-  if (anySuccess) {
+  if (anySuccess && primaryId) {
     return NextResponse.json({
       success:  true,
       order_id: primaryId,
@@ -198,12 +199,15 @@ export async function POST(req) {
   }
 
   // ── 6. All failed ─────────────────────────────────────────────────────────
-  const errors = results.filter(r => !r.success && !r.local).map(r => r.error || "Order failed");
+  const errors = results.filter(r => !r.success).map(r => r.error || "Order failed");
   return NextResponse.json({
     success: false,
-    error:   errors[0] || "Checkout failed. Please try again.",
+    queued:  allLocal,
+    error:   allLocal
+      ? "Order service is unavailable. Your cart was not submitted or charged; please retry when services reconnect."
+      : (errors[0] || "Checkout failed. Please try again."),
     errors,
-  }, { status: 400 });
+  }, { status: allLocal ? 503 : 400 });
 }
 
 export async function GET(req) {

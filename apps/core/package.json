@@ -22,6 +22,7 @@
     "status": "curl http://localhost:4025/reliability/status-dashboard -H 'Authorization: Bearer $ADMIN_TOKEN' | python3 -m json.tool",
     "logs": "tail -f logs/*.log",
     "costs": "curl http://localhost:4025/reliability/costs?days=30 -H 'Authorization: Bearer $ADMIN_TOKEN' | python3 -m json.tool"
+    ,"superuser:bootstrap": "node scripts/bootstrap-superuser.mjs"
   },
   "engines": {
     "node": ">=18.0.0",

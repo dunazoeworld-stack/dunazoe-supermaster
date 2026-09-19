@@ -28,8 +28,14 @@ export default function LoginPage() {
       }
       localStorage.setItem("dunazoe_token", data.token);
       localStorage.setItem("dunazoe_user", JSON.stringify({ user_id: data.user_id, name: data.name, email: data.email, role: data.role }));
-      if (data.role === "admin" || data.role === "super_admin") router.push("/admin");
-      else if (data.role === "vendor") router.push("/vendor/dashboard");
+      const mode = data.role === "vendor" ? "BUSINESS"
+        : data.role === "admin" ? "ADMIN"
+          : ["superuser", "super_admin"].includes(data.role) ? "SUPERUSER" : "USER";
+      localStorage.setItem("dunazoe_mode", mode);
+      window.dispatchEvent(new CustomEvent("dz:mode-change", { detail: mode }));
+      if (mode === "BUSINESS") router.push("/vendor/dashboard");
+      else if (mode === "ADMIN") router.push("/admin");
+      else if (mode === "SUPERUSER") router.push("/ops");
       else router.push("/dashboard");
     } catch (_) { setError("Connection failed. Try again."); }
     finally { setLoading(false); }

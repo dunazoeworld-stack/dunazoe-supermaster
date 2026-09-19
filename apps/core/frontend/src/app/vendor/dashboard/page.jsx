@@ -7,6 +7,18 @@ import { productShareUrl } from "../../../lib/public-url.js";
 const API = process.env.NEXT_PUBLIC_API_URL || "/api";
 const SUPERUSERS = ["dunazoeworld@gmail.com", "comfortwins@gmail.com"];
 
+async function fetchJsonWithTimeout(url, options, timeoutMs = 8000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    const data = await response.json().catch(() => ({}));
+    return { response, data };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export default function VendorDashboardPage() {
   const [stats,    setStats]    = useState(null);
   const [products, setProducts] = useState([]);
@@ -63,16 +75,16 @@ export default function VendorDashboardPage() {
       setIsSuperuser(SUPERUSERS.includes(email));
     } catch (_) {}
     const token = localStorage.getItem("dunazoe_token");
-    Promise.allSettled([
-      fetch(`${API}/vendor/stats`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
-      fetch(`${API}/products?vendor=me&limit=6`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
-      fetch(`${API}/orders?vendor=me&limit=10`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
-      fetch(`${API}/vendor/verification`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => null),
+    Promise.all([
+      fetchJsonWithTimeout(`${API}/vendor/stats`, { headers: { Authorization: `Bearer ${token}` } }),
+      fetchJsonWithTimeout(`${API}/products?vendor=me&limit=6`, { headers: { Authorization: `Bearer ${token}` } }),
+      fetchJsonWithTimeout(`${API}/orders?vendor=me&limit=10`, { headers: { Authorization: `Bearer ${token}` } }),
+      fetchJsonWithTimeout(`${API}/vendor/verification`, { headers: { Authorization: `Bearer ${token}` }}),
     ]).then(([s, p, o, v]) => {
-      if (s.status === "fulfilled") setStats(s.value.stats || s.value);
-      if (p.status === "fulfilled") setProducts(p.value.products || []);
-      if (o.status === "fulfilled") setOrders(o.value.orders || []);
-      if (v.status === "fulfilled" && v.value) setVerification(v.value);
+      if (s.data) setStats(s.data.stats || s.data);
+      if (p.data) setProducts(p.data.products || []);
+      if (o.data) setOrders(o.data.orders || []);
+      if (v.data) setVerification(v.data);
     }).finally(() => setLoading(false));
   }, []);
 

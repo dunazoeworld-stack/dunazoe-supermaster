@@ -2,7 +2,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import NotificationBell from "./NotificationBell";
 import { ThemeToggle } from "./ThemeProvider";
 
@@ -12,8 +12,23 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [activeMode, setActiveMode] = useState("USER");
   const pathname = usePathname();
+  const router = useRouter();
   const isHome = pathname === "/";
   const menuAllowed = /^\/(dashboard|vendor|admin|ops)(\/|$)/.test(pathname || "");
+
+  function modeForUser(parsed, path = pathname) {
+    const role = parsed?.role;
+    if (role === "vendor" && /^\/vendor(\/|$)/.test(path || "")) return "BUSINESS";
+    if (role === "admin" && /^\/admin(\/|$)/.test(path || "")) return "ADMIN";
+    if (["superuser", "super_admin"].includes(role) && (/^\/(ops|deploy)(\/|$)/.test(path || ""))) return "SUPERUSER";
+    const allowed = role === "vendor"
+      ? ["USER", "BUSINESS"]
+      : role === "admin"
+        ? ["USER", "ADMIN"]
+        : ["USER", "SUPERUSER"];
+    const storedMode = localStorage.getItem("dunazoe_mode");
+    return allowed.includes(storedMode) ? storedMode : "USER";
+  }
 
   useEffect(() => {
     try {
@@ -21,14 +36,25 @@ export default function Navbar() {
       if (u) {
         const parsed = JSON.parse(u);
         setUser(parsed);
-        const allowed = ["vendor", "admin", "superuser", "super_admin"].includes(parsed.role)
-          ? ["USER", parsed.role === "vendor" ? "BUSINESS" : parsed.role === "admin" ? "ADMIN" : "SUPERUSER"]
-          : ["USER"];
-        const storedMode = localStorage.getItem("dunazoe_mode");
-        setActiveMode(allowed.includes(storedMode) ? storedMode : "USER");
+        setActiveMode(modeForUser(parsed));
       }
     } catch (_) {}
-  }, []);
+  }, [pathname]);
+
+  useEffect(() => {
+    function syncMode(event) {
+      try {
+        const parsed = JSON.parse(localStorage.getItem("dunazoe_user") || "null");
+        if (parsed) setActiveMode(event?.detail || modeForUser(parsed));
+      } catch (_) {}
+    }
+    window.addEventListener("dz:mode-change", syncMode);
+    window.addEventListener("storage", syncMode);
+    return () => {
+      window.removeEventListener("dz:mode-change", syncMode);
+      window.removeEventListener("storage", syncMode);
+    };
+  }, [pathname]);
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 8);
@@ -48,9 +74,10 @@ export default function Navbar() {
     setActiveMode(nextMode);
     localStorage.setItem("dunazoe_mode", nextMode);
     window.dispatchEvent(new CustomEvent("dz:mode-change", { detail: nextMode }));
-    if (nextMode === "USER") window.location.href = "/dashboard";
-    else if (nextMode === "BUSINESS") window.location.href = "/vendor/dashboard";
-    else window.location.href = "/ops";
+    if (nextMode === "USER") router.push("/dashboard");
+    else if (nextMode === "BUSINESS") router.push("/vendor/dashboard");
+    else if (nextMode === "ADMIN") router.push("/admin");
+    else router.push("/ops");
   }
 
   const elevatedMode = user && ["vendor", "admin", "superuser", "super_admin"].includes(user.role);
@@ -114,7 +141,7 @@ export default function Navbar() {
 
             {user ? (
               <>
-                {elevatedMode && <label style={{ display: "flex", alignItems: "center", gap: "4px", color: "var(--text-muted)", fontSize: "0.68rem" }}>
+                {elevatedMode && <label className="navbar-mode-selector" style={{ display: "flex", alignItems: "center", gap: "4px", color: "var(--text-muted)", fontSize: "0.68rem" }}>
                   <span className="sr-only">Account mode</span>
                   <select value={activeMode} onChange={event => switchMode(event.target.value)} aria-label="Account mode"
                     style={{ maxWidth: "108px", padding: "5px 6px", borderRadius: "8px", border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", fontSize: "0.7rem" }}>
@@ -237,15 +264,20 @@ export default function Navbar() {
           .hamburger-btn { display: flex !important; }
           .navbar-user-desktop, .navbar-notifications { display: none !important; }
           .homepage-account { display: inline-flex !important; }
-          .navbar-actions { flex-shrink: 0; }
+          .navbar-actions { flex-shrink: 1; justify-content: flex-end; }
           .dz-logo { min-width: 0; }
-          .dz-logo-text { white-space: nowrap; }
+          .dz-logo-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+          .navbar-mode-selector { max-width: 84px; }
+          .navbar-mode-selector select { max-width: 84px !important; }
+        }
+        @media (max-width: 430px) {
+          .navbar-mode-selector { display: none !important; }
         }
         @media (max-width: 360px) {
           .navbar-actions { gap: 2px !important; }
           .navbar-theme-toggle button { padding-left: 6px !important; padding-right: 6px !important; }
           .dz-logo { gap: 6px; }
-          .dz-logo-text { font-size: 0.98rem; }
+          .dz-logo-text { font-size: 0.9rem; }
           .homepage-search span, .homepage-account span { display: none; }
         }
         .mobile-menu-drawer {

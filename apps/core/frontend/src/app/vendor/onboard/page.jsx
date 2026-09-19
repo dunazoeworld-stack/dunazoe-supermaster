@@ -231,9 +231,15 @@ export default function VendorOnboardPage() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ image_url: imageUrl, product_type: product.product_type }),
       });
-      const d = await r.json();
+      const d = await r.json().catch(() => ({}));
       if (d.success) {
         setAiVision(d);
+        // Heuristic and low-confidence results are suggestions only. They
+        // remain visible for review but must not silently populate a listing.
+        if (Number(d.confidence) < 0.7) {
+          setAiApplied({});
+          return;
+        }
         // Auto-fill empty fields only — never override what vendor already typed
         const filled = {};
         if (d.name        && !product.name)        { P("name",        d.name);        filled.name = true; }
@@ -290,7 +296,7 @@ export default function VendorOnboardPage() {
           product_type: product.product_type,
         }),
       });
-      const d = await r.json();
+       const d = await r.json().catch(() => ({}));
       if (d.success) setAiTip(d);
     } catch (_) {}
     finally { setAiLoading(false); }
@@ -817,6 +823,11 @@ export default function VendorOnboardPage() {
                     {Object.keys(aiApplied).length > 0 && (
                       <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginBottom: "8px" }}>
                         ✅ Auto-filled: {Object.keys(aiApplied).join(", ")}. Review and edit below.
+                      </p>
+                    )}
+                    {Number(aiVision.confidence) < 0.7 && (
+                      <p style={{ fontSize: "0.75rem", color: "var(--warning)", marginBottom: "8px" }}>
+                        ⚠️ Low-confidence suggestion. Nothing was auto-filled; verify every field before publishing.
                       </p>
                     )}
                     {aiVision.note && (

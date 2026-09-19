@@ -45,7 +45,8 @@ export async function POST(req) {
       return NextResponse.json({ success: false, error: "Email already registered" }, { status: 409 });
 
     const password_hash = await bcrypt.hash(password, SALT_ROUNDS);
-    const safe_role = ["customer", "vendor", "agent", "admin", "coordinator"].includes(role) ? role : "customer";
+    // Elevated roles are provisioned by operators, never by the public form.
+    const safe_role = ["customer", "vendor"].includes(role) ? role : "customer";
 
     const result = await pool.query(
       `INSERT INTO users(name,email,phone,whatsapp,password_hash,role,state,city,town)
